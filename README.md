@@ -92,46 +92,49 @@ DFX_MOC_PATH=<path-to-moc> mops test
 
 The benchmarking code can be found here: [canister-profiling](https://github.com/research-ag/canister-profiling)
 
-We benchmarked this library's sha256 and sha512 against two other existing sha256 implementations,
+We benchmarked this library's sha256 and sha512 against two other existing implementations,
 specifically these branches:
 
-* motoko-sha2: https://github.com/timohanke/motoko-sha2#v2.0.0
-* crypto.mo from aviate labs: https://github.com/skilesare/crypto.mo#main
+* motoko-sha2 for sha256/512: https://github.com/timohanke/motoko-sha2#v2.0.0
+* crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
 ### Time
 
 We first measured the instructions for hashing the empty message:
 
-|method|Sha256|Sha512|timohanke|aviate-labs|
-|---|---|---|---|---|
-|empty message|18,826|31,026|49,3420|98,981|
+|method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
+|---|---|---|---|---|---|
+|0 blocks|18,826|31,026|493,457|1,323,970|98,879|
 
 We then measured a long message of 1,000 blocks and divided by the length.
 We provide the value per block where a block is 64 bytes for Sha256 and 128 bytes for Sha512, per byte, and relative to this libary's Sha256:
 
-|method|Sha256|Sha512|timohanke|aviate-labs|
-|---|---|---|---|---|
-|per block|18,881|34,572|49,352|49,107|
-|per byte|295|270|771|767|
-|relative|1.0|0.92|2.61|2.60|
+|method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
+|---|---|---|---|---|---|
+|per block|18,881|34,572|49,352|80,556|47,315|
+|per byte|295|270|771|629|739|
+|relative|1.0|0.92|2.61|4.27|2.51|
 
+Notes:
+
+* All functions except crypto.mo have been measure with hashing type `Blob`. crypto.mo has been measured with hashing type `[Nat8]` because it does not offer type `Blob` directly.
+* We measured with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a constant message such that all 0x00 or all 0xff is not a reliable way to measure and produces significantly different results.
 ### Memory
 
-Hashing also causes heap allocations.
+Hashing also creates garbage.
+We measured the garbage created long message of 1,000 blocks and divided the result by the length of the message in bytes. 
+This tells us how many bytes of garbage are produced for each byte that is hashed.
+Ideally, this value should be 0.
 
-We first measured the instructions for hashing the empty message:
+|method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
+|---|---|---|---|---|---|
+|per byte|1.5|7.9|9|12.9|6.1|
 
-|method|Sha256|Sha512|timohanke|aviate-labs|
-|---|---|---|---|---|
-|empty message|800|1348|26472|4376|
+Notes: 
 
-We then measured a long message of 1,000 blocks and divided the result by the length of the message in bytes. 
-This tells us how many bytes are allocated on the heap for each byte that is hashed.
-Ideally, this value should be zero.
-
-|method|Sha256|Sha512|timohanke|aviate-labs|
-|---|---|---|---|---|
-|per byte|1.5|7.9|9|10.1|
+* All functions except crypto.mo have been measure with hashing type `Blob`. crypto.mo has been measured with hashing type `[Nat8]` because it does not offer type `Blob` directly. Converting `Blob` to `[Nat8]` first will increase the value of garbage per byte by 4.
+* We can see how the use Nat64 in Sha512 requires signifantly more heap allocations than the use of Nat32 in Sha256.
+* We can conclude that in Motoko it is advisable to use Sha256 over Sha512 despite the slightly higher performance per byte of Sha512.
 
 ## Implementation notes
 
