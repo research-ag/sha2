@@ -1,7 +1,4 @@
-/// Optimized SHA2 hash functions
-///
-/// Copyright: 2023 MR Research AG
-/// Main author: Timo Hanke (timohanke)
+// @testmode wasi
 
 import Blob "mo:base/Blob";
 import Array "mo:base/Array";
@@ -64,13 +61,6 @@ do {
 };
 
 // string of 640,000 zero bytes
-/* This test is commented out because mops test uses the moc interpreter,
-   not wasmtime, and this test takes too long (~3 minutes).
-
-  You can uncomment this and then run:
-  moc $(mops sources) -wasi-system-api sha2.test.mo && wasmtime sha2.test.wasm
-*/
-/*
 do {
   let data = Blob.fromArrayMut(Array.init<Nat8>(64, 0));
   let (digest256, digest512) = (
@@ -86,4 +76,3 @@ do {
   assert(digest256.sum() == h256);
   assert(digest512.sum() == h512);
 };
-*/

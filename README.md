@@ -104,7 +104,7 @@ We first measured the instructions for hashing the empty message:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|0 blocks|18,826|31,026|493,457|1,323,970|98,879|
+|empty message|18,826|31,026|493,457|1,323,970|98,879|
 
 We then measured a long message of 1,000 blocks and divided by the length.
 We provide the value per block where a block is 64 bytes for Sha256 and 128 bytes for Sha512, per byte, and relative to this libary's Sha256:
@@ -122,7 +122,7 @@ Notes:
 ### Memory
 
 Hashing also creates garbage.
-We measured the garbage created long message of 1,000 blocks and divided the result by the length of the message in bytes. 
+We measured the garbage created by a message of length 1,000 blocks and divided the result by the length of the message in bytes. 
 This tells us how many bytes of garbage are produced for each byte that is hashed.
 Ideally, this value should be 0.
 
@@ -133,7 +133,7 @@ Ideally, this value should be 0.
 Notes: 
 
 * All functions except crypto.mo have been measure with hashing type `Blob`. crypto.mo has been measured with hashing type `[Nat8]` because it does not offer type `Blob` directly. Converting `Blob` to `[Nat8]` first will increase the value of garbage per byte by 4.
-* We can see how the use Nat64 in Sha512 requires signifantly more heap allocations than the use of Nat32 in Sha256.
+* We can see how the use of Nat64 in Sha512 requires signifantly more heap allocations than the use of Nat32 in Sha256.
 * We can conclude that in Motoko it is advisable to use Sha256 over Sha512 despite the slightly higher performance per byte of Sha512.
 
 ## Implementation notes
