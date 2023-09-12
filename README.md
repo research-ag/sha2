@@ -105,16 +105,16 @@ We first measured the instructions for hashing the empty message:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|empty message|16,152|27,125|246,834|722,402|83,782|
+|empty message|15,513|26,229|246,834|722,402|83,782|
 
 We then measured a long message of 1,000 blocks and divided by the length.
 We provide the value per block where a block is 64 bytes for Sha256 and 128 bytes for Sha512, per byte, and relative to this libary's Sha256:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per block|16,625|29,588|43,007|69,655|41,708|
-|per byte|259|231|672|544|652|
-|relative|1.0|0.89|2.59|2.09|2.51|
+|per block|16,177|28,692|43,007|69,655|41,708|
+|per byte|253|224|672|544|652|
+|relative|1.0|0.89|2.66|2.15|2.58|
 
 Notes:
 

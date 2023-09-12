@@ -11,6 +11,7 @@ import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
+import Prim "mo:prim";
 
 module {
   public type Algorithm = {
@@ -152,7 +153,7 @@ module {
     reset();
 
     private func writeByte(val : Nat8) : () {
-      word := (word << 8) ^ Nat32.fromIntWrap(Nat8.toNat(val));
+      word := (word << 8) ^ Prim.nat16ToNat32(Prim.nat8ToNat16(val));
       i_byte -%= 1;
       if (i_byte == 0) {
         msg[Nat8.toNat(i_msg)] := word;
@@ -393,41 +394,49 @@ module {
       writeByte(Nat8.fromIntWrap(Nat64.toNat(n_bits & 0xff)));
 
       // retrieve sum
-      digest[0] := Nat8.fromIntWrap(Nat32.toNat((s0 >> 24) & 0xff));
-      digest[1] := Nat8.fromIntWrap(Nat32.toNat((s0 >> 16) & 0xff));
-      digest[2] := Nat8.fromIntWrap(Nat32.toNat((s0 >> 8) & 0xff));
-      digest[3] := Nat8.fromIntWrap(Nat32.toNat(s0 & 0xff));
-      digest[4] := Nat8.fromIntWrap(Nat32.toNat((s1 >> 24) & 0xff));
-      digest[5] := Nat8.fromIntWrap(Nat32.toNat((s1 >> 16) & 0xff));
-      digest[6] := Nat8.fromIntWrap(Nat32.toNat((s1 >> 8) & 0xff));
-      digest[7] := Nat8.fromIntWrap(Nat32.toNat(s1 & 0xff));
-      digest[8] := Nat8.fromIntWrap(Nat32.toNat((s2 >> 24) & 0xff));
-      digest[9] := Nat8.fromIntWrap(Nat32.toNat((s2 >> 16) & 0xff));
-      digest[10] := Nat8.fromIntWrap(Nat32.toNat((s2 >> 8) & 0xff));
-      digest[11] := Nat8.fromIntWrap(Nat32.toNat(s2 & 0xff));
-      digest[12] := Nat8.fromIntWrap(Nat32.toNat((s3 >> 24) & 0xff));
-      digest[13] := Nat8.fromIntWrap(Nat32.toNat((s3 >> 16) & 0xff));
-      digest[14] := Nat8.fromIntWrap(Nat32.toNat((s3 >> 8) & 0xff));
-      digest[15] := Nat8.fromIntWrap(Nat32.toNat(s3 & 0xff));
-      digest[16] := Nat8.fromIntWrap(Nat32.toNat((s4 >> 24) & 0xff));
-      digest[17] := Nat8.fromIntWrap(Nat32.toNat((s4 >> 16) & 0xff));
-      digest[18] := Nat8.fromIntWrap(Nat32.toNat((s4 >> 8) & 0xff));
-      digest[19] := Nat8.fromIntWrap(Nat32.toNat(s4 & 0xff));
-      digest[20] := Nat8.fromIntWrap(Nat32.toNat((s5 >> 24) & 0xff));
-      digest[21] := Nat8.fromIntWrap(Nat32.toNat((s5 >> 16) & 0xff));
-      digest[22] := Nat8.fromIntWrap(Nat32.toNat((s5 >> 8) & 0xff));
-      digest[23] := Nat8.fromIntWrap(Nat32.toNat(s5 & 0xff));
-      digest[24] := Nat8.fromIntWrap(Nat32.toNat((s6 >> 24) & 0xff));
-      digest[25] := Nat8.fromIntWrap(Nat32.toNat((s6 >> 16) & 0xff));
-      digest[26] := Nat8.fromIntWrap(Nat32.toNat((s6 >> 8) & 0xff));
-      digest[27] := Nat8.fromIntWrap(Nat32.toNat(s6 & 0xff));
+      let (h0,l0) = (Prim.nat32ToNat16(s0 >> 16),Prim.nat32ToNat16(s0 & 0xffff));
+      digest[0] := Prim.nat16ToNat8(h0 >> 8);
+      digest[1] := Prim.nat16ToNat8(h0 & 0xff);
+      digest[2] := Prim.nat16ToNat8(l0 >> 8);
+      digest[3] := Prim.nat16ToNat8(l0 & 0xff);
+      let (h1,l1) = (Prim.nat32ToNat16(s1 >> 16),Prim.nat32ToNat16(s1 & 0xffff));
+      digest[4] := Prim.nat16ToNat8(h1 >> 8);
+      digest[5] := Prim.nat16ToNat8(h1 & 0xff);
+      digest[6] := Prim.nat16ToNat8(l1 >> 8);
+      digest[7] := Prim.nat16ToNat8(l1 & 0xff);
+      let (h2,l2) = (Prim.nat32ToNat16(s2 >> 16),Prim.nat32ToNat16(s2 & 0xffff));
+      digest[8] := Prim.nat16ToNat8(h2 >> 8);
+      digest[9] := Prim.nat16ToNat8(h2 & 0xff);
+      digest[10] := Prim.nat16ToNat8(l2 >> 8);
+      digest[11] := Prim.nat16ToNat8(l2 & 0xff);
+      let (h3,l3) = (Prim.nat32ToNat16(s3 >> 16),Prim.nat32ToNat16(s3 & 0xffff));
+      digest[12] := Prim.nat16ToNat8(h3 >> 8);
+      digest[13] := Prim.nat16ToNat8(h3 & 0xff);
+      digest[14] := Prim.nat16ToNat8(l3 >> 8);
+      digest[15] := Prim.nat16ToNat8(l3 & 0xff);
+      let (h4,l4) = (Prim.nat32ToNat16(s4 >> 16),Prim.nat32ToNat16(s4 & 0xffff));
+      digest[16] := Prim.nat16ToNat8(h4 >> 8);
+      digest[17] := Prim.nat16ToNat8(h4 & 0xff);
+      digest[18] := Prim.nat16ToNat8(l4 >> 8);
+      digest[19] := Prim.nat16ToNat8(l4 & 0xff);
+      let (h5,l5) = (Prim.nat32ToNat16(s5 >> 16),Prim.nat32ToNat16(s5 & 0xffff));
+      digest[20] := Prim.nat16ToNat8(h5 >> 8);
+      digest[21] := Prim.nat16ToNat8(h5 & 0xff);
+      digest[22] := Prim.nat16ToNat8(l5 >> 8);
+      digest[23] := Prim.nat16ToNat8(l5 & 0xff);
+      let (h6,l6) = (Prim.nat32ToNat16(s6 >> 16),Prim.nat32ToNat16(s6 & 0xffff));
+      digest[24] := Prim.nat16ToNat8(h6 >> 8);
+      digest[25] := Prim.nat16ToNat8(h6 & 0xff);
+      digest[26] := Prim.nat16ToNat8(l6 >> 8);
+      digest[27] := Prim.nat16ToNat8(l6 & 0xff);
 
       if (algo_ == #sha224) return Blob.fromArrayMut(digest);
 
-      digest[28] := Nat8.fromIntWrap(Nat32.toNat((s7 >> 24) & 0xff));
-      digest[29] := Nat8.fromIntWrap(Nat32.toNat((s7 >> 16) & 0xff));
-      digest[30] := Nat8.fromIntWrap(Nat32.toNat((s7 >> 8) & 0xff));
-      digest[31] := Nat8.fromIntWrap(Nat32.toNat(s7 & 0xff));
+      let (h7,l7) = (Prim.nat32ToNat16(s7 >> 16),Prim.nat32ToNat16(s7 & 0xffff));
+      digest[28] := Prim.nat16ToNat8(h7 >> 8);
+      digest[29] := Prim.nat16ToNat8(h7 & 0xff);
+      digest[30] := Prim.nat16ToNat8(l7 >> 8);
+      digest[31] := Prim.nat16ToNat8(l7 & 0xff);
 
       return Blob.fromArrayMut(digest);
     };

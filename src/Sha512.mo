@@ -11,6 +11,7 @@ import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
+import Prim "mo:prim";
 
 module {
   public type Algorithm = {
@@ -194,7 +195,7 @@ module {
     reset();
 
     private func writeByte(val : Nat8) : () {
-      word := (word << 8) ^ Nat64.fromIntWrap(Nat8.toNat(val));
+      word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
       i_byte -%= 1;
       if (i_byte == 0) {
         msg[Nat8.toNat(i_msg)] := word;
