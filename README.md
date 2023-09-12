@@ -98,23 +98,23 @@ specifically these branches:
 * motoko-sha2 for sha256/512: https://github.com/timohanke/motoko-sha2#v2.0.0
 * crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
-The benchmark was run with dfx 0.14.4 and moc 0.9.5.
+The benchmark was run with dfx 0.14.4 and moc 0.9.8.
 ### Time
 
 We first measured the instructions for hashing the empty message:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|empty message|16,261|27,259|432,085|1,186,312|87,717|
+|empty message|16,152|27,125|246,834|722,402|83,782|
 
 We then measured a long message of 1,000 blocks and divided by the length.
 We provide the value per block where a block is 64 bytes for Sha256 and 128 bytes for Sha512, per byte, and relative to this libary's Sha256:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per block|16,673|29,924|43,334|70,468|41,867|
-|per byte|261|234|677|551|654|
-|relative|1.0|0.90|2.60|2.11|2.51|
+|per block|16,625|29,588|43,007|69,655|41,708|
+|per byte|259|231|672|544|652|
+|relative|1.0|0.89|2.59|2.09|2.51|
 
 Notes:
 
@@ -129,7 +129,7 @@ Ideally, this value should be 0.
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per byte|1.5|7.9|9|12.9|6.1|
+|per byte|1.5|7.9|8.8|12.5|6.1|
 
 Notes: 
 
