@@ -168,6 +168,18 @@ module {
       };
     };
 
+    // We must be at a word boundary, i.e. i_byte must be equal to 4
+    private func writeWord(val : Nat32) : () {
+      assert (i_byte == 4);
+      msg[Nat8.toNat(i_msg)] := val;
+      i_msg +%= 1;
+      if (i_msg == 16) {
+        process_block();
+        i_msg := 0;
+        i_block +%= 1;
+      };
+    };
+
     private func process_block() : () {
       let w00 = msg[0];
       let w01 = msg[1];
@@ -373,25 +385,25 @@ module {
       // n_bits = length of message in bits
       let n_bits : Nat64 = ((i_block << 6) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
 
-      // write padding
+      // write 1-4 padding bytes 
       writeByte(0x80);
       p -%= 1;
+      while (p & 0x3 != 0) {
+        writeByte(0);
+        p -%= 1;
+      };
+      // write padding words
+      p >>= 2;
       while (p != 0) {
-        writeByte(0x00);
+        writeWord(0);
         p -%= 1;
       };
 
       // write length (8 bytes)
       // Note: this exactly fills the block buffer, hence process_block will get
       // triggered by the last writeByte
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 56) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 48) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 40) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 32) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 24) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 16) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 8) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat(n_bits & 0xff)));
+      writeWord(Prim.nat64ToNat32(n_bits >> 32));
+      writeWord(Prim.nat64ToNat32(n_bits & 0xffffffff));
 
       // retrieve sum
       let (h0,l0) = (Prim.nat32ToNat16(s0 >> 16),Prim.nat32ToNat16(s0 & 0xffff));
