@@ -11,6 +11,7 @@ import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
+import Prim "mo:prim";
 
 module {
   public type Algorithm = {
@@ -194,7 +195,7 @@ module {
     reset();
 
     private func writeByte(val : Nat8) : () {
-      word := (word << 8) ^ Nat64.fromIntWrap(Nat8.toNat(val));
+      word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
       i_byte -%= 1;
       if (i_byte == 0) {
         msg[Nat8.toNat(i_msg)] := word;
@@ -206,6 +207,18 @@ module {
           i_msg := 0;
           i_block +%= 1;
         };
+      };
+    };
+
+    // We must be at a word boundary, i.e. i_byte must be equal to 8
+    private func writeWord(val : Nat64) : () {
+      assert (i_byte == 8);
+      msg[Nat8.toNat(i_msg)] := val;
+      i_msg +%= 1;
+      if (i_msg == 16) {
+        process_block();
+        i_msg := 0;
+        i_block +%= 1;
       };
     };
 
@@ -446,33 +459,25 @@ module {
       // Note: This implementation only handles messages < 2^64 bits
       let n_bits : Nat64 = ((i_block << 7) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
 
-      // write padding
+      // write 1-7 padding bytes 
       writeByte(0x80);
       p -%= 1;
+      while (p & 0x7 != 0) {
+        writeByte(0);
+        p -%= 1;
+      };
+      // write padding words
+      p >>= 3;
       while (p != 0) {
-        writeByte(0x00);
+        writeWord(0);
         p -%= 1;
       };
 
       // write length (16 bytes)
       // Note: this exactly fills the block buffer, hence process_block will get
       // triggered by the last writeByte
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(0x00);
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 56) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 48) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 40) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 32) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 24) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 16) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat((n_bits >> 8) & 0xff)));
-      writeByte(Nat8.fromIntWrap(Nat64.toNat(n_bits & 0xff)));
+      writeWord(0);
+      writeWord(n_bits);
 
       // retrieve sum
       digest[0] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 56) & 0xff));
