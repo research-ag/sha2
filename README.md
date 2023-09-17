@@ -98,24 +98,24 @@ specifically these branches:
 * motoko-sha2 for sha256/512: https://github.com/timohanke/motoko-sha2#v2.0.0
 * crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
-The benchmark was run with dfx 0.14.4 and moc 0.9.8.
+The benchmark was run with dfx 0.14.4 with cycle optimisation enabled and moc 0.9.8.
 ### Time
 
 We first measured the instructions for hashing the empty message:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|empty message|11,543|17,319|246,834|722,402|83,782|
-|relative|1.0|0.75|21.4|31.3|7.3|
+|empty message|12,185|17,307|246,834|722,402|83,782|
+|relative|1.0|0.71|20.3|29.6|6.9|
 
 We then measured a long message of 1,000 blocks and divided by the length.
 We provide the value per block where a block is 64 bytes for Sha256 and 128 bytes for Sha512, per byte, and relative to this libary's Sha256:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per block|16,176|28,691|43,007|69,655|41,708|
-|per byte|253|224|672|544|652|
-|relative|1.0|0.89|2.66|2.15|2.58|
+|per block|15,543|28,691|43,007|69,655|41,708|
+|per byte|243|224|672|544|652|
+|relative|1.0|0.92|2.77|2.24|2.68|
 
 Notes:
 
@@ -126,11 +126,12 @@ Notes:
 Hashing also creates garbage.
 We measured the garbage created by a message of length 1,000 blocks and divided the result by the length of the message in bytes. 
 This tells us how many bytes of garbage are produced for each byte that is hashed.
-Ideally, this value should be 0.
+For Sha256 this value is 0 which means that the garbage has size O(1).
+In fact, it is 1,008 bytes regardless of the message length.
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per byte|1.5|7.9|8.8|12.5|6.1|
+|per byte|0|7.9|8.8|12.5|6.1|
 
 Notes: 
 
@@ -153,3 +154,26 @@ Main author: Timo Hanke (timohanke)
 ## License 
 
 Apache-2.0
+
+## Changelog
+
+### 0.0.4
+
+Sha256:
+
+* Eliminate the heap allocations that were linear in message size
+* Reduce instructions per byte by 4%  
+* Comes with a per message penalty in instructions of 5% 
+
+### 0.0.3
+
+Sha256:
+
+* Reduce instructions per byte by 4%
+* Reduce instructions for empty message by 25%
+* Reduce heap allocations from 1.5x to 1x the message size
+
+Sha512:
+
+* Reduce instructions per byte by 4%
+* Reduce instructions for empty message by 35%
