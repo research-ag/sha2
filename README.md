@@ -98,7 +98,7 @@ specifically these branches:
 * motoko-sha2 for sha256/512: https://github.com/timohanke/motoko-sha2#v2.0.0
 * crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
-The benchmark was run with dfx 0.14.4 and moc 0.9.8.
+The benchmark was run with dfx 0.14.4 with cycle optimisation enabled and moc 0.9.8.
 ### Time
 
 We first measured the instructions for hashing the empty message:
@@ -154,3 +154,26 @@ Main author: Timo Hanke (timohanke)
 ## License 
 
 Apache-2.0
+
+## Changelog
+
+### 0.0.4
+
+Sha256:
+
+* Eliminate the heap allocations that were linear in message size
+* Reduce instructions per byte by 4%  
+* Comes with a per message penalty in instructions of 5% 
+
+### 0.0.3
+
+Sha256:
+
+* Reduce instructions per byte by 4%
+* Reduce instructions for empty message by 25%
+* Reduce heap allocations from 1.5x to 1x the message size
+
+Sha512:
+
+* Reduce instructions per byte by 4%
+* Reduce instructions for empty message by 35%
