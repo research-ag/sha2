@@ -150,30 +150,7 @@ MR Research AG, 2023
 ## Authors
 
 Main author: Timo Hanke (timohanke)
-
 ## License 
 
 Apache-2.0
 
-## Changelog
-
-### 0.0.4
-
-Sha256:
-
-* Eliminate the heap allocations that were linear in message size
-* Reduce instructions per byte by 4%  
-* Comes with a per message penalty in instructions of 5% 
-
-### 0.0.3
-
-Sha256:
-
-* Reduce instructions per byte by 4%
-* Reduce instructions for empty message by 25%
-* Reduce heap allocations from 1.5x to 1x the message size
-
-Sha512:
-
-* Reduce instructions per byte by 4%
-* Reduce instructions for empty message by 35%
