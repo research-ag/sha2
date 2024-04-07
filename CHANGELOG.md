@@ -3,6 +3,7 @@
 ## 0.0.6
 
 * Bump base and test dependencies
+* Add benchmarks
 
 ## 0.0.5
 
