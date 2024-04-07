@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.0.6
+
+* Bump base and test dependencies
+
 ## 0.0.5
 
 * Bump base dependency to 0.11.0
