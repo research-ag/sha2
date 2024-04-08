@@ -13,7 +13,6 @@ base = "0.11.1"
 test = "2.0.0"
 bench = "1.0.0"
 "crypto.mo" = "https://github.com/skilesare/crypto.mo"
-motoko-sha2 = "https://github.com/timohanke/motoko-sha2#v2.0.0@837682e5a503f200f6829081e41dd6c98b8d6bf9"
 
 [toolchain]
 wasmtime = "19.0.1"
