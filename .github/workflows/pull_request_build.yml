@@ -15,6 +15,9 @@ jobs:
       - name: Make sure moc is installed
         run: mops toolchain bin moc || mops toolchain use moc latest
 
+      - name: Show mops version
+        run: mops -v
+
       - name: Run mops install
         run: mops install
 
