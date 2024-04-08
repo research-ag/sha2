@@ -12,7 +12,8 @@ base = "0.11.1"
 [dev-dependencies]
 test = "2.0.0"
 bench = "1.0.0"
-"crypto.mo" = "https://github.com/skilesare/crypto.mo"
+crypto = "https://github.com/skilesare/crypto.mo"
+motoko-sha2 = "https://github.com/timohanke/motoko-sha2"
 
 [toolchain]
 wasmtime = "19.0.1"

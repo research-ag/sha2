@@ -3,7 +3,7 @@ import Blob "mo:base/Blob";
 import Array "mo:base/Array";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
-import Crypto "mo:crypto.mo/SHA/SHA256";
+import Crypto "mo:crypto/SHA/SHA256";
 import Sha2 "mo:motoko-sha2";
 
 module {
