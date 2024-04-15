@@ -18,8 +18,5 @@ jobs:
       - name: Show mops version
         run: mops -v
 
-      - name: Run mops install
-        run: mops install
-
       - name: Run mops test
         run: mops test
