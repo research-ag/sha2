@@ -152,7 +152,7 @@ This was mainly motivated by reducing the heap allocations but it also reduced t
 
 ## Copyright
 
-MR Research AG, 2023
+MR Research AG, 2023-2024
 ## Authors
 
 Main author: Timo Hanke (timohanke)

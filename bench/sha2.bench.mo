@@ -12,7 +12,8 @@ module {
 
     // benchmark code...
     bench.name("Sha256");
-    bench.description("Hash various message lengths\nBlocks are 64 bytes for sha256 and 128 bytes for sha512");
+    bench.description("Hash various message lengths.
+    Blocks are 64 bytes for sha256 and 128 bytes for sha512.");
 
     bench.rows(["Sha256", "Sha512", "Crypto.mo", "motoko-sha2"]);
     bench.cols(["0", "1k blocks", "1 MB"]);
