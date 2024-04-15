@@ -1,4 +1,9 @@
-Optimized of all SHA2 functions
+[![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/sha2)](https://mops.one/sha2)
+[![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/sha2)](https://mops.one/sha2/docs)
+
+# SHA2 family 
+
+Optimized implementation of all SHA2 functions
 
 ## Overview
 
