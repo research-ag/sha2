@@ -281,3 +281,33 @@ do {
   assert(digest256.sum() == h256);
   assert(digest512.sum() == h512);
 };
+
+// test share() and unshare()
+
+do {
+  let data = Blob.fromArrayMut(Array.init<Nat8>(64, 0));
+  var digest256 = Sha256.Digest(#sha256);
+  var digest512 = Sha512.Digest(#sha512);
+
+  var digest256_state = digest256.share();
+  var digest512_state = digest512.share();
+
+  for (i in range(1,10000)) {
+    digest256.unshare(digest256_state);
+    digest512.unshare(digest512_state);
+
+    digest256.writeBlob(data);
+    digest512.writeBlob(data);
+
+    digest256_state := digest256.share();
+    digest512_state := digest512.share();
+    
+  };
+
+  //assert(read256 == 10000 * 64);
+  let h256 = Blob.fromArray([61, 0, 237, 134, 182, 99, 205, 27, 138, 200, 43, 16, 82, 87, 205, 16, 148, 18, 249, 45, 202, 68, 32, 72, 83, 36, 57, 249, 32, 167, 246, 69]);
+  let h512 = Blob.fromArray([185, 210, 89, 99, 251, 49, 143, 153, 12, 142, 84, 169, 249, 148, 175, 61, 145, 199, 69, 11, 148, 254, 140, 119, 61, 28, 58, 131, 83, 32, 14, 171, 33, 173, 242, 36, 122, 71, 210, 182, 28, 141, 145, 66, 148, 64, 86, 232, 73, 25, 31, 130, 115, 13, 234, 231, 152, 183, 217, 138, 153, 112, 120, 205]);
+  assert(digest256.sum() == h256);
+  assert(digest512.sum() == h512);
+
+}

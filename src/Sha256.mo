@@ -1,3 +1,11 @@
+/// Cycle-optimized Sha256 variants.
+///
+/// Features:
+///
+/// * Algorithms: `sha256`, `sha224`
+/// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
+/// * Output types: `Blob`
+
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
@@ -5,8 +13,20 @@ import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 
-module Sha256 {
+module {
   public type Algorithm = { #sha224; #sha256 };
+  public type StaticSha256 = {
+    msg : [Nat16];
+    digest : [Nat8];
+    i_msg : Nat8;
+    i_block : Nat32;
+    high : Bool;
+    word : Nat16;
+
+    // state variables in Nat16 form
+    sh : [Nat16];
+    sl : [Nat16];
+  };
 
   let K00 : Nat32 = 0x428a2f98;
   let K01 : Nat32 = 0x71374491;
@@ -73,214 +93,199 @@ module Sha256 {
   let K62 : Nat32 = 0xbef9a3f7;
   let K63 : Nat32 = 0xc67178f2;
 
-  public let rot = Nat32.bitrotRight;
-  
-  public let nat64To32 = Prim.nat64ToNat32;
-  public let nat32To16 = Prim.nat32ToNat16;
-  public let nat32To64 = Prim.nat32ToNat64;
-  public let nat16To32 = Prim.nat16ToNat32;
-  public let nat16To8 = Prim.nat16ToNat8;
-  public let nat8To16 = Prim.nat8ToNat16;
-  
-  public type StaticSha256 = {
-    algo : Algorithm;
-    msg : [var Nat16];
-    digest : [var Nat8];
-    var i_msg : Nat8;
-    var i_block : Nat32;
-    var high : Bool;
-    var word : Nat16;
+  let rot = Nat32.bitrotRight;
+
+  let nat64To32 = Prim.nat64ToNat32;
+  let nat32To16 = Prim.nat32ToNat16;
+  let nat32To64 = Prim.nat32ToNat64;
+  let nat16To32 = Prim.nat16ToNat32;
+  let nat16To8 = Prim.nat16ToNat8;
+  let nat8To16 = Prim.nat8ToNat16;
+
+  public class Digest(algo_ : Algorithm) {
+    public func algo() : Algorithm = algo_;
 
     // state variables in Nat16 form
-    sh : [var Nat16];
-    sl : [var Nat16];
-  };
+    var s0h : Nat16 = 0; var s0l : Nat16 = 0;
+    var s1h : Nat16 = 0; var s1l : Nat16 = 0;
+    var s2h : Nat16 = 0; var s2l : Nat16 = 0;
+    var s3h : Nat16 = 0; var s3l : Nat16 = 0;
+    var s4h : Nat16 = 0; var s4l : Nat16 = 0;
+    var s5h : Nat16 = 0; var s5l : Nat16 = 0;
+    var s6h : Nat16 = 0; var s6l : Nat16 = 0;
+    var s7h : Nat16 = 0; var s7l : Nat16 = 0;
 
-  public func Digest(algo: Algorithm) : StaticSha256 {
-    let state : StaticSha256 =  {
-      algo;
-      msg = Array.init<Nat16>(32, 0);
-      digest = switch (algo) {
-        case (#sha224) Array.init<Nat8>(28, 0);
-        case (#sha256) Array.init<Nat8>(32, 0);
+    let msg : [var Nat16] = Array.init<Nat16>(32, 0);
+    let digest = switch (algo_) {
+      case (#sha224) Array.init<Nat8>(28, 0);
+      case (#sha256) Array.init<Nat8>(32, 0);
+    };
+    
+    var i_msg : Nat8 = 0;
+    var i_block : Nat32 = 0;
+    var high : Bool = true;
+
+    public func reset() {
+      i_msg := 0;
+      i_block := 0;
+      high := true;
+      if (algo_ == #sha224) {
+          s0h := 0xc105; s0l := 0x9ed8;
+          s1h := 0x367c; s1l := 0xd507;
+          s2h := 0x3070; s2l := 0xdd17;
+          s3h := 0xf70e; s3l := 0x5939;
+          s4h := 0xffc0; s4l := 0x0b31;
+          s5h := 0x6858; s5l := 0x1511;
+          s6h := 0x64f9; s6l := 0x8fa7;
+          s7h := 0xbefa; s7l := 0x4fa4;
+      } else {
+          s0h := 0x6a09; s0l := 0xe667;
+          s1h := 0xbb67; s1l := 0xae85;
+          s2h := 0x3c6e; s2l := 0xf372;
+          s3h := 0xa54f; s3l := 0xf53a;
+          s4h := 0x510e; s4l := 0x527f;
+          s5h := 0x9b05; s5l := 0x688c;
+          s6h := 0x1f83; s6l := 0xd9ab;
+          s7h := 0x5be0; s7l := 0xcd19;
       };
-
-      var i_msg = 0;
-      var i_block = 0;
-      var high = true;
-      var word = 0;
-
-      // state variables in Nat16 form
-      sh = Array.init<Nat16>(8, 0);
-      sl = Array.init<Nat16>(8, 0);
     };
 
-    reset(state);
+    reset();
 
-    return state;
-  };
-
-  public func algo(state: StaticSha256) : Algorithm = state.algo;
-
-  public func reset(state: StaticSha256) {
-    state.i_msg := 0;
-    state.i_block := 0;
-    state.high := true;
-
-    if (state.algo == #sha224){
-      state.sh[0] := 0xc105; state.sl[0] := 0x9ed8;
-      state.sh[1] := 0x367c; state.sl[1] := 0xd507;
-      state.sh[2] := 0x3070; state.sl[2] := 0xdd17;
-      state.sh[3] := 0xf70e; state.sl[3] := 0x5939;
-      state.sh[4] := 0xffc0; state.sl[4] := 0x0b31;
-      state.sh[5] := 0x6858; state.sl[5] := 0x1511;
-      state.sh[6] := 0x64f9; state.sl[6] := 0x8fa7;
-      state.sh[7] := 0xbefa; state.sl[7] := 0x4fa4;
-    } else {
-      state.sh[0] := 0x6a09; state.sl[0] := 0xe667;
-      state.sh[1] := 0xbb67; state.sl[1] := 0xae85;
-      state.sh[2] := 0x3c6e; state.sl[2] := 0xf372;
-      state.sh[3] := 0xa54f; state.sl[3] := 0xf53a;
-      state.sh[4] := 0x510e; state.sl[4] := 0x527f;
-      state.sh[5] := 0x9b05; state.sl[5] := 0x688c;
-      state.sh[6] := 0x1f83; state.sl[6] := 0xd9ab;
-      state.sh[7] := 0x5be0; state.sl[7] := 0xcd19;
-    };
-  };
-
-  public func writeByte(state: StaticSha256, val: Nat8){
-    if (state.high){
-      state.word := nat8To16(val) << 8;
-      state.high := false;
-    } else {
-      state.msg[Nat8.toNat(state.i_msg)] := state.word | nat8To16(val);
-      state.i_msg +%= 1;
-      state.high := true;
-    };
-
-    if (state.i_msg == 32) {
-        process_block(state);
-        state.i_msg := 0;
-        state.i_block +%= 1;
+    var word : Nat16 = 0;
+    private func writeByte(val : Nat8) : () {
+      if (high) {
+        word := nat8To16(val) << 8;
+        high := false;
+      } else {
+        msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
+        i_msg +%= 1;
+        high := true;
       };
-  };
-
-  public func writePadding(state: StaticSha256): (){
-    // n_bits = length of message in bits
-    let t : Nat8 = if (state.high) state.i_msg << 1 else state.i_msg << 1 +% 1;
-    let n_bits : Nat64 = ((nat32To64(state.i_block) << 6) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
-    // separator byte
-    if (state.high) {
-      state.msg[Nat8.toNat(state.i_msg)] := 0x8000;
-    } else {
-      state.msg[Nat8.toNat(state.i_msg)] := state.word | 0x80;
-    };
-    state.i_msg +%= 1;
-    // zero padding with extra block if necessary
-    if (state.i_msg > 28) {
-      while (state.i_msg < 32) {
-        state.msg[Nat8.toNat(state.i_msg)] := 0;
-        state.i_msg +%= 1;
+      if (i_msg == 32) {
+        process_block();
+        i_msg := 0;
+        i_block +%= 1;
       };
-      process_block(state);
-      state.i_msg := 0;
-      // skipping here: state.i_block +%= 1;
     };
-    // zero padding in last block
-    while (state.i_msg < 28) {
-      state.msg[Nat8.toNat(state.i_msg)] := 0;
-      state.i_msg +%= 1;
-    };
-    // 8 length bytes
-    // Note: this exactly fills the block buffer, hence process_block will get
-    // triggered by the last writeByte
-    let lh = nat64To32(n_bits >> 32);
-    let ll = nat64To32(n_bits & 0xffffffff);
-    state.msg[28] := nat32To16(lh >> 16);
-    state.msg[29] := nat32To16(lh & 0xffff);
-    state.msg[30] := nat32To16(ll >> 16);
-    state.msg[31] := nat32To16(ll & 0xffff);
-    process_block(state);
-    // skipping here: state.i_msg := 0;
-  };
 
-  public func writeIter(state: StaticSha256, iter : { next() : ?Nat8 }) : () {
-    label reading loop {
-      switch (iter.next()) {
-        case (?val) {
-          writeByte(state, val);
-          continue reading;
+    // We must be at a Nat16 boundary, i.e. high must be true
+    /*
+    private func writeWord(val : Nat32) : () {
+      assert (high);
+      msg[Nat8.toNat(i_msg)] := nat32To16(val >> 16);
+      msg[Nat8.toNat(i_msg +% 1)] := nat32To16(val & 0xffff);
+      i_msg +%= 2;
+      if (i_msg == 32) {
+        process_block();
+        i_msg := 0;
+        i_block +%= 1;
+      };
+    };
+    */
+
+    private func writePadding() : () {
+      // n_bits = length of message in bits
+      let t : Nat8 = if (high) i_msg << 1 else i_msg << 1 +% 1;
+      let n_bits : Nat64 = ((nat32To64(i_block) << 6) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
+      // separator byte
+      if (high) {
+        msg[Nat8.toNat(i_msg)] := 0x8000;
+      } else {
+        msg[Nat8.toNat(i_msg)] := word | 0x80;
+      };
+      i_msg +%= 1;
+      // zero padding with extra block if necessary
+      if (i_msg > 28) {
+        while (i_msg < 32) {
+          msg[Nat8.toNat(i_msg)] := 0;
+          i_msg +%= 1;
         };
-        case (null) {
-          break reading;
-        };
+        process_block();
+        i_msg := 0;
+        // skipping here: i_block +%= 1;
       };
+      // zero padding in last block
+      while (i_msg < 28) {
+        msg[Nat8.toNat(i_msg)] := 0;
+        i_msg +%= 1;
+      };
+      // 8 length bytes
+      // Note: this exactly fills the block buffer, hence process_block will get
+      // triggered by the last writeByte
+      let lh = nat64To32(n_bits >> 32);
+      let ll = nat64To32(n_bits & 0xffffffff);
+      msg[28] := nat32To16(lh >> 16);
+      msg[29] := nat32To16(lh & 0xffff);
+      msg[30] := nat32To16(ll >> 16);
+      msg[31] := nat32To16(ll & 0xffff);
+      process_block();
+      // skipping here: i_msg := 0;
     };
-  };
 
-  public func writeArray(state: StaticSha256, arr : [Nat8]) : () = writeIter(state, arr.vals());
-  public func writeBlob(state: StaticSha256, blob : Blob) : () = writeIter(state, blob.vals());
+    public func share() : StaticSha256  {
+      let state : StaticSha256 =  {
+        i_msg; i_block; high; word;
+        msg = Array.freeze(msg);
+        digest = Array.freeze(digest);
 
-  public func sum(state: StaticSha256): Blob {
-    writePadding(state);
+        // state variables in Nat16 form
+        sh = [s0h, s1h, s2h, s3h, s4h, s5h, s6h, s7h];
+        sl = [s0l, s1l, s2l, s3l, s4l, s5l, s6l, s7l];
+      };
 
-    state.digest[0] := nat16To8(state.sh[0] >> 8);
-    state.digest[1] := nat16To8(state.sh[0] & 0xff);
-    state.digest[2] := nat16To8(state.sl[0] >> 8);
-    state.digest[3] := nat16To8(state.sl[0] & 0xff);
-    state.digest[4] := nat16To8(state.sh[1] >> 8);
-    state.digest[5] := nat16To8(state.sh[1] & 0xff);
-    state.digest[6] := nat16To8(state.sl[1] >> 8);
-    state.digest[7] := nat16To8(state.sl[1] & 0xff);
-    state.digest[8] := nat16To8(state.sh[2] >> 8);
-    state.digest[9] := nat16To8(state.sh[2] & 0xff);
-    state.digest[10] := nat16To8(state.sl[2] >> 8);
-    state.digest[11] := nat16To8(state.sl[2] & 0xff);
-    state.digest[12] := nat16To8(state.sh[3] >> 8);
-    state.digest[13] := nat16To8(state.sh[3] & 0xff);
-    state.digest[14] := nat16To8(state.sl[3] >> 8);
-    state.digest[15] := nat16To8(state.sl[3] & 0xff);
-    state.digest[16] := nat16To8(state.sh[4] >> 8);
-    state.digest[17] := nat16To8(state.sh[4] & 0xff);
-    state.digest[18] := nat16To8(state.sl[4] >> 8);
-    state.digest[19] := nat16To8(state.sl[4] & 0xff);
-    state.digest[20] := nat16To8(state.sh[5] >> 8);
-    state.digest[21] := nat16To8(state.sh[5] & 0xff);
-    state.digest[22] := nat16To8(state.sl[5] >> 8);
-    state.digest[23] := nat16To8(state.sl[5] & 0xff);
-    state.digest[24] := nat16To8(state.sh[6] >> 8);
-    state.digest[25] := nat16To8(state.sh[6] & 0xff);
-    state.digest[26] := nat16To8(state.sl[6] >> 8);
-    state.digest[27] := nat16To8(state.sl[6] & 0xff);
+      state;
+    };
 
-    if (state.algo == #sha224) return Blob.fromArrayMut(state.digest);
+    public func unshare(state: StaticSha256) {
+      assert msg.size() == state.msg.size();
+      assert digest.size() == state.digest.size();
 
-    state.digest[28] := nat16To8(state.sh[7] >> 8);
-    state.digest[29] := nat16To8(state.sh[7] & 0xff);
-    state.digest[30] := nat16To8(state.sl[7] >> 8);
-    state.digest[31] := nat16To8(state.sl[7] & 0xff);
+      i_msg := state.i_msg;
+      i_block := state.i_block;
+      high := state.high;
+      word := state.word;
 
-    return Blob.fromArrayMut(state.digest);
-  };
+      var i = 0;
+      while (i < msg.size()){
+        msg[i] := state.msg[i];
+        i += 1;
+      };
 
-  func process_block(state: StaticSha256) {
+      i := 0;
+      while (i < digest.size()){
+        digest[i] := state.digest[i];
+        i += 1;
+      };
 
-      let w00 = nat16To32(state.msg[0]) << 16 | nat16To32(state.msg[1]);
-      let w01 = nat16To32(state.msg[2]) << 16 | nat16To32(state.msg[3]);
-      let w02 = nat16To32(state.msg[4]) << 16 | nat16To32(state.msg[5]);
-      let w03 = nat16To32(state.msg[6]) << 16 | nat16To32(state.msg[7]);
-      let w04 = nat16To32(state.msg[8]) << 16 | nat16To32(state.msg[9]);
-      let w05 = nat16To32(state.msg[10]) << 16 | nat16To32(state.msg[11]);
-      let w06 = nat16To32(state.msg[12]) << 16 | nat16To32(state.msg[13]);
-      let w07 = nat16To32(state.msg[14]) << 16 | nat16To32(state.msg[15]);
-      let w08 = nat16To32(state.msg[16]) << 16 | nat16To32(state.msg[17]);
-      let w09 = nat16To32(state.msg[18]) << 16 | nat16To32(state.msg[19]);
-      let w10 = nat16To32(state.msg[20]) << 16 | nat16To32(state.msg[21]);
-      let w11 = nat16To32(state.msg[22]) << 16 | nat16To32(state.msg[23]);
-      let w12 = nat16To32(state.msg[24]) << 16 | nat16To32(state.msg[25]);
-      let w13 = nat16To32(state.msg[26]) << 16 | nat16To32(state.msg[27]);
-      let w14 = nat16To32(state.msg[28]) << 16 | nat16To32(state.msg[29]);
-      let w15 = nat16To32(state.msg[30]) << 16 | nat16To32(state.msg[31]);
+      s0h := state.sh[0]; s0l := state.sl[0];
+      s1h := state.sh[1]; s1l := state.sl[1];
+      s2h := state.sh[2]; s2l := state.sl[2];
+      s3h := state.sh[3]; s3l := state.sl[3];
+      s4h := state.sh[4]; s4l := state.sl[4];
+      s5h := state.sh[5]; s5l := state.sl[5];
+      s6h := state.sh[6]; s6l := state.sl[6];
+      s7h := state.sh[7]; s7l := state.sl[7];
+
+    };
+
+    private func process_block() : () {
+      let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
+      let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);
+      let w02 = nat16To32(msg[4]) << 16 | nat16To32(msg[5]);
+      let w03 = nat16To32(msg[6]) << 16 | nat16To32(msg[7]);
+      let w04 = nat16To32(msg[8]) << 16 | nat16To32(msg[9]);
+      let w05 = nat16To32(msg[10]) << 16 | nat16To32(msg[11]);
+      let w06 = nat16To32(msg[12]) << 16 | nat16To32(msg[13]);
+      let w07 = nat16To32(msg[14]) << 16 | nat16To32(msg[15]);
+      let w08 = nat16To32(msg[16]) << 16 | nat16To32(msg[17]);
+      let w09 = nat16To32(msg[18]) << 16 | nat16To32(msg[19]);
+      let w10 = nat16To32(msg[20]) << 16 | nat16To32(msg[21]);
+      let w11 = nat16To32(msg[22]) << 16 | nat16To32(msg[23]);
+      let w12 = nat16To32(msg[24]) << 16 | nat16To32(msg[25]);
+      let w13 = nat16To32(msg[26]) << 16 | nat16To32(msg[27]);
+      let w14 = nat16To32(msg[28]) << 16 | nat16To32(msg[29]);
+      let w15 = nat16To32(msg[30]) << 16 | nat16To32(msg[31]);
       let w16 = w00 +% rot(w01, 07) ^ rot(w01, 18) ^ (w01 >> 03) +% w09 +% rot(w14, 17) ^ rot(w14, 19) ^ (w14 >> 10);
       let w17 = w01 +% rot(w02, 07) ^ rot(w02, 18) ^ (w02 >> 03) +% w10 +% rot(w15, 17) ^ rot(w15, 19) ^ (w15 >> 10);
       let w18 = w02 +% rot(w03, 07) ^ rot(w03, 18) ^ (w03 >> 03) +% w11 +% rot(w16, 17) ^ rot(w16, 19) ^ (w16 >> 10);
@@ -330,23 +335,24 @@ module Sha256 {
       let w62 = w46 +% rot(w47, 07) ^ rot(w47, 18) ^ (w47 >> 03) +% w55 +% rot(w60, 17) ^ rot(w60, 19) ^ (w60 >> 10);
       let w63 = w47 +% rot(w48, 07) ^ rot(w48, 18) ^ (w48 >> 03) +% w56 +% rot(w61, 17) ^ rot(w61, 19) ^ (w61 >> 10);
 
-      // for ((i, j, k, l, m) in expansion_rounds.vals()) {
-      //   // (j,k,l,m) = (i+1,i+9,i+14,i+16)
-      //   let (v0, v1) = (state.msg[j], state.msg[l]);
-      //   let s0 = rot(v0, 07) ^ rot(v0, 18) ^ (v0 >> 03);
-      //   let s1 = rot(v1, 17) ^ rot(v1, 19) ^ (v1 >> 10);
-      //   state.msg[m] := msg[i] +% s0 +% msg[k] +% s1;
-      // };
-      
+/*
+      for ((i, j, k, l, m) in expansion_rounds.vals()) {
+        // (j,k,l,m) = (i+1,i+9,i+14,i+16)
+        let (v0, v1) = (msg[j], msg[l]);
+        let s0 = rot(v0, 07) ^ rot(v0, 18) ^ (v0 >> 03);
+        let s1 = rot(v1, 17) ^ rot(v1, 19) ^ (v1 >> 10);
+        msg[m] := msg[i] +% s0 +% msg[k] +% s1;
+      };
+*/
       // compress
-      let a_0 = nat16To32(state.sh[0]) << 16 | nat16To32(state.sl[0]);
-      let b_0 = nat16To32(state.sh[1]) << 16 | nat16To32(state.sl[1]);
-      let c_0 = nat16To32(state.sh[2]) << 16 | nat16To32(state.sl[2]);
-      let d_0 = nat16To32(state.sh[3]) << 16 | nat16To32(state.sl[3]);
-      let e_0 = nat16To32(state.sh[4]) << 16 | nat16To32(state.sl[4]);
-      let f_0 = nat16To32(state.sh[5]) << 16 | nat16To32(state.sl[5]);
-      let g_0 = nat16To32(state.sh[6]) << 16 | nat16To32(state.sl[6]);
-      let h_0 = nat16To32(state.sh[7]) << 16 | nat16To32(state.sl[7]);
+      let a_0 = nat16To32(s0h) << 16 | nat16To32(s0l);
+      let b_0 = nat16To32(s1h) << 16 | nat16To32(s1l);
+      let c_0 = nat16To32(s2h) << 16 | nat16To32(s2l);
+      let d_0 = nat16To32(s3h) << 16 | nat16To32(s3l);
+      let e_0 = nat16To32(s4h) << 16 | nat16To32(s4l);
+      let f_0 = nat16To32(s5h) << 16 | nat16To32(s5l);
+      let g_0 = nat16To32(s6h) << 16 | nat16To32(s6l);
+      let h_0 = nat16To32(s7h) << 16 | nat16To32(s7l);
       var a = a_0;
       var b = b_0;
       var c = c_0;
@@ -422,23 +428,23 @@ module Sha256 {
       t := h +% K62 +% w62 +% (e & f) ^ (^ e & g) +% rot(e, 06) ^ rot(e, 11) ^ rot(e, 25); h := g; g := f; f := e; e := d +% t; d := c; c := b; b := a; a := t +% (b & c) ^ (b & d) ^ (c & d) +% rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
       t := h +% K63 +% w63 +% (e & f) ^ (^ e & g) +% rot(e, 06) ^ rot(e, 11) ^ rot(e, 25); h := g; g := f; f := e; e := d +% t; d := c; c := b; b := a; a := t +% (b & c) ^ (b & d) ^ (c & d) +% rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
 
-
-      // for (i in compression_rounds.keys()) {
-      //   let ch = (e & f) ^ (^ e & g);
-      //   let maj = (a & b) ^ (a & c) ^ (b & c);
-      //   let sigma0 = rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
-      //   let sigma1 = rot(e, 06) ^ rot(e, 11) ^ rot(e, 25);
-      //   let t = h +% K[i] +% state.msg[i] +% ch +% sigma1;
-      //   h := g;
-      //   g := f;
-      //   f := e;
-      //   e := d +% t;
-      //   d := c;
-      //   c := b;
-      //   b := a;
-      //   a := t +% maj +% sigma0;
-      // };
-
+/*
+      for (i in compression_rounds.keys()) {
+        let ch = (e & f) ^ (^ e & g);
+        let maj = (a & b) ^ (a & c) ^ (b & c);
+        let sigma0 = rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
+        let sigma1 = rot(e, 06) ^ rot(e, 11) ^ rot(e, 25);
+        let t = h +% K[i] +% msg[i] +% ch +% sigma1;
+        h := g;
+        g := f;
+        f := e;
+        e := d +% t;
+        d := c;
+        c := b;
+        b := a;
+        a := t +% maj +% sigma0;
+      };
+*/
       // final addition
       a +%= a_0;
       b +%= b_0;
@@ -448,21 +454,95 @@ module Sha256 {
       f +%= f_0;
       g +%= g_0;
       h +%= h_0;
-      state.sh[0] := nat32To16(a >> 16); state.sl[0] := nat32To16(a & 0xffff);
-      state.sh[1] := nat32To16(b >> 16); state.sl[1] := nat32To16(b & 0xffff);
-      state.sh[2] := nat32To16(c >> 16); state.sl[2] := nat32To16(c & 0xffff);
-      state.sh[3] := nat32To16(d >> 16); state.sl[3] := nat32To16(d & 0xffff);
-      state.sh[4] := nat32To16(e >> 16); state.sl[4] := nat32To16(e & 0xffff);
-      state.sh[5] := nat32To16(f >> 16); state.sl[5] := nat32To16(f & 0xffff);
-      state.sh[6] := nat32To16(g >> 16); state.sl[6] := nat32To16(g & 0xffff);
-      state.sh[7] := nat32To16(h >> 16); state.sl[7] := nat32To16(h & 0xffff);
-    
+      s0h := nat32To16(a >> 16); s0l := nat32To16(a & 0xffff);
+      s1h := nat32To16(b >> 16); s1l := nat32To16(b & 0xffff);
+      s2h := nat32To16(c >> 16); s2l := nat32To16(c & 0xffff);
+      s3h := nat32To16(d >> 16); s3l := nat32To16(d & 0xffff);
+      s4h := nat32To16(e >> 16); s4l := nat32To16(e & 0xffff);
+      s5h := nat32To16(f >> 16); s5l := nat32To16(f & 0xffff);
+      s6h := nat32To16(g >> 16); s6l := nat32To16(g & 0xffff);
+      s7h := nat32To16(h >> 16); s7l := nat32To16(h & 0xffff);
+    };
+
+    public func writeIter(iter : { next() : ?Nat8 }) : () {
+      label reading loop {
+        switch (iter.next()) {
+          case (?val) {
+            writeByte(val);
+            continue reading;
+          };
+          case (null) {
+            break reading;
+          };
+        };
+      };
+    };
+
+    public func writeArray(arr : [Nat8]) : () = writeIter(arr.vals());
+    public func writeBlob(blob : Blob) : () = writeIter(blob.vals());
+
+    public func sum() : Blob {
+      writePadding();
+
+      digest[0] := nat16To8(s0h >> 8);
+      digest[1] := nat16To8(s0h & 0xff);
+      digest[2] := nat16To8(s0l >> 8);
+      digest[3] := nat16To8(s0l & 0xff);
+      digest[4] := nat16To8(s1h >> 8);
+      digest[5] := nat16To8(s1h & 0xff);
+      digest[6] := nat16To8(s1l >> 8);
+      digest[7] := nat16To8(s1l & 0xff);
+      digest[8] := nat16To8(s2h >> 8);
+      digest[9] := nat16To8(s2h & 0xff);
+      digest[10] := nat16To8(s2l >> 8);
+      digest[11] := nat16To8(s2l & 0xff);
+      digest[12] := nat16To8(s3h >> 8);
+      digest[13] := nat16To8(s3h & 0xff);
+      digest[14] := nat16To8(s3l >> 8);
+      digest[15] := nat16To8(s3l & 0xff);
+      digest[16] := nat16To8(s4h >> 8);
+      digest[17] := nat16To8(s4h & 0xff);
+      digest[18] := nat16To8(s4l >> 8);
+      digest[19] := nat16To8(s4l & 0xff);
+      digest[20] := nat16To8(s5h >> 8);
+      digest[21] := nat16To8(s5h & 0xff);
+      digest[22] := nat16To8(s5l >> 8);
+      digest[23] := nat16To8(s5l & 0xff);
+      digest[24] := nat16To8(s6h >> 8);
+      digest[25] := nat16To8(s6h & 0xff);
+      digest[26] := nat16To8(s6l >> 8);
+      digest[27] := nat16To8(s6l & 0xff);
+
+      if (algo_ == #sha224) return Blob.fromArrayMut(digest);
+
+      digest[28] := nat16To8(s7h >> 8);
+      digest[29] := nat16To8(s7h & 0xff);
+      digest[30] := nat16To8(s7l >> 8);
+      digest[31] := nat16To8(s7l & 0xff);
+
+      return Blob.fromArrayMut(digest);
+    };
+  }; // class Digest
+
+  // Calculate SHA256 hash digest from [Nat8].
+  public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
+    let digest = Digest(algo);
+    digest.writeIter(arr.vals());
+    return digest.sum();
   };
 
+  // Calculate SHA2 hash digest from Iter.
+  public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
+    let digest = Digest(algo);
+    digest.writeIter(iter);
+    return digest.sum();
+  };
+
+  /// Calculate the SHA2 hash digest from `Blob`.
+  /// Allowed values for `algo` are: `#sha224`, `#256`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let digest = Digest(algo);
-    writeIter(digest, b.vals());
-    return sum(digest);
+    digest.writeIter(b.vals());
+    return digest.sum();
   };
-
 };
