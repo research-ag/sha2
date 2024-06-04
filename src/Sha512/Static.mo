@@ -9,7 +9,6 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
-import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 
@@ -182,7 +181,7 @@ module {
       var word = 0;
       
       var i_msg = 0;
-      var i_byte = 0;
+      var i_byte = 8;
       var i_block = 0;
 
       iv;
@@ -199,7 +198,7 @@ module {
 
   public func reset(state: StaticSha512) {
     state.i_msg := 0;
-    state.i_byte := 0;
+    state.i_byte := 8;
     state.i_block := 0;
 
     state.s[0] := ivs[state.iv][0];
@@ -441,14 +440,14 @@ module {
       t := h +% K79 +% w79 +% (e & f) ^ (^ e & g) +% rot(e, 14) ^ rot(e, 18) ^ rot(e, 41); h := g; g := f; f := e; e := d +% t; d := c; c := b; b := a; a := t +% (b & c) ^ (b & d) ^ (c & d) +% rot(a, 28) ^ rot(a, 34) ^ rot(a, 39);
 
       //final addition
-      state.s[0] += a;
-      state.s[1] += b;
-      state.s[2] += c;
-      state.s[3] += d;
-      state.s[4] += e;
-      state.s[5] += f;
-      state.s[6] += g;
-      state.s[7] += h;
+      state.s[0] +%= a;
+      state.s[1] +%= b;
+      state.s[2] +%= c;
+      state.s[3] +%= d;
+      state.s[4] +%= e;
+      state.s[5] +%= f;
+      state.s[6] +%= g;
+      state.s[7] +%= h;
 
   };
 
