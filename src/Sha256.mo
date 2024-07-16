@@ -253,22 +253,14 @@ module {
         digest[i] := state.digest[i];
       };
 
-      s0h := state.sh[0];
-      s0l := state.sl[0];
-      s1h := state.sh[1];
-      s1l := state.sl[1];
-      s2h := state.sh[2];
-      s2l := state.sl[2];
-      s3h := state.sh[3];
-      s3l := state.sl[3];
-      s4h := state.sh[4];
-      s4l := state.sl[4];
-      s5h := state.sh[5];
-      s5l := state.sl[5];
-      s6h := state.sh[6];
-      s6l := state.sl[6];
-      s7h := state.sh[7];
-      s7l := state.sl[7];
+      s0h := state.sh[0]; s0l := state.sl[0];
+      s1h := state.sh[1]; s1l := state.sl[1];
+      s2h := state.sh[2]; s2l := state.sl[2];
+      s3h := state.sh[3]; s3l := state.sl[3];
+      s4h := state.sh[4]; s4l := state.sl[4];
+      s5h := state.sh[5]; s5l := state.sl[5];
+      s6h := state.sh[6]; s6l := state.sl[6];
+      s7h := state.sh[7]; s7l := state.sl[7];
 
     };
 

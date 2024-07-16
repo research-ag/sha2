@@ -2,6 +2,7 @@
 
 import Blob "mo:base/Blob";
 import Array "mo:base/Array";
+import Nat8 "mo:base/Nat8";
 import { range } "mo:base/Iter";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
@@ -284,25 +285,30 @@ do {
 };
 
 // test share() and unshare()
-
 do {
-  let data = Blob.fromArrayMut(Array.init<Nat8>(64, 0));
-  var digest256 = Sha256.Digest(#sha256);
-  var digest512 = Sha512.Digest(#sha512);
-
-  for (i in range(1, 10000)) {
-    digest256.writeBlob(data);
-    digest512.writeBlob(data);
-  };
+  let data = Blob.fromArray(Array.tabulate<Nat8>(95, func n = Nat8.fromIntWrap(n)));
+  let digest256 = Sha256.Digest(#sha256);
+  digest256.writeBlob(data);
 
   let newDigest256 = Sha256.Digest(#sha256);
-  let h256 = Blob.fromArray([61, 0, 237, 134, 182, 99, 205, 27, 138, 200, 43, 16, 82, 87, 205, 16, 148, 18, 249, 45, 202, 68, 32, 72, 83, 36, 57, 249, 32, 167, 246, 69]);
   newDigest256.unshare(digest256.share());
-  assert (newDigest256.sum() == h256);
+
+  digest256.writeBlob(data);
+  newDigest256.writeBlob(data);
+
+  assert digest256.sum() == newDigest256.sum();
+};
+
+do {
+  let data = Blob.fromArray(Array.tabulate<Nat8>(95, func n = Nat8.fromIntWrap(n)));
+  let digest512 = Sha512.Digest(#sha512);
+  digest512.writeBlob(data);
 
   let newDigest512 = Sha512.Digest(#sha512);
-  let h512 = Blob.fromArray([185, 210, 89, 99, 251, 49, 143, 153, 12, 142, 84, 169, 249, 148, 175, 61, 145, 199, 69, 11, 148, 254, 140, 119, 61, 28, 58, 131, 83, 32, 14, 171, 33, 173, 242, 36, 122, 71, 210, 182, 28, 141, 145, 66, 148, 64, 86, 232, 73, 25, 31, 130, 115, 13, 234, 231, 152, 183, 217, 138, 153, 112, 120, 205]);
   newDigest512.unshare(digest512.share());
-  assert (newDigest512.sum() == h512);
 
+  digest512.writeBlob(data);
+  newDigest512.writeBlob(data);
+
+  assert digest512.sum() == newDigest512.sum();
 };
