@@ -2,8 +2,8 @@
 
 ## 0.1.0
 
-* Bump base dependency
 * Add share/unshare interface to Digest classes 
+* Bump base dependency
 
 ## 0.0.6
 
