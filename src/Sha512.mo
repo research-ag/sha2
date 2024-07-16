@@ -9,7 +9,6 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Nat8 "mo:base/Nat8";
-import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Prim "mo:prim";
 
@@ -19,6 +18,19 @@ module {
     #sha512;
     #sha512_224;
     #sha512_256;
+  };
+
+  public type StaticSha512 = {
+    msg : [Nat64];
+    digest : [Nat8];
+    word : Nat64;
+
+    i_msg : Nat8;
+    i_byte : Nat8;
+    i_block : Nat64;
+
+    // state variables
+    s : [Nat64];
   };
 
   let K00 : Nat64 = 0x428a2f98d728ae22;
@@ -220,6 +232,44 @@ module {
         i_msg := 0;
         i_block +%= 1;
       };
+    };
+
+    public func share() : StaticSha512 = {
+      msg = Array.freeze(msg);
+      digest = Array.freeze(digest);
+      word;
+      i_msg;
+      i_byte;
+      i_block;
+      iv;
+      s = [s0, s1, s2, s3, s4, s5, s6, s7];
+    };
+
+    public func unshare(state : StaticSha512) {
+      assert msg.size() == state.msg.size();
+      assert digest.size() == state.digest.size();
+
+      for (i in msg.keys()) {
+        msg[i] := state.msg[i];
+      };
+
+      for (i in digest.keys()) {
+        digest[i] := state.digest[i];
+      };
+
+      word := state.word;
+      i_msg := state.i_msg;
+      i_byte := state.i_byte;
+      i_block := state.i_block;
+
+      s0 := state.s[0];
+      s1 := state.s[1];
+      s2 := state.s[2];
+      s3 := state.s[3];
+      s4 := state.s[4];
+      s5 := state.s[5];
+      s6 := state.s[6];
+      s7 := state.s[7];
     };
 
     private func process_block() : () {
@@ -520,7 +570,6 @@ module {
       digest[31] := Nat8.fromIntWrap(Nat64.toNat(s3 & 0xff));
 
       if (algo_ == #sha512_256) return Blob.fromArrayMut(digest);
-
 
       digest[32] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 56) & 0xff));
       digest[33] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 48) & 0xff));

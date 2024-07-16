@@ -15,6 +15,18 @@ import Prim "mo:prim";
 
 module {
   public type Algorithm = { #sha224; #sha256 };
+  public type StaticSha256 = {
+    msg : [Nat16];
+    digest : [Nat8];
+    i_msg : Nat8;
+    i_block : Nat32;
+    high : Bool;
+    word : Nat16;
+
+    // state variables in Nat16 form
+    sh : [Nat16];
+    sl : [Nat16];
+  };
 
   let K00 : Nat32 = 0x428a2f98;
   let K01 : Nat32 = 0x71374491;
@@ -108,7 +120,7 @@ module {
       case (#sha224) Array.init<Nat8>(28, 0);
       case (#sha256) Array.init<Nat8>(32, 0);
     };
-    
+
     var i_msg : Nat8 = 0;
     var i_block : Nat32 = 0;
     var high : Bool = true;
@@ -209,6 +221,47 @@ module {
       msg[31] := nat32To16(ll & 0xffff);
       process_block();
       // skipping here: i_msg := 0;
+    };
+
+    public func share() : StaticSha256 = {
+      i_msg;
+      i_block;
+      high;
+      word;
+      msg = Array.freeze(msg);
+      digest = Array.freeze(digest);
+
+      // state variables in Nat16 form
+      sh = [s0h, s1h, s2h, s3h, s4h, s5h, s6h, s7h];
+      sl = [s0l, s1l, s2l, s3l, s4l, s5l, s6l, s7l];
+    };
+
+    public func unshare(state : StaticSha256) {
+      assert msg.size() == state.msg.size();
+      assert digest.size() == state.digest.size();
+
+      i_msg := state.i_msg;
+      i_block := state.i_block;
+      high := state.high;
+      word := state.word;
+
+      for (i in msg.keys()) {
+        msg[i] := state.msg[i];
+      };
+
+      for (i in digest.keys()) {
+        digest[i] := state.digest[i];
+      };
+
+      s0h := state.sh[0]; s0l := state.sl[0];
+      s1h := state.sh[1]; s1l := state.sl[1];
+      s2h := state.sh[2]; s2l := state.sl[2];
+      s3h := state.sh[3]; s3l := state.sl[3];
+      s4h := state.sh[4]; s4l := state.sl[4];
+      s5h := state.sh[5]; s5l := state.sl[5];
+      s6h := state.sh[6]; s6l := state.sl[6];
+      s7h := state.sh[7]; s7l := state.sl[7];
+
     };
 
     private func process_block() : () {
