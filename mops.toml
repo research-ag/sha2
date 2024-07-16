@@ -16,5 +16,5 @@ crypto = "https://github.com/skilesare/crypto.mo#master@33aef62a7d8bc7a6eaf56cec
 motoko-sha2 = "https://github.com/timohanke/motoko-sha2#master@837682e5a503f200f6829081e41dd6c98b8d6bf9"
 
 [toolchain]
-wasmtime = "19.0.2"
+wasmtime = "22.0.0"
 moc = "0.11.3"
