@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.0
+
+* Add share/unshare interface to Digest classes 
+
 ## 0.0.6
 
 * Bump base and test dependencies
