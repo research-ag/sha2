@@ -18,6 +18,9 @@ This package implements all SHA2 functions:
 
 The API allows to hash types `Blob`, `[Nat8]` and `Iter<Nat8>`.
 
+The API provides the usual Digest instance which accepts the message piecewise until finally computing the hash sum (digest).
+This allows hashing very large messages over multiple executions of the canister, even across canister upgrades.
+
 ### Links
 
 The package is published on [MOPS](https://mops.one/sha2) and [GitHub](https://github.com/research-ag/sha2).
@@ -83,14 +86,11 @@ Sha512.fromBlob(#sha512_256,"")
 
 ### Build & test
 
-We need up-to-date versions of `node`, `moc` and `mops` installed.
-Suppose `<path-to-moc>` is the path of the `moc` binary of the appropriate version.
-
-Then run:
+Run:
 ```
 git clone git@github.com:research-ag/sha2.git
 mops install
-DFX_MOC_PATH=<path-to-moc> mops test
+mops test
 ```
 
 ## Benchmarks
@@ -103,15 +103,14 @@ specifically these branches:
 * motoko-sha2 for sha256/512: https://github.com/timohanke/motoko-sha2#v2.0.0
 * crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
-The benchmark was run with dfx 0.18.0 with cycle optimisation enabled and moc 0.11.0.
+The benchmark was run with dfx 0.20.1 with cycle optimisation enabled and moc 0.11.3.
 ### Time
 
 We first measured the instructions for hashing the empty message:
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|empty message|12,185|17,307|246,834|722,402|83,782|
-|empty message|11,723|17,580|284,704|817,525|101,247|
+|empty message|11,723|17,580|285,526|818,633|101,275|
 |relative|1.0|1.5|24.3|69.7|8.6|
 
 We then measured a long message of 1,000 blocks and divided by the length.
@@ -119,7 +118,7 @@ We provide the value per block where a block is 64 bytes for Sha256 and 128 byte
 
 |method|Sha256|Sha512|mo-sha256|mo-sha512|crypto.mo|
 |---|---|---|---|---|---|
-|per block|16,821|31,248|48,298|78,676|48,863|
+|per block|16,821|31,248|48,299|78,677|48,863|
 |per byte|263|244|755|615|763|
 |relative|1.0|0.93|2.87|2.34|2.90|
 
