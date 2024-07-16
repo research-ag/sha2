@@ -7,7 +7,7 @@ keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-base = "0.11.1"
+base = "0.11.3"
 
 [dev-dependencies]
 test = "2.0.0"
@@ -17,4 +17,4 @@ motoko-sha2 = "https://github.com/timohanke/motoko-sha2#master@837682e5a503f200f
 
 [toolchain]
 wasmtime = "19.0.2"
-moc = "0.11.1"
+moc = "0.11.3"
