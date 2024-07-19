@@ -12,9 +12,8 @@ base = "0.11.3"
 [dev-dependencies]
 test = "2.0.0"
 bench = "1.0.0"
-crypto = "https://github.com/skilesare/crypto.mo#master@33aef62a7d8bc7a6eaf56cece71024a2c215fd51"
-motoko-sha2 = "https://github.com/timohanke/motoko-sha2#master@837682e5a503f200f6829081e41dd6c98b8d6bf9"
 
 [toolchain]
 wasmtime = "22.0.0"
 moc = "0.11.3"
+pocket-ic = "1.0.0"

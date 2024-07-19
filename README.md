@@ -95,6 +95,13 @@ mops test
 
 ## Benchmarks
 
+### Mops benchmark
+Run
+```
+mops bench --replica pocket-ic
+```
+
+### Performance
 The benchmarking code can be found here: [canister-profiling](https://github.com/research-ag/canister-profiling)
 
 We benchmarked this library's sha256 and sha512 against two other existing implementations,
@@ -104,6 +111,7 @@ specifically these branches:
 * crypto.mo from aviate labs for sha256 only: https://github.com/skilesare/crypto.mo#main
 
 The benchmark was run with dfx 0.20.1 with cycle optimisation enabled and moc 0.11.3.
+
 ### Time
 
 We first measured the instructions for hashing the empty message:
@@ -126,6 +134,7 @@ Notes:
 
 * All functions except crypto.mo have been measure with hashing type `Blob`. crypto.mo has been measured with hashing type `[Nat8]` because it does not offer type `Blob` directly.
 * We measured with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a constant message such that all 0x00 or all 0xff is not a reliable way to measure and produces significantly different results.
+
 ### Memory
 
 Hashing also creates garbage.
