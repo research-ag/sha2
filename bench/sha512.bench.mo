@@ -1,6 +1,5 @@
 import Array "mo:base/Array";
 import Blob "mo:base/Blob";
-import Iter "mo:base/Iter";
 import Text "mo:base/Text";
 
 import Prim "mo:prim";
@@ -53,7 +52,13 @@ module {
             func() = ignore Sha512.fromArray(#sha512, source);
           };
           case (2) {
-            let iter = Iter.fromArray(source);
+            var itemsLeft = source.size();
+            let iter = {
+              next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
+                itemsLeft -= 1;
+                ?0x5f;
+              };
+            };
             func() = ignore Sha512.fromIter(#sha512, iter);
           };
           case (_) Prim.trap("Row not implemented");
