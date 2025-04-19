@@ -1,5 +1,11 @@
 # Sha2 changelog
 
+## 0.1.1
+
+* Introduce mops benchmarks
+* Remove comparison to other packages from README
+* Bump dependencies
+
 ## 0.1.0
 
 * Add share/unshare interface to Digest classes 
