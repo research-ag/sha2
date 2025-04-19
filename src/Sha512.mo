@@ -532,7 +532,28 @@ module {
       };
     };
 
-    public func writeBlob(blob : Blob) : () = writeIter(blob.vals());
+    public func writeBlob(blob : Blob) : () {
+      var i = 0;
+      let s = blob.size();
+      while (i < s) {
+        let val = blob[i];
+        // The following is an inlined version of writeByte(val)
+        word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
+        i_byte -%= 1;
+        if (i_byte == 0) {
+          msg[Nat8.toNat(i_msg)] := word;
+          word := 0;
+          i_byte := 8;
+          i_msg +%= 1;
+          if (i_msg == 16) {
+            process_block();
+            i_msg := 0;
+            i_block +%= 1;
+          };
+        };
+        i += 1;
+      };
+    };
 
     public func sum() : Blob {
       // calculate padding

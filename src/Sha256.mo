@@ -463,6 +463,7 @@ module {
       label reading loop {
         switch (iter.next()) {
           case (?val) {
+            // The following is an inlined version of writeByte(val)
             if (high) {
               word := nat8To16(val) << 8;
               high := false;
@@ -490,6 +491,7 @@ module {
       let s = arr.size();
       while (i < s) {
         let val = arr[i];
+        // The following is an inlined version of writeByte(val)
         if (high) {
           word := nat8To16(val) << 8;
           high := false;
@@ -507,7 +509,28 @@ module {
       };
     };
 
-    public func writeBlob(blob : Blob) : () = writeIter(blob.vals());
+    public func writeBlob(blob : Blob) : () {
+      var i = 0;
+      let s = blob.size();
+      while (i < s) {
+        let val = blob[i];
+        // The following is an inlined version of writeByte(val)
+        if (high) {
+          word := nat8To16(val) << 8;
+          high := false;
+        } else {
+          msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
+          i_msg +%= 1;
+          high := true;
+        };
+        if (i_msg == 32) {
+          process_block();
+          i_msg := 0;
+          i_block +%= 1;
+        };
+        i += 1;
+      };
+    };
 
     public func sum() : Blob {
       writePadding();
