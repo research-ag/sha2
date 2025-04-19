@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.2
+
+* Improve performance by 10-12%
+
 ## 0.1.1
 
 * Introduce mops benchmarks

@@ -486,7 +486,20 @@ module {
       label reading loop {
         switch (iter.next()) {
           case (?val) {
-            writeByte(val);
+            // The following is an inlined version of writeByte(val)
+            word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
+            i_byte -%= 1;
+            if (i_byte == 0) {
+              msg[Nat8.toNat(i_msg)] := word;
+              word := 0;
+              i_byte := 8;
+              i_msg +%= 1;
+              if (i_msg == 16) {
+                process_block();
+                i_msg := 0;
+                i_block +%= 1;
+              };
+            };
             continue reading;
           };
           case (null) {
@@ -500,7 +513,21 @@ module {
       var i = 0;
       let s = arr.size();
       while (i < s) {
-        writeByte(arr[i]);
+        let val = arr[i];
+        // The following is an inlined version of writeByte(val)
+        word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
+        i_byte -%= 1;
+        if (i_byte == 0) {
+          msg[Nat8.toNat(i_msg)] := word;
+          word := 0;
+          i_byte := 8;
+          i_msg +%= 1;
+          if (i_msg == 16) {
+            process_block();
+            i_msg := 0;
+            i_block +%= 1;
+          };
+        };
         i += 1;
       };
     };
