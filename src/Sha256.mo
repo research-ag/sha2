@@ -473,7 +473,15 @@ module {
       };
     };
 
-    public func writeArray(arr : [Nat8]) : () = writeIter(arr.vals());
+    public func writeArray(arr : [Nat8]) : () {
+      var i = 0;
+      let s = arr.size();
+      while (i < s) {
+        writeByte(arr[i]);
+        i += 1;
+      };
+    };
+
     public func writeBlob(blob : Blob) : () = writeIter(blob.vals());
 
     public func sum() : Blob {
@@ -519,13 +527,6 @@ module {
     };
   }; // class Digest
 
-  // Calculate SHA256 hash digest from [Nat8].
-  public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
-    let digest = Digest(algo);
-    digest.writeIter(arr.vals());
-    return digest.sum();
-  };
-
   // Calculate SHA2 hash digest from Iter.
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let digest = Digest(algo);
@@ -533,11 +534,18 @@ module {
     return digest.sum();
   };
 
+  // Calculate SHA256 hash digest from [Nat8].
+  public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
+    let digest = Digest(algo);
+    digest.writeArray(arr);
+    return digest.sum();
+  };
+
   /// Calculate the SHA2 hash digest from `Blob`.
   /// Allowed values for `algo` are: `#sha224`, `#256`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let digest = Digest(algo);
-    digest.writeIter(b.vals());
+    digest.writeBlob(b);
     return digest.sum();
   };
 };
