@@ -463,7 +463,19 @@ module {
       label reading loop {
         switch (iter.next()) {
           case (?val) {
-            writeByte(val);
+            if (high) {
+              word := nat8To16(val) << 8;
+              high := false;
+            } else {
+              msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
+              i_msg +%= 1;
+              high := true;
+            };
+            if (i_msg == 32) {
+              process_block();
+              i_msg := 0;
+              i_block +%= 1;
+            };
             continue reading;
           };
           case (null) {
@@ -477,7 +489,20 @@ module {
       var i = 0;
       let s = arr.size();
       while (i < s) {
-        writeByte(arr[i]);
+        let val = arr[i];
+        if (high) {
+          word := nat8To16(val) << 8;
+          high := false;
+        } else {
+          msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
+          i_msg +%= 1;
+          high := true;
+        };
+        if (i_msg == 32) {
+          process_block();
+          i_msg := 0;
+          i_block +%= 1;
+        };
         i += 1;
       };
     };
