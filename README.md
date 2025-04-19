@@ -89,12 +89,6 @@ mops test
 
 Run
 ```
-mops bench --replica pocket-ic
-```
-### Performance
-
-For benchmarking run:
-```
 mops bench
 ```
 or
@@ -102,6 +96,7 @@ or
 mops bench --replica pocket-ic
 ```
 or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
+### Performance
 
 We measure performance with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a message of  all the same bytes is not a reliable way to measure. It produces significantly different results.
 ### Memory
