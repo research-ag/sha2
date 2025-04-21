@@ -489,47 +489,49 @@ module {
     public func writeArray(arr : [Nat8]) : () {
       var i = 0;
       let s = arr.size();
-      while (i < s) {
-        let val = arr[i];
-        // The following is an inlined version of writeByte(val)
-        if (high) {
-          word := nat8To16(val) << 8;
-          high := false;
-        } else {
-          msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
-          i_msg +%= 1;
-          high := true;
-        };
+      if (s == 0) return;
+      if (not high) {
+        writeByte(arr[0]);
+        i += 1;
+      };
+      // Round the remaining length of s - i down to a multiple of 2
+      let i_max : Nat = 2 * ((s - i) / 2) + i;
+      // Note: setting i_max always to s - 1 also works (only for multiples of 2).
+      while (i < i_max) {
+        msg[Nat8.toNat(i_msg)] := nat8To16(arr[i]) << 8 ^ nat8To16(arr[i+1]);
+        i_msg +%= 1;
         if (i_msg == 32) {
           process_block();
           i_msg := 0;
           i_block +%= 1;
         };
-        i += 1;
+        i += 2;
       };
+      if (i < s) writeByte(arr[i]);
     };
 
     public func writeBlob(blob : Blob) : () {
       var i = 0;
       let s = blob.size();
-      while (i < s) {
-        let val = blob[i];
-        // The following is an inlined version of writeByte(val)
-        if (high) {
-          word := nat8To16(val) << 8;
-          high := false;
-        } else {
-          msg[Nat8.toNat(i_msg)] := word ^ nat8To16(val);
-          i_msg +%= 1;
-          high := true;
-        };
+      if (s == 0) return;
+      if (not high) {
+        writeByte(blob[0]);
+        i += 1;
+      };
+      // Round the remaining length of s - i down to a multiple of 2
+      let i_max : Nat = 2 * ((s - i) / 2) + i;
+      // Note: setting i_max always to s - 1 also works (only for multiples of 2).
+      while (i < i_max) {
+        msg[Nat8.toNat(i_msg)] := nat8To16(blob[i]) << 8 ^ nat8To16(blob[i+1]);
+        i_msg +%= 1;
         if (i_msg == 32) {
           process_block();
           i_msg := 0;
           i_block +%= 1;
         };
-        i += 1;
+        i += 2;
       };
+      if (i < s) writeByte(blob[i]);
     };
 
     public func sum() : Blob {
