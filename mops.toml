@@ -16,4 +16,4 @@ new-base = "0.4.0"
 
 [toolchain]
 wasmtime = "32.0.0"
-moc = "0.14.8"
+moc = "0.14.9"
