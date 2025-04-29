@@ -870,11 +870,11 @@ module {
       ignore write_arr_to_buffer(arr, i);
     };
 
-    // write blob to buffer until either the block is full or the end of the blob is reached
-    // return the end position of the last byte written plus 1
-    func write_blob_to_buffer(blob : Blob, start : Nat) : Nat {
+    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // The return value refers to the interval that was written in the form [start,end)
+    func write_blob_to_buffer(blob : Blob, start : Nat) : (end : Nat) {
       let s = blob.size();
-      if (start >= s) return start; // TODO: write test to catch this (if 0 was returned)
+      if (start >= s) return start;
       var i = start;
       if (not high) {
         writeByte(blob[i]);
@@ -899,8 +899,8 @@ module {
       return i;
     };
 
-    // write arr to buffer until either the block is full or the end of the arr is reached
-    // return the number of bytes written
+    // Write array to buffer until either the block is full or the end of the array is reached
+    // The return value refers to the interval that was written in the form [start,end)
     func write_arr_to_buffer(arr : [Nat8], start : Nat) : Nat {
       let s = arr.size();
       if (start >= s) return start;
