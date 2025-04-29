@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.3
+
+* Improve performance by 35-40%
+
 ## 0.1.2
 
 * Improve performance by 10-12%
