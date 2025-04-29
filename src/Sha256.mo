@@ -892,7 +892,7 @@ module {
           return i;
         };
       };
-      if (i < s) {
+      while (i < s) {
         writeByte(blob[i]);
         i += 1;
       };
@@ -921,7 +921,7 @@ module {
           return i;
         };
       };
-      if (i < s) {
+      while (i < s) {
         writeByte(arr[i]);
         i += 1;
       };
