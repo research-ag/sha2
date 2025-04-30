@@ -1,12 +1,19 @@
 # Sha2 changelog
 
+## 0.1.4
+
+* Improve performance for short messages by 8%/12%
+* Utilise explodeNatX functions from moc 0.14.9
+
 ## 0.1.3
 
 * Improve performance by 35-40%
+* Utilise Blob random access from moc 0.14.8
 
 ## 0.1.2
 
 * Improve performance by 10-12%
+* Utilise Blob random access from moc 0.14.8
 
 ## 0.1.1
 

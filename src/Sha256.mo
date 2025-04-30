@@ -931,43 +931,38 @@ module {
     public func sum() : Blob {
       writePadding();
 
-      digest[0] := nat16To8(s0h >> 8);
-      digest[1] := nat16To8(s0h & 0xff);
-      digest[2] := nat16To8(s0l >> 8);
-      digest[3] := nat16To8(s0l & 0xff);
-      digest[4] := nat16To8(s1h >> 8);
-      digest[5] := nat16To8(s1h & 0xff);
-      digest[6] := nat16To8(s1l >> 8);
-      digest[7] := nat16To8(s1l & 0xff);
-      digest[8] := nat16To8(s2h >> 8);
-      digest[9] := nat16To8(s2h & 0xff);
-      digest[10] := nat16To8(s2l >> 8);
-      digest[11] := nat16To8(s2l & 0xff);
-      digest[12] := nat16To8(s3h >> 8);
-      digest[13] := nat16To8(s3h & 0xff);
-      digest[14] := nat16To8(s3l >> 8);
-      digest[15] := nat16To8(s3l & 0xff);
-      digest[16] := nat16To8(s4h >> 8);
-      digest[17] := nat16To8(s4h & 0xff);
-      digest[18] := nat16To8(s4l >> 8);
-      digest[19] := nat16To8(s4l & 0xff);
-      digest[20] := nat16To8(s5h >> 8);
-      digest[21] := nat16To8(s5h & 0xff);
-      digest[22] := nat16To8(s5l >> 8);
-      digest[23] := nat16To8(s5l & 0xff);
-      digest[24] := nat16To8(s6h >> 8);
-      digest[25] := nat16To8(s6h & 0xff);
-      digest[26] := nat16To8(s6l >> 8);
-      digest[27] := nat16To8(s6l & 0xff);
+      let (d0, d1) = Prim.explodeNat16(s0h);
+      let (d2, d3) = Prim.explodeNat16(s0l);
+      let (d4, d5) = Prim.explodeNat16(s1h);
+      let (d6, d7) = Prim.explodeNat16(s1l);
+      let (d8, d9) = Prim.explodeNat16(s2h);
+      let (d10, d11) = Prim.explodeNat16(s2l);
+      let (d12, d13) = Prim.explodeNat16(s3h);
+      let (d14, d15) = Prim.explodeNat16(s3l);
+      let (d16, d17) = Prim.explodeNat16(s4h);
+      let (d18, d19) = Prim.explodeNat16(s4l);
+      let (d20, d21) = Prim.explodeNat16(s5h);
+      let (d22, d23) = Prim.explodeNat16(s5l);
+      let (d24, d25) = Prim.explodeNat16(s6h);
+      let (d26, d27) = Prim.explodeNat16(s6l);
+      let (d28, d29) = Prim.explodeNat16(s7h);
+      let (d30, d31) = Prim.explodeNat16(s7l);
 
-      if (algo_ == #sha224) return Blob.fromArrayMut(digest);
-
-      digest[28] := nat16To8(s7h >> 8);
-      digest[29] := nat16To8(s7h & 0xff);
-      digest[30] := nat16To8(s7l >> 8);
-      digest[31] := nat16To8(s7l & 0xff);
-
-      return Blob.fromArrayMut(digest);
+      return Prim.arrayToBlob(
+        if (algo_ == #sha224)
+          [ d0, d1, d2, d3, d4, d5, d6, d7,
+            d8, d9, d10, d11, d12, d13, d14, d15,
+            d16, d17, d18, d19, d20, d21, d22, d23,
+            d24, d25, d26, d27
+          ]
+        else
+          [
+            d0, d1, d2, d3, d4, d5, d6, d7,
+            d8, d9, d10, d11, d12, d13, d14, d15,
+            d16, d17, d18, d19, d20, d21, d22, d23,
+            d24, d25, d26, d27, d28, d29, d30, d31
+          ]
+        );
     };
   }; // class Digest
 

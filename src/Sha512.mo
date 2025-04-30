@@ -1070,86 +1070,57 @@ module {
       writeWord(n_bits);
 
       // retrieve sum
-      digest[0] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 56) & 0xff));
-      digest[1] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 48) & 0xff));
-      digest[2] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 40) & 0xff));
-      digest[3] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 32) & 0xff));
-      digest[4] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 24) & 0xff));
-      digest[5] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 16) & 0xff));
-      digest[6] := Nat8.fromIntWrap(Nat64.toNat((s0 >> 8) & 0xff));
-      digest[7] := Nat8.fromIntWrap(Nat64.toNat(s0 & 0xff));
+      let (d0, d1, d2, d3, d4, d5, d6, d7) = Prim.explodeNat64(s0);
+      let (d8, d9, d10, d11, d12, d13, d14, d15) = Prim.explodeNat64(s1);
+      let (d16, d17, d18, d19, d20, d21, d22, d23) = Prim.explodeNat64(s2);
+      let (d24, d25, d26, d27, d28, d29, d30, d31) = Prim.explodeNat64(s3);
 
-      digest[8] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 56) & 0xff));
-      digest[9] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 48) & 0xff));
-      digest[10] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 40) & 0xff));
-      digest[11] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 32) & 0xff));
-      digest[12] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 24) & 0xff));
-      digest[13] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 16) & 0xff));
-      digest[14] := Nat8.fromIntWrap(Nat64.toNat((s1 >> 8) & 0xff));
-      digest[15] := Nat8.fromIntWrap(Nat64.toNat(s1 & 0xff));
+      if (algo_ == #sha512_224) {
+        return Prim.arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27
+        ]);
+      };
 
-      digest[16] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 56) & 0xff));
-      digest[17] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 48) & 0xff));
-      digest[18] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 40) & 0xff));
-      digest[19] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 32) & 0xff));
-      digest[20] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 24) & 0xff));
-      digest[21] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 16) & 0xff));
-      digest[22] := Nat8.fromIntWrap(Nat64.toNat((s2 >> 8) & 0xff));
-      digest[23] := Nat8.fromIntWrap(Nat64.toNat(s2 & 0xff));
+      if (algo_ == #sha512_256) {
+        return Prim.arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27,
+          d28, d29, d30, d31
+        ]);
+      };
 
-      digest[24] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 56) & 0xff));
-      digest[25] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 48) & 0xff));
-      digest[26] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 40) & 0xff));
-      digest[27] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 32) & 0xff));
+      let (d32, d33, d34, d35, d36, d37, d38, d39) = Prim.explodeNat64(s4);
+      let (d40, d41, d42, d43, d44, d45, d46, d47) = Prim.explodeNat64(s5);
 
-      if (algo_ == #sha512_224) return Blob.fromArrayMut(digest);
+      if (algo_ == #sha384) {
+        return Prim.arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27, d28, d29, d30, d31,
+          d32, d33, d34, d35, d36, d37, d38, d39,
+          d40, d41, d42, d43, d44, d45, d46, d47
+        ]);
+      };
 
-      digest[28] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 24) & 0xff));
-      digest[29] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 16) & 0xff));
-      digest[30] := Nat8.fromIntWrap(Nat64.toNat((s3 >> 8) & 0xff));
-      digest[31] := Nat8.fromIntWrap(Nat64.toNat(s3 & 0xff));
+      let (d48, d49, d50, d51, d52, d53, d54, d55) = Prim.explodeNat64(s6);
+      let (d56, d57, d58, d59, d60, d61, d62, d63) = Prim.explodeNat64(s7);
 
-      if (algo_ == #sha512_256) return Blob.fromArrayMut(digest);
-
-      digest[32] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 56) & 0xff));
-      digest[33] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 48) & 0xff));
-      digest[34] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 40) & 0xff));
-      digest[35] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 32) & 0xff));
-      digest[36] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 24) & 0xff));
-      digest[37] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 16) & 0xff));
-      digest[38] := Nat8.fromIntWrap(Nat64.toNat((s4 >> 8) & 0xff));
-      digest[39] := Nat8.fromIntWrap(Nat64.toNat(s4 & 0xff));
-
-      digest[40] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 56) & 0xff));
-      digest[41] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 48) & 0xff));
-      digest[42] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 40) & 0xff));
-      digest[43] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 32) & 0xff));
-      digest[44] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 24) & 0xff));
-      digest[45] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 16) & 0xff));
-      digest[46] := Nat8.fromIntWrap(Nat64.toNat((s5 >> 8) & 0xff));
-      digest[47] := Nat8.fromIntWrap(Nat64.toNat(s5 & 0xff));
-
-      if (algo_ == #sha384) return Blob.fromArrayMut(digest);
-
-      digest[48] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 56) & 0xff));
-      digest[49] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 48) & 0xff));
-      digest[50] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 40) & 0xff));
-      digest[51] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 32) & 0xff));
-      digest[52] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 24) & 0xff));
-      digest[53] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 16) & 0xff));
-      digest[54] := Nat8.fromIntWrap(Nat64.toNat((s6 >> 8) & 0xff));
-      digest[55] := Nat8.fromIntWrap(Nat64.toNat(s6 & 0xff));
-
-      digest[56] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 56) & 0xff));
-      digest[57] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 48) & 0xff));
-      digest[58] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 40) & 0xff));
-      digest[59] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 32) & 0xff));
-      digest[60] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 24) & 0xff));
-      digest[61] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 16) & 0xff));
-      digest[62] := Nat8.fromIntWrap(Nat64.toNat((s7 >> 8) & 0xff));
-      digest[63] := Nat8.fromIntWrap(Nat64.toNat(s7 & 0xff));
-
-      return Blob.fromArrayMut(digest);
+      return Prim.arrayToBlob([
+        d0, d1, d2, d3, d4, d5, d6, d7,
+        d8, d9, d10, d11, d12, d13, d14, d15,
+        d16, d17, d18, d19, d20, d21, d22, d23,
+        d24, d25, d26, d27, d28, d29, d30, d31,
+        d32, d33, d34, d35, d36, d37, d38, d39,
+        d40, d41, d42, d43, d44, d45, d46, d47,
+        d48, d49, d50, d51, d52, d53, d54, d55,
+        d56, d57, d58, d59, d60, d61, d62, d63
+      ]);
     };
   }; // class Digest
 
