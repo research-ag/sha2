@@ -1,9 +1,13 @@
 # Sha2 changelog
 
+## 0.1.6
+
+* Bump dependencies
+* Add [requirements] section
+
 ## 0.1.5
 
 * Bugfix in writeBlob/writeArray
-* Add [requirements] section
 
 Note: fromBlob/fromArray were correct, but calling the low-level writeBlob/writeArray multiple times could cause an error.
 
