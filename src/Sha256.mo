@@ -855,7 +855,7 @@ module {
       if (i_msg > 0 or not high) {
         i := write_blob_to_buffer(blob, 0);
       };
-      i += process_blocks_from_blob(blob, i);
+      i := process_blocks_from_blob(blob, i);
       ignore write_blob_to_buffer(blob, i);
     };
 
@@ -866,7 +866,7 @@ module {
       if (i_msg > 0 or not high) {
         i := write_arr_to_buffer(arr, 0);
       };
-      i += process_blocks_from_arr(arr, i);
+      i := process_blocks_from_arr(arr, i);
       ignore write_arr_to_buffer(arr, i);
     };
 
@@ -889,6 +889,7 @@ module {
           process_block_from_buffer();
           i_msg := 0;
           i_block +%= 1;
+          return i;
         };
       };
       while (i < s) {
@@ -917,6 +918,7 @@ module {
           process_block_from_buffer();
           i_msg := 0;
           i_block +%= 1;
+          return i;
         };
       };
       while (i < s) {
