@@ -946,7 +946,7 @@ module {
       if (i_msg > 0 or i_byte < 8) { 
         i := write_arr_to_buffer(arr,i);
       };
-      i += process_blocks_from_arr(arr, i);
+      i := process_blocks_from_arr(arr, i);
       ignore write_arr_to_buffer(arr, i);
     };
 
@@ -957,7 +957,7 @@ module {
       if (i_msg > 0 or i_byte < 8) { 
         i := write_blob_to_buffer(blob,i);
       };
-      i += process_blocks_from_blob(blob, i);
+      i := process_blocks_from_blob(blob, i);
       ignore write_blob_to_buffer(blob, i);
     };
 
