@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+##
+
+* Bugfix in writeBlob/writeArray. Note: fromBlob/fromArray were correct, but calling the low-level writeBlob/writeArray multiple times could cause an error.
+
 ## 0.1.4
 
 * Improve performance for short messages by 8%/12%
