@@ -889,7 +889,6 @@ module {
           process_block_from_buffer();
           i_msg := 0;
           i_block +%= 1;
-          return i;
         };
       };
       while (i < s) {
@@ -918,7 +917,6 @@ module {
           process_block_from_buffer();
           i_msg := 0;
           i_block +%= 1;
-          return i;
         };
       };
       while (i < s) {
