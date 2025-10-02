@@ -1,9 +1,10 @@
 // @testmode wasi
 
-import Blob "mo:base/Blob";
-import Array "mo:base/Array";
-import Nat8 "mo:base/Nat8";
-import { range } "mo:base/Iter";
+import Blob "mo:core/Blob";
+import Array "mo:core/Array";
+import Nat8 "mo:core/Nat8";
+import { range } "mo:core/Nat";
+import VarArray "mo:core/VarArray";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
@@ -118,7 +119,7 @@ let digests : [[Nat8]] = [
   [187, 98, 110, 85, 119, 2, 29, 249, 94, 161, 126, 182, 51, 158, 117, 144, 72, 85, 184, 0, 135, 228, 6, 96, 147, 28, 74, 137, 179, 2, 247, 74],
 ];
 
-for (l in range(0, 64)) {
+for (l in range(0, 65)) {
   let b = Blob.fromArray(Array.tabulate<Nat8>(l, func(i) { 0xa5 }));
   let h = Blob.fromArray(digests[l]);
   assert (Sha256.fromBlob(#sha256, b) == h);
@@ -260,7 +261,7 @@ let digests512 : [[Nat8]] = [
   [28, 210, 101, 155, 3, 30, 138, 39, 159, 136, 136, 236, 150, 167, 157, 91, 245, 112, 24, 156, 48, 27, 239, 146, 112, 53, 136, 21, 88, 125, 128, 173, 149, 181, 155, 46, 112, 127, 91, 247, 97, 155, 46, 183, 249, 159, 170, 175, 58, 24, 205, 169, 214, 42, 56, 70, 60, 126, 138, 47, 218, 218, 138, 88],
 ];
 
-for (l in range(0, 80)) {
+for (l in range(0, 81)) {
   let b = Blob.fromArray(Array.tabulate<Nat8>(l, func(i) { 0xa5 }));
   let h = Blob.fromArray(digests512[l]);
   assert (Sha512.fromBlob(#sha512, b) == h);
@@ -268,12 +269,12 @@ for (l in range(0, 80)) {
 
 // string of 640,000 zero bytes
 do {
-  let data = Blob.fromArrayMut(Array.init<Nat8>(64, 0));
+  let data = Blob.fromVarArray(VarArray.repeat<Nat8>(0, 64));
   let (digest256, digest512) = (
     Sha256.Digest(#sha256),
     Sha512.Digest(#sha512),
   );
-  for (i in range(1, 10000)) {
+  for (i in range(0, 10000)) {
     digest256.writeBlob(data);
     digest512.writeBlob(data);
   };
@@ -289,7 +290,7 @@ do {
   let hash512_b = Sha512.Digest(#sha512);
   let hash256_arr = Sha256.Digest(#sha256);
   let hash512_arr = Sha512.Digest(#sha512);
-  for (l in range(0, 10)) {
+  for (l in range(0, 11)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
     hash256_b.writeBlob(b);
@@ -310,7 +311,7 @@ do {
   let hash512_b = Sha512.Digest(#sha512);
   let hash256_arr = Sha256.Digest(#sha256);
   let hash512_arr = Sha512.Digest(#sha512);
-  for (l in range(0, 5)) {
+  for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
     hash256_b.writeBlob(b);
@@ -318,7 +319,7 @@ do {
     hash256_arr.writeArray(arr);
     hash512_arr.writeArray(arr);
   };
-  for (l in range(0, 5)) {
+  for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
     hash256_b.writeBlob(b);
@@ -339,7 +340,7 @@ do {
   let hash256_arr = Sha256.Digest(#sha256);
   let hash512_b = Sha512.Digest(#sha512);
   let hash512_arr = Sha512.Digest(#sha512);
-  for (l in range(0, 5)) {
+  for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
     hash256_b.writeBlob(b);
