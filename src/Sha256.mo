@@ -9,6 +9,7 @@
 import Array "mo:core/Array";
 import Nat8 "mo:core/Nat8";
 import { bitrotRight = rot } "mo:core/Nat32";
+import Nat32 "mo:core/Nat32";
 import Nat64 "mo:core/Nat64";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
@@ -107,37 +108,31 @@ module {
     var i_block : Nat32;
     var high : Bool;
     var word : Nat16;
-    var s0h : Nat16; var s0l : Nat16;
-    var s1h : Nat16; var s1l : Nat16;
-    var s2h : Nat16; var s2l : Nat16;
-    var s3h : Nat16; var s3l : Nat16;
-    var s4h : Nat16; var s4l : Nat16;
-    var s5h : Nat16; var s5l : Nat16;
-    var s6h : Nat16; var s6l : Nat16;
-    var s7h : Nat16; var s7l : Nat16;
+    // state variables in Nat16 form
+    sh : [var Nat16];
+    sl : [var Nat16];
   };
 
   public func new(algo_ : Algorithm) : StaticDigest {
-    let x : StaticDigest = {
-      algo =  algo_;
-      // state variables in Nat16 form
-      var s0h : Nat16 = 0; var s0l : Nat16 = 0;
-      var s1h : Nat16 = 0; var s1l : Nat16 = 0;
-      var s2h : Nat16 = 0; var s2l : Nat16 = 0;
-      var s3h : Nat16 = 0; var s3l : Nat16 = 0;
-      var s4h : Nat16 = 0; var s4l : Nat16 = 0;
-      var s5h : Nat16 = 0; var s5l : Nat16 = 0;
-      var s6h : Nat16 = 0; var s6l : Nat16 = 0;
-      var s7h : Nat16 = 0; var s7l : Nat16 = 0;
-
-      msg : [var Nat16] = VarArray.repeat<Nat16>(0, 32);
+    if (algo_ == #sha224) {{
+      algo = #sha224;
+      sh : [var Nat16] = [var 0xc105, 0x367c, 0x3070, 0xf70e, 0xffc0, 0x6858, 0x64f9, 0xbefa];
+      sl : [var Nat16] = [var 0x9ed8, 0xd507, 0xdd17, 0x5939, 0x0b31, 0x1511, 0x8fa7, 0x4fa4];
+      msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       var i_msg : Nat8 = 0;
       var i_block : Nat32 = 0;
       var high : Bool = true;
       var word : Nat16 = 0;
-    };
-    reset(x);
-    x
+    }} else {{
+      algo = #sha256;
+      sh : [var Nat16] = [var 0x6a09, 0xbb67, 0x3c6e, 0xa54f, 0x510e, 0x9b05, 0x1f83, 0x5be0];
+      sl : [var Nat16] = [var 0xe667, 0xae85, 0xf372, 0xf53a, 0x527f, 0x688c, 0xd9ab, 0xcd19];
+      msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      var i_msg : Nat8 = 0;
+      var i_block : Nat32 = 0;
+      var high : Bool = true;
+      var word : Nat16 = 0;
+    }};
   };
 
   public func reset(x : StaticDigest) {
@@ -145,23 +140,23 @@ module {
     x.i_block := 0;
     x.high := true;
     if (x.algo == #sha224) {
-      x.s0h := 0xc105; x.s0l := 0x9ed8;
-      x.s1h := 0x367c; x.s1l := 0xd507;
-      x.s2h := 0x3070; x.s2l := 0xdd17;
-      x.s3h := 0xf70e; x.s3l := 0x5939;
-      x.s4h := 0xffc0; x.s4l := 0x0b31;
-      x.s5h := 0x6858; x.s5l := 0x1511;
-      x.s6h := 0x64f9; x.s6l := 0x8fa7;
-      x.s7h := 0xbefa; x.s7l := 0x4fa4;
+      x.sh[0] := 0xc105; x.sl[0] := 0x9ed8;
+      x.sh[1] := 0x367c; x.sl[1] := 0xd507;
+      x.sh[2] := 0x3070; x.sl[2] := 0xdd17;
+      x.sh[3] := 0xf70e; x.sl[3] := 0x5939;
+      x.sh[4] := 0xffc0; x.sl[4] := 0x0b31;
+      x.sh[5] := 0x6858; x.sl[5] := 0x1511;
+      x.sh[6] := 0x64f9; x.sl[6] := 0x8fa7;
+      x.sh[7] := 0xbefa; x.sl[7] := 0x4fa4;
     } else {
-      x.s0h := 0x6a09; x.s0l := 0xe667;
-      x.s1h := 0xbb67; x.s1l := 0xae85;
-      x.s2h := 0x3c6e; x.s2l := 0xf372;
-      x.s3h := 0xa54f; x.s3l := 0xf53a;
-      x.s4h := 0x510e; x.s4l := 0x527f;
-      x.s5h := 0x9b05; x.s5l := 0x688c;
-      x.s6h := 0x1f83; x.s6l := 0xd9ab;
-      x.s7h := 0x5be0; x.s7l := 0xcd19;
+      x.sh[0] := 0x6a09; x.sl[0] := 0xe667;
+      x.sh[1] := 0xbb67; x.sl[1] := 0xae85;
+      x.sh[2] := 0x3c6e; x.sl[2] := 0xf372;
+      x.sh[3] := 0xa54f; x.sl[3] := 0xf53a;
+      x.sh[4] := 0x510e; x.sl[4] := 0x527f;
+      x.sh[5] := 0x9b05; x.sl[5] := 0x688c;
+      x.sh[6] := 0x1f83; x.sl[6] := 0xd9ab;
+      x.sh[7] := 0x5be0; x.sl[7] := 0xcd19;
     };
   };
 
@@ -175,7 +170,7 @@ module {
       x.high := true;
     };
     if (x.i_msg == 32) {
-      process_block_from_buffer(x);
+      process_block_from_buffer(x.sh, x.sl, x.msg);
       x.i_msg := 0;
       x.i_block +%= 1;
     };
@@ -200,7 +195,7 @@ module {
         msg[Nat8.toNat(i_msg)] := 0;
         i_msg +%= 1;
       };
-      process_block_from_buffer(x); // Note: function does not rely on x.i_msg
+      process_block_from_buffer(x.sh, x.sl, x.msg); // Note: function does not rely on x.i_msg
       i_msg := 0;
       // skipping here because we won't use x.i_block anymore: x.i_block +%= 1;
     };
@@ -212,18 +207,16 @@ module {
     // 8 length bytes
     // Note: this exactly fills the block buffer, hence process_block will get
     // triggered by the last writeByte
-    let lh = nat64To32(n_bits >> 32);
-    let ll = nat64To32(n_bits & 0xffffffff);
-    msg[28] := nat32To16(lh >> 16);
-    msg[29] := nat32To16(lh & 0xffff);
-    msg[30] := nat32To16(ll >> 16);
-    msg[31] := nat32To16(ll & 0xffff);
-    process_block_from_buffer(x); // Note: function does not rely on x.i_msg
+    let (l0, l1, l2, l3, l4, l5, l6, l7) = Prim.explodeNat64(n_bits);
+    msg[28] := nat8To16(l0) << 8 | nat8To16(l1);
+    msg[29] := nat8To16(l2) << 8 | nat8To16(l3);
+    msg[30] := nat8To16(l4) << 8 | nat8To16(l5);
+    msg[31] := nat8To16(l6) << 8 | nat8To16(l7);
+    process_block_from_buffer(x.sh, x.sl, x.msg); // Note: function does not rely on x.i_msg
     // skipping here because we won't use x anymore: x.i_msg := 0;
   };
 
-  private func process_block_from_buffer(x : StaticDigest) : () {
-    let msg = x.msg;
+  private func process_block_from_buffer(sh : [var Nat16], sl : [var Nat16], msg : [var Nat16]) : () {
     let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
     let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);
     let w02 = nat16To32(msg[4]) << 16 | nat16To32(msg[5]);
@@ -299,14 +292,14 @@ module {
     };
 */
     // compress
-    let a_0 = nat16To32(x.s0h) << 16 | nat16To32(x.s0l);
-    let b_0 = nat16To32(x.s1h) << 16 | nat16To32(x.s1l);
-    let c_0 = nat16To32(x.s2h) << 16 | nat16To32(x.s2l);
-    let d_0 = nat16To32(x.s3h) << 16 | nat16To32(x.s3l);
-    let e_0 = nat16To32(x.s4h) << 16 | nat16To32(x.s4l);
-    let f_0 = nat16To32(x.s5h) << 16 | nat16To32(x.s5l);
-    let g_0 = nat16To32(x.s6h) << 16 | nat16To32(x.s6l);
-    let h_0 = nat16To32(x.s7h) << 16 | nat16To32(x.s7l);
+    let a_0 = nat16To32(sh[0]) << 16 | nat16To32(sl[0]);
+    let b_0 = nat16To32(sh[1]) << 16 | nat16To32(sl[1]);
+    let c_0 = nat16To32(sh[2]) << 16 | nat16To32(sl[2]);
+    let d_0 = nat16To32(sh[3]) << 16 | nat16To32(sl[3]);
+    let e_0 = nat16To32(sh[4]) << 16 | nat16To32(sl[4]);
+    let f_0 = nat16To32(sh[5]) << 16 | nat16To32(sl[5]);
+    let g_0 = nat16To32(sh[6]) << 16 | nat16To32(sl[6]);
+    let h_0 = nat16To32(sh[7]) << 16 | nat16To32(sl[7]);
     var a = a_0;
     var b = b_0;
     var c = c_0;
@@ -408,28 +401,28 @@ module {
     f +%= f_0;
     g +%= g_0;
     h +%= h_0;
-    x.s0h := nat32To16(a >> 16); x.s0l := nat32To16(a & 0xffff);
-    x.s1h := nat32To16(b >> 16); x.s1l := nat32To16(b & 0xffff);
-    x.s2h := nat32To16(c >> 16); x.s2l := nat32To16(c & 0xffff);
-    x.s3h := nat32To16(d >> 16); x.s3l := nat32To16(d & 0xffff);
-    x.s4h := nat32To16(e >> 16); x.s4l := nat32To16(e & 0xffff);
-    x.s5h := nat32To16(f >> 16); x.s5l := nat32To16(f & 0xffff);
-    x.s6h := nat32To16(g >> 16); x.s6l := nat32To16(g & 0xffff);
-    x.s7h := nat32To16(h >> 16); x.s7l := nat32To16(h & 0xffff);
+    sh[0] := nat32To16(a >> 16); sl[0] := nat32To16(a & 0xffff);
+    sh[1] := nat32To16(b >> 16); sl[1] := nat32To16(b & 0xffff);
+    sh[2] := nat32To16(c >> 16); sl[2] := nat32To16(c & 0xffff);
+    sh[3] := nat32To16(d >> 16); sl[3] := nat32To16(d & 0xffff);
+    sh[4] := nat32To16(e >> 16); sl[4] := nat32To16(e & 0xffff);
+    sh[5] := nat32To16(f >> 16); sl[5] := nat32To16(f & 0xffff);
+    sh[6] := nat32To16(g >> 16); sl[6] := nat32To16(g & 0xffff);
+    sh[7] := nat32To16(h >> 16); sl[7] := nat32To16(h & 0xffff);
   };
 
-  private func process_blocks_from_blob(x : StaticDigest, blob : Blob, start : Nat) : Nat {
+  private func process_blocks_from_blob(sh : [var Nat16], sl : [var Nat16], msg : [var Nat16], blob : Blob, start : Nat) : Nat {
     let s = blob.size();
     var i = start;
     // load state registers
-    var a = nat16To32(x.s0h) << 16 | nat16To32(x.s0l);
-    var b = nat16To32(x.s1h) << 16 | nat16To32(x.s1l);
-    var c = nat16To32(x.s2h) << 16 | nat16To32(x.s2l);
-    var d = nat16To32(x.s3h) << 16 | nat16To32(x.s3l);
-    var e = nat16To32(x.s4h) << 16 | nat16To32(x.s4l);
-    var f = nat16To32(x.s5h) << 16 | nat16To32(x.s5l);
-    var g = nat16To32(x.s6h) << 16 | nat16To32(x.s6l);
-    var h = nat16To32(x.s7h) << 16 | nat16To32(x.s7l);
+    var a = nat16To32(sh[0]) << 16 | nat16To32(sl[0]);
+    var b = nat16To32(sh[1]) << 16 | nat16To32(sl[1]);
+    var c = nat16To32(sh[2]) << 16 | nat16To32(sl[2]);
+    var d = nat16To32(sh[3]) << 16 | nat16To32(sl[3]);
+    var e = nat16To32(sh[4]) << 16 | nat16To32(sl[4]);
+    var f = nat16To32(sh[5]) << 16 | nat16To32(sl[5]);
+    var g = nat16To32(sh[6]) << 16 | nat16To32(sl[6]);
+    var h = nat16To32(sh[7]) << 16 | nat16To32(sl[7]);
     var t = 0 : Nat32;
     var i_max : Nat = i + ((s - i) / 64) * 64;
     while (i < i_max) {
@@ -581,19 +574,17 @@ module {
       g +%= g_0;
       h +%= h_0;
 
-      // counters
       i += 64;
-      x.i_block +%= 1;
     };
     // write state back to registers
-    x.s0h := nat32To16(a >> 16); x.s0l := nat32To16(a & 0xffff);
-    x.s1h := nat32To16(b >> 16); x.s1l := nat32To16(b & 0xffff);
-    x.s2h := nat32To16(c >> 16); x.s2l := nat32To16(c & 0xffff);
-    x.s3h := nat32To16(d >> 16); x.s3l := nat32To16(d & 0xffff);
-    x.s4h := nat32To16(e >> 16); x.s4l := nat32To16(e & 0xffff);
-    x.s5h := nat32To16(f >> 16); x.s5l := nat32To16(f & 0xffff);
-    x.s6h := nat32To16(g >> 16); x.s6l := nat32To16(g & 0xffff);
-    x.s7h := nat32To16(h >> 16); x.s7l := nat32To16(h & 0xffff);
+    sh[0] := nat32To16(a >> 16); sl[0] := nat32To16(a & 0xffff);
+    sh[1] := nat32To16(b >> 16); sl[1] := nat32To16(b & 0xffff);
+    sh[2] := nat32To16(c >> 16); sl[2] := nat32To16(c & 0xffff);
+    sh[3] := nat32To16(d >> 16); sl[3] := nat32To16(d & 0xffff);
+    sh[4] := nat32To16(e >> 16); sl[4] := nat32To16(e & 0xffff);
+    sh[5] := nat32To16(f >> 16); sl[5] := nat32To16(f & 0xffff);
+    sh[6] := nat32To16(g >> 16); sl[6] := nat32To16(g & 0xffff);
+    sh[7] := nat32To16(h >> 16); sl[7] := nat32To16(h & 0xffff);
 
     return i
   };
@@ -605,7 +596,9 @@ module {
     if (x.i_msg > 0 or not x.high) {
       i := write_blob_to_buffer(x, blob, 0);
     };
-    i := process_blocks_from_blob(x, blob, i);
+    let end = process_blocks_from_blob(x.sh, x.sl, x.msg, blob, i);
+    x.i_block +%= Nat32.fromNat(end - i) / 64;
+    i := end;
     ignore write_blob_to_buffer(x, blob, i);
   };
 
@@ -638,7 +631,7 @@ module {
       x.i_msg +%= 1;
       i += 2;
       if (x.i_msg == 32) {
-        process_block_from_buffer(x);
+        process_block_from_buffer(x.sh, x.sl, x.msg);
         x.i_msg := 0;
         x.i_block +%= 1;
         return i;
@@ -667,7 +660,7 @@ module {
       x.i_msg +%= 1;
       i += 2;
       if (x.i_msg == 32) {
-        process_block_from_buffer(x);
+        process_block_from_buffer(x.sh, x.sl, x.msg);
         x.i_msg := 0;
         x.i_block +%= 1;
         return i;
@@ -683,22 +676,22 @@ module {
   public func sum(x : StaticDigest) : Blob {
     writePadding(x);
 
-    let (d0, d1) = Prim.explodeNat16(x.s0h);
-    let (d2, d3) = Prim.explodeNat16(x.s0l);
-    let (d4, d5) = Prim.explodeNat16(x.s1h);
-    let (d6, d7) = Prim.explodeNat16(x.s1l);
-    let (d8, d9) = Prim.explodeNat16(x.s2h);
-    let (d10, d11) = Prim.explodeNat16(x.s2l);
-    let (d12, d13) = Prim.explodeNat16(x.s3h);
-    let (d14, d15) = Prim.explodeNat16(x.s3l);
-    let (d16, d17) = Prim.explodeNat16(x.s4h);
-    let (d18, d19) = Prim.explodeNat16(x.s4l);
-    let (d20, d21) = Prim.explodeNat16(x.s5h);
-    let (d22, d23) = Prim.explodeNat16(x.s5l);
-    let (d24, d25) = Prim.explodeNat16(x.s6h);
-    let (d26, d27) = Prim.explodeNat16(x.s6l);
-    let (d28, d29) = Prim.explodeNat16(x.s7h);
-    let (d30, d31) = Prim.explodeNat16(x.s7l);
+    let (d0, d1) = Prim.explodeNat16(x.sh[0]);
+    let (d2, d3) = Prim.explodeNat16(x.sl[0]);
+    let (d4, d5) = Prim.explodeNat16(x.sh[1]);
+    let (d6, d7) = Prim.explodeNat16(x.sl[1]);
+    let (d8, d9) = Prim.explodeNat16(x.sh[2]);
+    let (d10, d11) = Prim.explodeNat16(x.sl[2]);
+    let (d12, d13) = Prim.explodeNat16(x.sh[3]);
+    let (d14, d15) = Prim.explodeNat16(x.sl[3]);
+    let (d16, d17) = Prim.explodeNat16(x.sh[4]);
+    let (d18, d19) = Prim.explodeNat16(x.sl[4]);
+    let (d20, d21) = Prim.explodeNat16(x.sh[5]);
+    let (d22, d23) = Prim.explodeNat16(x.sl[5]);
+    let (d24, d25) = Prim.explodeNat16(x.sh[6]);
+    let (d26, d27) = Prim.explodeNat16(x.sl[6]);
+    let (d28, d29) = Prim.explodeNat16(x.sh[7]);
+    let (d30, d31) = Prim.explodeNat16(x.sl[7]);
 
     return Prim.arrayToBlob(
       if (x.algo == #sha224)
