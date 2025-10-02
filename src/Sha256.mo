@@ -6,12 +6,11 @@
 /// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
 /// * Output types: `Blob`
 
-import Array "mo:base/Array";
-import Blob "mo:base/Blob";
-import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
-import Nat32 "mo:base/Nat32";
-import Nat64 "mo:base/Nat64";
+import Array "mo:core/Array";
+import Nat8 "mo:core/Nat8";
+import { bitrotRight = rot } "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
@@ -94,13 +93,11 @@ module {
   let K62 : Nat32 = 0xbef9a3f7;
   let K63 : Nat32 = 0xc67178f2;
 
-  let rot = Nat32.bitrotRight;
-
   let nat64To32 = Prim.nat64ToNat32;
   let nat32To16 = Prim.nat32ToNat16;
   let nat32To64 = Prim.nat32ToNat64;
   let nat16To32 = Prim.nat16ToNat32;
-  let nat16To8 = Prim.nat16ToNat8;
+//  let nat16To8 = Prim.nat16ToNat8;
   let nat8To16 = Prim.nat8ToNat16;
 
   public class Digest(algo_ : Algorithm) {
@@ -116,10 +113,10 @@ module {
     var s6h : Nat16 = 0; var s6l : Nat16 = 0;
     var s7h : Nat16 = 0; var s7l : Nat16 = 0;
 
-    let msg : [var Nat16] = Array.init<Nat16>(32, 0);
+    let msg : [var Nat16] = VarArray.repeat<Nat16>(0, 32);
     let digest = switch (algo_) {
-      case (#sha224) Array.init<Nat8>(28, 0);
-      case (#sha256) Array.init<Nat8>(32, 0);
+      case (#sha224) VarArray.repeat<Nat8>(0, 28);
+      case (#sha256) VarArray.repeat<Nat8>(0, 32);
     };
 
     var i_msg : Nat8 = 0;
@@ -229,8 +226,8 @@ module {
       i_block;
       high;
       word;
-      msg = Array.freeze(msg);
-      digest = Array.freeze(digest);
+      msg = Array.fromVarArray(msg);
+      digest = Array.fromVarArray(digest);
 
       // state variables in Nat16 form
       sh = [s0h, s1h, s2h, s3h, s4h, s5h, s6h, s7h];

@@ -7,16 +7,15 @@ keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-base = "0.14.14"
+core = "1.0.0"
 
 [dev-dependencies]
 test = "2.1.1"
 bench = "1.0.0"
-new-base = "0.4.0"
 
 [requirements]
 moc = "0.14.13"
 
 [toolchain]
-wasmtime = "34.0.1"
-moc = "0.14.14"
+wasmtime = "37.0.1"
+moc = "0.16.3"

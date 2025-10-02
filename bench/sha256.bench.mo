@@ -1,7 +1,7 @@
-import Array "mo:base/Array";
-import Blob "mo:base/Blob";
-import Text "mo:base/Text";
-import Random "mo:new-base/Random";
+import Array "mo:core/Array";
+import Blob "mo:core/Blob";
+import Text "mo:core/Text";
+import Random "mo:core/Random";
 import Prim "mo:prim";
 import Bench "mo:bench";
 import Sha256 "../src/Sha256";
@@ -27,7 +27,7 @@ module {
     bench.rows(rows);
     bench.cols(cols);
 
-    let rng : Random.Random = Random.fast(0x5f5f5f5f5f5f5f5f);
+    let rng : Random.Random = Random.seed(0x5f5f5f5f5f5f5f5f);
 
     let rowSourceArrays : [[Nat8]] = [
       [],
@@ -68,8 +68,8 @@ module {
 
     bench.runner(
       func(row, col) {
-        let ?ri = Array.indexOf<Text>(row, rows, Text.equal) else Prim.trap("Unknown row");
-        let ?ci = Array.indexOf<Text>(col, cols, Text.equal) else Prim.trap("Unknown column");
+        let ?ri = Array.indexOf<Text>(rows, Text.equal, row) else Prim.trap("Unknown row");
+        let ?ci = Array.indexOf<Text>(cols, Text.equal, col) else Prim.trap("Unknown column");
         routines[ci * rows.size() + ri]();
       }
     );

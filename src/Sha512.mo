@@ -6,10 +6,10 @@
 /// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
 /// * Output types: `Blob`
 
-import Array "mo:base/Array";
-import Blob "mo:base/Blob";
-import Nat8 "mo:base/Nat8";
-import Nat64 "mo:base/Nat64";
+import Array "mo:core/Array";
+import Nat8 "mo:core/Nat8";
+import Nat64 "mo:core/Nat64";
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
@@ -186,8 +186,8 @@ module {
     var s6 : Nat64 = 0;
     var s7 : Nat64 = 0;
 
-    let msg : [var Nat64] = Array.init<Nat64>(80, 0);
-    let digest = Array.init<Nat8>(sum_bytes, 0);
+    let msg : [var Nat64] = VarArray.repeat<Nat64>(0, 80);
+    let digest = VarArray.repeat<Nat8>(0, sum_bytes);
     var word : Nat64 = 0;
 
     var i_msg : Nat8 = 0;
@@ -239,8 +239,8 @@ module {
     };
 
     public func share() : StaticSha512 = {
-      msg = Array.freeze(msg);
-      digest = Array.freeze(digest);
+      msg = Array.fromVarArray(msg);
+      digest = Array.fromVarArray(digest);
       word;
       i_msg;
       i_byte;
