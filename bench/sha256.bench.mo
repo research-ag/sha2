@@ -15,6 +15,7 @@ module {
 
     let rows = [
       "fromBlob",
+      "fromBlob2",
       "fromArray",
       "fromIter",
     ];
@@ -42,16 +43,19 @@ module {
         let col : Nat = i / rows.size();
 
         let source = rowSourceArrays[col];
+        let blob = Blob.fromArray(source);
 
         switch (row) {
           case (0) {
-            let blob = Blob.fromArray(source);
             func() = ignore Sha256.fromBlob(#sha256, blob);
           };
           case (1) {
-            func() = ignore Sha256.fromArray(#sha256, source);
+            func() = ignore Sha256.fromBlob2(#sha256, blob);
           };
           case (2) {
+            func() = ignore Sha256.fromArray(#sha256, source);
+          };
+          case (3) {
             var itemsLeft = source.size();
             let iter = {
               next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {

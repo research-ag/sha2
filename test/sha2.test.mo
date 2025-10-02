@@ -15,12 +15,14 @@ let b = Blob.fromArray([] : [Nat8]);
 do {
   let h = Blob.fromArray([227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85]);
   assert (Sha256.fromBlob(#sha256, b) == h);
+  assert (Sha256.fromBlob2(#sha256, b) == h);
 };
 
 // sha224
 do {
   let h = Blob.fromArray([209, 74, 2, 140, 42, 58, 43, 201, 71, 97, 2, 187, 40, 130, 52, 196, 21, 162, 176, 31, 130, 142, 166, 42, 197, 179, 228, 47]);
   assert (Sha256.fromBlob(#sha224, b) == h);
+  assert (Sha256.fromBlob2(#sha224, b) == h);
 };
 
 // sha512
@@ -123,6 +125,7 @@ for (l in range(0, 65)) {
   let b = Blob.fromArray(Array.tabulate<Nat8>(l, func(i) { 0xa5 }));
   let h = Blob.fromArray(digests[l]);
   assert (Sha256.fromBlob(#sha256, b) == h);
+  assert (Sha256.fromBlob2(#sha256, b) == h);
 };
 
 // padding test for sha512
