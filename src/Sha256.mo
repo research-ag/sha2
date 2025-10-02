@@ -1794,11 +1794,6 @@ module {
 
   // Calculate SHA2 hash digest from Iter.
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
-    let digest = Digest(algo);
-    digest.writeIter(iter);
-    return digest.sum();
-  };
-  public func fromIter2(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let digest = new(algo);
     writeIter(digest, iter);
     return sum(digest);
@@ -1806,11 +1801,6 @@ module {
 
   // Calculate SHA256 hash digest from [Nat8].
   public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
-    let digest = Digest(algo);
-    digest.writeArray(arr);
-    return digest.sum();
-  };
-  public func fromArray2(algo : Algorithm, arr : [Nat8]) : Blob {
     let digest = new(algo);
     writeArray(digest, arr);
     return sum(digest);
@@ -1819,11 +1809,6 @@ module {
   /// Calculate the SHA2 hash digest from `Blob`.
   /// Allowed values for `algo` are: `#sha224`, `#256`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
-    let digest = Digest(algo);
-    digest.writeBlob(b);
-    return digest.sum();
-  };
-  public func fromBlob2(algo : Algorithm, b : Blob) : Blob {
     let digest = new(algo);
     writeBlob(digest, b);
     return sum(digest);
