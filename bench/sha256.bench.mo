@@ -17,7 +17,9 @@ module {
       "fromBlob",
       "fromBlob2",
       "fromArray",
+      "fromArray2",
       "fromIter",
+      "fromIter2",
     ];
     let cols = [
       "0",
@@ -56,14 +58,13 @@ module {
             func() = ignore Sha256.fromArray(#sha256, source);
           };
           case (3) {
-            var itemsLeft = source.size();
-            let iter = {
-              next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
-                itemsLeft -= 1;
-                ?0x5f;
-              };
-            };
-            func() = ignore Sha256.fromIter(#sha256, iter);
+            func() = ignore Sha256.fromArray2(#sha256, source);
+          };
+          case (4) {
+            func() = ignore Sha256.fromIter(#sha256, source.vals());
+          };
+          case (5) {
+            func() = ignore Sha256.fromIter2(#sha256, source.vals());
           };
           case (_) Prim.trap("Row not implemented");
         };
