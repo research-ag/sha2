@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.7
+
+* Switch from base to core
+
 ## 0.1.6
 
 * Bump dependencies
