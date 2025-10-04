@@ -1,7 +1,8 @@
 // @testmode wasi
 
-import Blob "mo:core/Blob";
 import Array "mo:core/Array";
+import Blob "mo:core/Blob";
+import List "mo:core/List";
 import Nat8 "mo:core/Nat8";
 import { range } "mo:core/Nat";
 import VarArray "mo:core/VarArray";
@@ -16,6 +17,7 @@ do {
   let h = Blob.fromArray([227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85]);
   assert (Sha256.fromBlob(#sha256, b) == h);
   assert (Sha256.fromArray(#sha256, []) == h);
+  assert (Sha256.fromList(#sha256, List.empty<Nat8>()) == h);
   assert (Sha256.fromIter(#sha256, [].vals()) == h);
 };
 
@@ -24,6 +26,7 @@ do {
   let h = Blob.fromArray([209, 74, 2, 140, 42, 58, 43, 201, 71, 97, 2, 187, 40, 130, 52, 196, 21, 162, 176, 31, 130, 142, 166, 42, 197, 179, 228, 47]);
   assert (Sha256.fromBlob(#sha224, b) == h);
   assert (Sha256.fromArray(#sha224, []) == h);
+  assert (Sha256.fromList(#sha224, List.empty<Nat8>()) == h);
   assert (Sha256.fromIter(#sha224, [].vals()) == h);
 };
 
@@ -128,6 +131,7 @@ for (l in range(0, 65)) {
   let h = Blob.fromArray(digests[l]);
   assert (Sha256.fromBlob(#sha256, b) == h);
   assert (Sha256.fromArray(#sha256, Blob.toArray(b)) == h);
+  assert (Sha256.fromList(#sha256, List.fromArray(Blob.toArray(b))) == h);
   assert (Sha256.fromIter(#sha256, b.vals()) == h);
 };
 
@@ -280,6 +284,7 @@ do {
     Sha256.new(#sha256),
     Sha512.Digest(#sha512),
   );
+  digest256.reset(); // test reset() as well
   for (i in range(0, 10000)) {
     digest256.writeBlob(data);
     digest512.writeBlob(data);

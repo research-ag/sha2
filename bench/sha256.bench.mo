@@ -1,5 +1,6 @@
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
+import List "mo:core/List";
 import Text "mo:core/Text";
 import Random "mo:core/Random";
 import Prim "mo:prim";
@@ -16,10 +17,14 @@ module {
     let rows = [
       "fromBlob",
       "fromArray",
+      "fromList",
       "fromIter",
     ];
     let cols = [
       "0",
+      "32 bytes",
+      "55 bytes",
+      "60 bytes",
       "1k blocks",
       "1M bytes",
     ];
@@ -31,6 +36,9 @@ module {
 
     let rowSourceArrays : [[Nat8]] = [
       [],
+      Array.tabulate<Nat8>(32, func(i) = rng.nat8()),
+      Array.tabulate<Nat8>(55, func(i) = rng.nat8()),
+      Array.tabulate<Nat8>(60, func(i) = rng.nat8()),
       Array.tabulate<Nat8>(64_000, func(i) = rng.nat8()),
       Array.tabulate<Nat8>(1_000_000, func(i) = rng.nat8()),
     ];
@@ -43,6 +51,7 @@ module {
 
         let source = rowSourceArrays[col];
         let blob = Blob.fromArray(source);
+        let list = List.fromArray(source);
 
         switch (row) {
           case (0) {
@@ -52,6 +61,9 @@ module {
             func() = ignore Sha256.fromArray(#sha256, source);
           };
           case (2) {
+            func() = ignore Sha256.fromList(#sha256, list);
+          };
+          case (3) {
             func() = ignore Sha256.fromIter(#sha256, source.vals());
           };
           case (_) Prim.trap("Row not implemented");

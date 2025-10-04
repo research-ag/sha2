@@ -14,7 +14,7 @@ test = "2.1.1"
 bench = "1.0.0"
 
 [requirements]
-moc = "0.14.13"
+moc = "0.16.3"
 
 [toolchain]
 wasmtime = "37.0.1"
