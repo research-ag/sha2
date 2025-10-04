@@ -1,3 +1,4 @@
+import Nat "mo:core/Nat";
 import Types "mo:core/Types";
 import Prim "mo:prim";
 
@@ -10,6 +11,12 @@ module {
   // Self.0 = high bytes
   // Self.1 = low bytes
   public type Self = ([var Nat16], [var Nat16]);
+  public func set(s : Self, high : [Nat16], low : [Nat16]) {
+    for (i in Nat.range(0, 8)) {
+      s.0 [i] := high[i];
+      s.1 [i] := low[i];
+    };
+  };
   public func process_blocks_from_blob(s : Self, data : Blob, start : Nat) : Nat {
     Blob.process_blocks(s.0, s.1, data, start);
   };
@@ -19,7 +26,7 @@ module {
   public func process_blocks_from_list(s : Self, data : Types.List<Nat8>, start : Nat) : Nat {
     List.process_blocks(s.0, s.1, data, start);
   };
-  public func process_block_from_msg_buffer(s : Self, msg : [var Nat16]) {
+  public func process_block_from_msg(s : Self, msg : [var Nat16]) {
     Block.process_block(s.0, s.1, msg);
   };
   public func toArray28(s : Self) : [Nat8] {
