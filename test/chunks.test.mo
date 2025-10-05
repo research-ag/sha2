@@ -15,14 +15,14 @@ do {
   let digest = Sha256.fromArray(#sha256, combined);
   Prim.debugPrint("Digest: " # debug_show (digest));
 
-  let digest2 = Sha256.Digest(#sha256);
+  let digest2 = Sha256.new(#sha256);
   digest2.writeIter(chunk0.vals());
   digest2.writeIter(chunk1.vals());
   let sum = digest2.sum();
   Prim.debugPrint("Digest2: " # debug_show (sum));
   assert Blob.equal(sum, digest);
 
-  let digest3 = Sha256.Digest(#sha256);
+  let digest3 = Sha256.new(#sha256);
   digest3.writeBlob(chunk0);
   digest3.writeBlob(chunk1);
   let sum2 = digest3.sum();
