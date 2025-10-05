@@ -1,3 +1,4 @@
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
@@ -19,6 +20,13 @@ module {
     x.i_msg := 0;
     x.i_block := 0;
     x.high := true;
+  };
+  public func clone(x : Self) : Self = {
+    msg = VarArray.clone(x.msg);
+    var i_msg = x.i_msg;
+    var i_block = x.i_block;
+    var high = x.high;
+    var word = x.word;
   };
 
   let nat8To16 = Prim.nat8ToNat16;

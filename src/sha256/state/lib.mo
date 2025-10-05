@@ -1,11 +1,12 @@
 import Nat "mo:core/Nat";
 import Types "mo:core/Types";
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import Blob "blocks/Blob";
-import Array "blocks/Array";
-import List "blocks/List";
-import VarArray "blocks/VarArray";
+import ProcessBlob "blocks/Blob";
+import ProcessArray "blocks/Array";
+import ProcessList "blocks/List";
+import ProcessVarArray "blocks/VarArray";
 
 import Block "block";
 
@@ -19,17 +20,18 @@ module {
       s.1 [i] := low[i];
     };
   };
+  public func clone(s : Self) : Self = (VarArray.clone(s.0), VarArray.clone(s.1));
   public func process_blocks_from_blob(s : Self, data : Blob, start : Nat) : Nat {
-    Blob.process_blocks(s.0, s.1, data, start);
+    ProcessBlob.process_blocks(s.0, s.1, data, start);
   };
   public func process_blocks_from_array(s : Self, data : [Nat8], start : Nat) : Nat {
-    Array.process_blocks(s.0, s.1, data, start);
+    ProcessArray.process_blocks(s.0, s.1, data, start);
   };
   public func process_blocks_from_vararray(s : Self, data : [var Nat8], start : Nat) : Nat {
-    VarArray.process_blocks(s.0, s.1, data, start);
+    ProcessVarArray.process_blocks(s.0, s.1, data, start);
   };
   public func process_blocks_from_list(s : Self, data : Types.List<Nat8>, start : Nat) : Nat {
-    List.process_blocks(s.0, s.1, data, start);
+    ProcessList.process_blocks(s.0, s.1, data, start);
   };
   public func process_block_from_msg(s : Self, msg : [var Nat16]) {
     Block.process_block(s.0, s.1, msg);

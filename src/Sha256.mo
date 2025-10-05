@@ -31,6 +31,7 @@ module {
     algo : Algorithm;
     buffer : Buffer.Self;
     state : State.Self;
+    var closed : Bool;
   };
 
   public func new(algo_ : Algorithm) : Digest {
@@ -43,6 +44,7 @@ module {
           [var 0x9ed8, 0xd507, 0xdd17, 0x5939, 0x0b31, 0x1511, 0x8fa7, 0x4fa4],
         );
         buffer = buf;
+        var closed = false;
       };
     } else {
       {
@@ -52,6 +54,7 @@ module {
           [var 0xe667, 0xae85, 0xf372, 0xf53a, 0x527f, 0x688c, 0xd9ab, 0xcd19],
         );
         buffer = buf;
+        var closed = false;
       };
     };
   };
@@ -71,7 +74,17 @@ module {
     };
   };
 
-  private func writePadding(x : Digest) : () {
+  public func clone(x : Digest) : Digest {
+    assert not x.closed;
+    {
+      algo = x.algo;
+      buffer = Buffer.clone(x.buffer);
+      state = State.clone(x.state);
+      var closed = false;
+    };
+  };
+
+  func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
     let msg = buf.msg;
     var i_msg = buf.i_msg;
@@ -118,6 +131,7 @@ module {
   public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
 
   public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
+    assert not x.closed;
     let (buf, state) = (x.buffer, x.state);
     var high = buf.high;
     var word = buf.word;
@@ -154,12 +168,22 @@ module {
     buf.i_block := i_block;
   };
 
-  public func sum(x : Digest) : Blob {
-    writePadding(x);
+  func stateToBlob(x : Digest) : Blob = Prim.arrayToBlob(
+    switch (x.algo) {
+      case (#sha224) State.toArray28(x.state);
+      case (#sha256) State.toArray32(x.state);
+    }
+  );
 
-    return Prim.arrayToBlob(
-      if (x.algo == #sha224) State.toArray28(x.state) else State.toArray32(x.state)
-    );
+  public func sum(x : Digest) : Blob {
+    assert not x.closed;
+    writePadding(x);
+    x.closed := true;
+    stateToBlob(x);
+  };
+
+  public func peekSum(x : Digest) : Blob {
+    if (x.closed) stateToBlob(x) else sum(clone(x));
   };
 
   /// Calculate the SHA2 hash digest from `Blob`.

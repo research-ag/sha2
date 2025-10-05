@@ -7,11 +7,13 @@ module {
   type Digest = {
     buffer : Buffer.Self;
     state : State.Self;
+    var closed : Bool;
   };
 
   let natToNat32 = Prim.natToNat32;
 
   public func write(x : Digest, data : List.List<Nat8>) : () {
+    assert not x.closed;
     let s = List.size(data);
     if (s == 0) return;
     var pos = 0;
