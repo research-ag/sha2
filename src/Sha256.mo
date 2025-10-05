@@ -9,8 +9,13 @@
 import List "mo:core/List";
 import Types "mo:core/Types";
 import Prim "mo:prim";
+
 import Buffer "sha256/buffer";
 import State "sha256/state";
+
+import WriteArray "sha256/write/Array";
+import WriteBlob "sha256/write/Blob";
+import WriteList "sha256/write/List";
 
 module {
   public type Self = Digest;
@@ -108,77 +113,9 @@ module {
     // skipping here because we won't use x anymore: buf.i_msg := 0;
   };
 
-  public func writeBlob(x : Digest, data : Blob) : () {
-    let s = data.size();
-    if (s == 0) return;
-    var pos = 0;
-    let (buf, state) = (x.buffer, x.state);
-    if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, func(i) = data[i], s, 0);
-      if (buf.i_msg == 32) {
-        state.process_block_from_msg(buf.msg);
-        buf.i_msg := 0;
-        buf.i_block +%= 1;
-      };
-    };
-    // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_blob(data, pos);
-    buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, func(i) = data[i], s, end);
-    if (buf.i_msg == 32) {
-      state.process_block_from_msg(buf.msg);
-      buf.i_msg := 0;
-      buf.i_block +%= 1;
-    };
-  };
-
-  public func writeArray(x : Digest, data : [Nat8]) : () {
-    let s = data.size();
-    if (s == 0) return;
-    var pos = 0;
-    let (buf, state) = (x.buffer, x.state);
-    if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, func(i) = data[i], s, 0);
-      if (buf.i_msg == 32) {
-        state.process_block_from_msg(buf.msg);
-        buf.i_msg := 0;
-        buf.i_block +%= 1;
-      };
-    };
-    // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_array(data, pos);
-    buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, func(i) = data[i], s, end);
-    if (buf.i_msg == 32) {
-      state.process_block_from_msg(buf.msg);
-      buf.i_msg := 0;
-      buf.i_block +%= 1;
-    };
-  };
-
-  public func writeList(x : Digest, data : Types.List<Nat8>) : () {
-    let s = List.size(data);
-    if (s == 0) return;
-    var pos = 0;
-    let (buf, state) = (x.buffer, x.state);
-    if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, func(i) = List.at(data, i), s, 0);
-      if (buf.i_msg == 32) {
-        state.process_block_from_msg(buf.msg);
-        buf.i_msg := 0;
-        buf.i_block +%= 1;
-      };
-    };
-    // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_list(data, pos);
-    buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, func(i) = List.at(data, i), s, end);
-    if (buf.i_msg == 32) {
-      state.process_block_from_msg(buf.msg);
-      buf.i_msg := 0;
-      buf.i_block +%= 1;
-    };
-  };
+  public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
+  public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
+  public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
 
   public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
     let (buf, state) = (x.buffer, x.state);

@@ -49,7 +49,6 @@ module {
     if (start >= s) return start;
     var i = start;
     if (not x.high) {
-//      writeByte(x, at(i));
       x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(at(i));
       x.i_msg +%= 1;
       x.high := true;
@@ -62,17 +61,9 @@ module {
       x.msg[nat8ToNat(x.i_msg)] := nat8To16(at(i)) << 8 ^ nat8To16(at(i + 1));
       x.i_msg +%= 1;
       i += 2;
-      if (x.i_msg == 32) {
-        /*
-        x.state.process_block_from_msg_buffer(x.msg);
-        x.i_msg := 0;
-        x.i_block +%= 1;
-        */
-        return i;
-      };
+      if (x.i_msg == 32) return i;
     };
     while (i < s) {
-      //writeByte(x, at(i));
       if (x.high) {
         x.word := nat8To16(at(i)) << 8;
         x.high := false;

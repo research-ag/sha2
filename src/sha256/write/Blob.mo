@@ -1,0 +1,37 @@
+import Prim "mo:prim";
+import Buffer "../buffer";
+import State "../state";
+
+module {
+  type Digest = {
+    buffer : Buffer.Self;
+    state : State.Self;
+  };
+
+  let natToNat32 = Prim.natToNat32;
+
+  public func write(x : Digest, data : Blob) : () {
+    let s = data.size();
+    if (s == 0) return;
+    var pos = 0;
+    let (buf, state) = (x.buffer, x.state);
+    if (buf.i_msg > 0 or not buf.high) {
+      pos := Buffer.write_chunk(buf, func(i) = data[i], s, 0);
+      if (buf.i_msg == 32) {
+        state.process_block_from_msg(buf.msg);
+        buf.i_msg := 0;
+        buf.i_block +%= 1;
+      };
+    };
+    // if (buf.i_msg != 0) return;
+    let end = state.process_blocks_from_blob(data, pos);
+    buf.i_block +%= natToNat32(end - pos) / 64;
+    ignore Buffer.write_chunk(buf, func(i) = data[i], s, end);
+    if (buf.i_msg == 32) {
+      state.process_block_from_msg(buf.msg);
+      buf.i_msg := 0;
+      buf.i_block +%= 1;
+    };
+  };
+
+};
