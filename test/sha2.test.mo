@@ -11,12 +11,12 @@ import Sha512 "../src/Sha512";
 
 // empty string
 
-let b = Blob.fromArray([] : [Nat8]);
 // sha256
 do {
   let h = Blob.fromArray([227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85]);
-  assert (Sha256.fromBlob(#sha256, b) == h);
+  assert (Sha256.fromBlob(#sha256, "") == h);
   assert (Sha256.fromArray(#sha256, []) == h);
+  assert (Sha256.fromVarArray(#sha256, [var]) == h);
   assert (Sha256.fromList(#sha256, List.empty<Nat8>()) == h);
   assert (Sha256.fromIter(#sha256, [].vals()) == h);
 };
@@ -24,8 +24,9 @@ do {
 // sha224
 do {
   let h = Blob.fromArray([209, 74, 2, 140, 42, 58, 43, 201, 71, 97, 2, 187, 40, 130, 52, 196, 21, 162, 176, 31, 130, 142, 166, 42, 197, 179, 228, 47]);
-  assert (Sha256.fromBlob(#sha224, b) == h);
+  assert (Sha256.fromBlob(#sha224, "") == h);
   assert (Sha256.fromArray(#sha224, []) == h);
+  assert (Sha256.fromVarArray(#sha224, [var]) == h);
   assert (Sha256.fromList(#sha224, List.empty<Nat8>()) == h);
   assert (Sha256.fromIter(#sha224, [].vals()) == h);
 };
@@ -33,25 +34,25 @@ do {
 // sha512
 do {
   let h = Blob.fromArray([207, 131, 225, 53, 126, 239, 184, 189, 241, 84, 40, 80, 214, 109, 128, 7, 214, 32, 228, 5, 11, 87, 21, 220, 131, 244, 169, 33, 211, 108, 233, 206, 71, 208, 209, 60, 93, 133, 242, 176, 255, 131, 24, 210, 135, 126, 236, 47, 99, 185, 49, 189, 71, 65, 122, 129, 165, 56, 50, 122, 249, 39, 218, 62]);
-  assert (Sha512.fromBlob(#sha512, b) == h);
+  assert (Sha512.fromBlob(#sha512, "") == h);
 };
 
 // sha512-224
 do {
   let h = Blob.fromArray([110, 208, 221, 2, 128, 111, 168, 158, 37, 222, 6, 12, 25, 211, 172, 134, 202, 187, 135, 214, 160, 221, 208, 92, 51, 59, 132, 244]);
-  assert (Sha512.fromBlob(#sha512_224, b) == h);
+  assert (Sha512.fromBlob(#sha512_224, "") == h);
 };
 
 // sha512-256
 do {
   let h = Blob.fromArray([198, 114, 184, 209, 239, 86, 237, 40, 171, 135, 195, 98, 44, 81, 20, 6, 155, 221, 58, 215, 184, 249, 115, 116, 152, 208, 192, 30, 206, 240, 150, 122]);
-  assert (Sha512.fromBlob(#sha512_256, b) == h);
+  assert (Sha512.fromBlob(#sha512_256, "") == h);
 };
 
 // sha384
 do {
   let h = Blob.fromArray([56, 176, 96, 167, 81, 172, 150, 56, 76, 217, 50, 126, 177, 177, 227, 106, 33, 253, 183, 17, 20, 190, 7, 67, 76, 12, 199, 191, 99, 246, 225, 218, 39, 78, 222, 191, 231, 111, 101, 251, 213, 26, 210, 241, 72, 152, 185, 91]);
-  assert (Sha512.fromBlob(#sha384, b) == h);
+  assert (Sha512.fromBlob(#sha384, "") == h);
 };
 
 // padding testi for sha256
@@ -131,6 +132,7 @@ for (l in range(0, 65)) {
   let h = Blob.fromArray(digests[l]);
   assert (Sha256.fromBlob(#sha256, b) == h);
   assert (Sha256.fromArray(#sha256, Blob.toArray(b)) == h);
+  assert (Sha256.fromVarArray(#sha256, Blob.toVarArray(b)) == h);
   assert (Sha256.fromList(#sha256, List.fromArray(Blob.toArray(b))) == h);
   assert (Sha256.fromIter(#sha256, b.vals()) == h);
 };

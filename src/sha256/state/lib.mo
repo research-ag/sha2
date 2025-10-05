@@ -5,12 +5,14 @@ import Prim "mo:prim";
 import Blob "blocks/Blob";
 import Array "blocks/Array";
 import List "blocks/List";
+import VarArray "blocks/VarArray";
+
 import Block "block";
 
 module {
-  // Self.0 = high bytes
-  // Self.1 = low bytes
+  // Self.0 = high bytes, Self.1 = low bytes
   public type Self = ([var Nat16], [var Nat16]);
+
   public func set(s : Self, high : [Nat16], low : [Nat16]) {
     for (i in Nat.range(0, 8)) {
       s.0 [i] := high[i];
@@ -22,6 +24,9 @@ module {
   };
   public func process_blocks_from_array(s : Self, data : [Nat8], start : Nat) : Nat {
     Array.process_blocks(s.0, s.1, data, start);
+  };
+  public func process_blocks_from_vararray(s : Self, data : [var Nat8], start : Nat) : Nat {
+    VarArray.process_blocks(s.0, s.1, data, start);
   };
   public func process_blocks_from_list(s : Self, data : Types.List<Nat8>, start : Nat) : Nat {
     List.process_blocks(s.0, s.1, data, start);

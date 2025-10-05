@@ -6,7 +6,6 @@
 /// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
 /// * Output types: `Blob`
 
-import List "mo:core/List";
 import Types "mo:core/Types";
 import Prim "mo:prim";
 
@@ -14,6 +13,7 @@ import Buffer "sha256/buffer";
 import State "sha256/state";
 
 import WriteArray "sha256/write/Array";
+import WriteVarArray "sha256/write/VarArray";
 import WriteBlob "sha256/write/Blob";
 import WriteList "sha256/write/List";
 
@@ -25,7 +25,6 @@ module {
   let nat32To64 = Prim.nat32ToNat64;
   let nat8To16 = Prim.nat8ToNat16;
   let nat8ToNat = Prim.nat8ToNat;
-  let natToNat32 = Prim.natToNat32;
   let intToNat64Wrap = Prim.intToNat64Wrap;
 
   type Digest = {
@@ -115,6 +114,7 @@ module {
 
   public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
   public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
+  public func writeVarArray(x : Digest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
   public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
 
   public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
@@ -174,6 +174,13 @@ module {
   public func fromArray(algo : Algorithm, data : [Nat8]) : Blob {
     let digest = new(algo);
     writeArray(digest, data);
+    return sum(digest);
+  };
+
+  // Calculate SHA256 hash digest from [Nat8].
+  public func fromVarArray(algo : Algorithm, data : [var Nat8]) : Blob {
+    let digest = new(algo);
+    writeVarArray(digest, data);
     return sum(digest);
   };
 
