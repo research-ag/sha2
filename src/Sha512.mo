@@ -10,6 +10,7 @@ import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
 import Types "mo:core/Types";
+import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import K "sha512/constants";
 import ProcessBlock "sha512/process_block";
@@ -20,7 +21,7 @@ import WriteVarArray "sha512/write/VarArray";
 import WriteList "sha512/write/List";
 
 module {
-  public type Self = StaticDigest;
+  public type Self = Digest;
 
   public type Algorithm = {
     #sha384;
@@ -29,21 +30,20 @@ module {
     #sha512_256;
   };
 
-  public type StaticDigest = {
+  public type Digest = {
     algo : Algorithm;
-
     // msg buffer
     msg : [var Nat64];
     var word : Nat64;
     var i_msg : Nat8;
     var i_byte : Nat8;
     var i_block : Nat64;
-
     // state variables
     s : [var Nat64];
+    var closed : Bool;
   };
 
-  public func new(algo_ : Algorithm) : StaticDigest {
+  public func new(algo_ : Algorithm) : Digest {
     {
       algo = algo_;
       msg : [var Nat64] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -57,10 +57,12 @@ module {
         case (#sha384) [ var 0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939, 0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4, ];
         case (#sha512) [ var 0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1, 0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179, ];
       };
+      var closed = false;
     }
   };
 
-  public func reset(x : StaticDigest) {
+  public func reset(x : Digest) {
+    assert not x.closed;
     x.i_msg := 0;
     x.i_byte := 8;
     x.i_block := 0;
@@ -75,8 +77,22 @@ module {
     };
   };
   
+  public func clone(x : Digest) : Digest {
+    assert not x.closed;
+    {
+      algo = x.algo;
+      msg = VarArray.clone(x.msg);
+      var word = x.word;
+      var i_msg = x.i_msg;
+      var i_byte = x.i_byte;
+      var i_block = x.i_block;
+      s = VarArray.clone(x.s);
+      var closed = false;
+    };
+  };
+
   // We must be at a word boundary, i.e. i_byte must be equal to 8
-  private func writeWord(x : StaticDigest, val : Nat64) : () {
+  private func writeWord(x : Digest, val : Nat64) : () {
     assert (x.i_byte == 8);
     x.msg[Nat8.toNat(x.i_msg)] := val;
     x.i_msg +%= 1;
@@ -87,7 +103,8 @@ module {
     };
   };
 
-  public func writeIter(x : StaticDigest, iter : { next() : ?Nat8 }) : () {
+  public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
+    assert not x.closed;
     var word = x.word;
     var i_byte = x.i_byte;
     var i_msg = x.i_msg;
@@ -122,12 +139,13 @@ module {
     x.i_block := i_block;
   };
 
-  public func writeBlob(x : StaticDigest, data : Blob) : () = WriteBlob.write(x, data);
-  public func writeArray(x : StaticDigest, data : [Nat8]) : () = WriteArray.write(x, data);
-  public func writeVarArray(x : StaticDigest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
-  public func writeList(x : StaticDigest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
+  public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
+  public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
+  public func writeVarArray(x : Digest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
+  public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
 
-  public func sum(x : StaticDigest) : Blob {
+  public func sum(x : Digest) : Blob {
+    assert not x.closed;
     // calculate padding
     // t = bytes in the last incomplete block (0-127)
     let t : Nat8 = (x.i_msg << 3) +% 8 -% x.i_byte;
@@ -210,6 +228,28 @@ module {
       d56, d57, d58, d59, d60, d61, d62, d63
     ]);
   };
+
+  /*
+  TODO: peekSum
+
+  func stateToBlob(x : Digest) : Blob = Prim.arrayToBlob(
+    switch (x.algo) {
+      case (#sha224) State.toArray28(x.state);
+      case (#sha256) State.toArray32(x.state);
+    }
+  );
+
+  public func sum(x : Digest) : Blob {
+    assert not x.closed;
+    writePadding(x);
+    x.closed := true;
+    stateToBlob(x);
+  };
+
+  public func peekSum(x : Digest) : Blob {
+    if (x.closed) stateToBlob(x) else sum(clone(x));
+  };
+  */
 
   // Calculate SHA2 hash digest from Iter, Array, Blob, VarArray, List.
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {

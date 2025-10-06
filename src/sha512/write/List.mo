@@ -14,12 +14,13 @@ module {
     var i_msg : Nat8;
     var i_byte : Nat8;
     var i_block : Nat64;
-
     // state variables
     s : [var Nat64];
+    var closed : Bool;
   };
 
   public func write(x : Digest, data : List.List<Nat8>) : () {
+    assert not x.closed;
     let sz = List.size(data);
     if (sz == 0) return;
     var pos = 0;
