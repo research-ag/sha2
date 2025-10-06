@@ -86,7 +86,7 @@ module {
       x.i_byte := 8;
       x.i_msg +%= 1;
       if (x.i_msg == 16) {
-        ProcessBlock.process_block_from_buffer(x);
+        ProcessBlock.process_block_from_buffer(x.s, x.msg);
         x.i_msg := 0;
         x.i_block +%= 1;
       };
@@ -99,7 +99,7 @@ module {
     x.msg[Nat8.toNat(x.i_msg)] := val;
     x.i_msg +%= 1;
     if (x.i_msg == 16) {
-      ProcessBlock.process_block_from_buffer(x);
+      ProcessBlock.process_block_from_buffer(x.s, x.msg);
       x.i_msg := 0;
       x.i_block +%= 1;
     };
@@ -122,7 +122,7 @@ module {
             i_byte := 8;
             i_msg +%= 1;
             if (i_msg == 16) {
-              ProcessBlock.process_block_from_buffer(x);
+              ProcessBlock.process_block_from_buffer(x.s, x.msg);
               i_msg := 0;
               i_block +%= 1;
             };

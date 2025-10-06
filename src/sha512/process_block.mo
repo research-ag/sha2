@@ -16,8 +16,7 @@ module {
 
   let rot = Nat64.bitrotRight;
 
-  public func process_block_from_buffer(x : StaticDigest) : () {
-    let (s, msg) = (x.s, x.msg);
+  public func process_block_from_buffer(s : [var Nat64], msg : [var Nat64]) : () {
     // Below is an inlined and unrolled version of this code:
     // for ((i, j, k, l, m) in expansion_rounds.vals()) {
     //   // (j,k,l,m) = (i+1,i+9,i+14,i+16)
