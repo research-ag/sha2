@@ -3,6 +3,7 @@ import Nat32 "mo:core/Nat32";
 import Types "mo:core/Types";
 import Prim "mo:prim";
 import K "../constants";
+import Util "../../../util";
 
 module {
   let nat32To16 = Prim.nat32ToNat16;
@@ -11,50 +12,9 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  func locate(index : Nat) : (Nat, Nat) {
-    // see comments in tests
-    let i = Nat32.fromNat(index);
-    let lz = Nat32.bitcountLeadingZero(i);
-    let lz2 = lz >> 1;
-    if (lz & 1 == 0) {
-      (Nat32.toNat(((i << lz2) >> 16) ^ (0x10000 >> lz2)), Nat32.toNat(i & (0xFFFF >> lz2)))
-    } else {
-      (Nat32.toNat(((i << lz2) >> 15) ^ (0x18000 >> lz2)), Nat32.toNat(i & (0x7FFF >> lz2)))
-    }
-  };
-
-  func range<T>(list : Types.List<T>, start : Nat) : () -> T {
-    var blockIndex = 0;
-    var elementIndex = 0;
-    if (start != 0) {
-      let (block, element) = locate(start - 1);
-      blockIndex := block;
-      elementIndex := element + 1
-    };
-    var db : [var ?T] = list.blocks[blockIndex];
-    var dbSize = db.size();
-    func next() : T {
-      // Note: next() traps when reading beyond end of list
-      if (elementIndex == dbSize) {
-        blockIndex += 1;
-        db := list.blocks[blockIndex];
-        dbSize := db.size();
-        elementIndex := 0
-      };
-      switch (db[elementIndex]) {
-        case (?ret) {
-          elementIndex += 1;
-          return ret
-        };
-        case (_) Prim.trap("");
-      };
-    };
-    next
-  };
-
   public func process_blocks(sh : [var Nat16], sl : [var Nat16], data : Types.List<Nat8>, start : Nat) : Nat {
     let s = List.size(data);
-    let read = range(data, start);
+    let read = Util.listRange(data, start);
     var i = start;
     // load state registers
     var a = nat16To32(sh[0]) << 16 | nat16To32(sl[0]);

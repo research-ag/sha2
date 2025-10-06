@@ -3,10 +3,10 @@ import Types "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import ProcessBlob "blocks/Blob";
-import ProcessArray "blocks/Array";
-import ProcessList "blocks/List";
-import ProcessVarArray "blocks/VarArray";
+import ProcessBlob "whole_blocks/Blob";
+import ProcessArray "whole_blocks/Array";
+import ProcessList "whole_blocks/List";
+import ProcessVarArray "whole_blocks/VarArray";
 
 import Block "block";
 

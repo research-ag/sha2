@@ -74,24 +74,6 @@ module {
       x.s[j] := K.ivs[i][j];
     };
   };
-
-  /*
-  private func writeByte(x : StaticDigest, val : Nat8) : () {
-    x.word := (x.word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
-    x.i_byte -%= 1;
-    if (x.i_byte == 0) {
-      x.msg[Nat8.toNat(x.i_msg)] := x.word;
-      x.word := 0;
-      x.i_byte := 8;
-      x.i_msg +%= 1;
-      if (x.i_msg == 16) {
-        ProcessBlock.process_block_from_buffer(x.s, x.msg);
-        x.i_msg := 0;
-        x.i_block +%= 1;
-      };
-    };
-  };
-  */
   
   // We must be at a word boundary, i.e. i_byte must be equal to 8
   private func writeWord(x : StaticDigest, val : Nat64) : () {
