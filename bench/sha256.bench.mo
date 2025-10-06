@@ -17,6 +17,7 @@ module {
     let rows = [
       "fromBlob",
       "fromArray",
+      "fromVarArray",
       "fromList",
       "fromIter",
     ];
@@ -52,6 +53,7 @@ module {
         let source = rowSourceArrays[col];
         let blob = Blob.fromArray(source);
         let list = List.fromArray(source);
+        let varArray = Array.toVarArray(source);
 
         switch (row) {
           case (0) {
@@ -61,10 +63,20 @@ module {
             func() = ignore Sha256.fromArray(#sha256, source);
           };
           case (2) {
-            func() = ignore Sha256.fromList(#sha256, list);
+            func() = ignore Sha256.fromVarArray(#sha256, varArray);
           };
           case (3) {
-            func() = ignore Sha256.fromIter(#sha256, source.vals());
+            func() = ignore Sha256.fromList(#sha256, list);
+          };
+          case (4) {
+            var itemsLeft = source.size();
+            let iter = {
+              next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
+                itemsLeft -= 1;
+                ?0x5f;
+              };
+            };
+            func() = ignore Sha256.fromIter(#sha256, iter);
           };
           case (_) Prim.trap("Row not implemented");
         };

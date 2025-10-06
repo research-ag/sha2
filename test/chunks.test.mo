@@ -40,14 +40,14 @@ do {
   let digest = Sha512.fromArray(#sha512, combined);
   Prim.debugPrint("Digest: " # debug_show (digest));
 
-  let digest2 = Sha512.Digest(#sha512);
+  let digest2 = Sha512.new(#sha512);
   digest2.writeIter(chunk0.vals());
   digest2.writeIter(chunk1.vals());
   let sum = digest2.sum();
   Prim.debugPrint("Digest2: " # debug_show (sum));
   assert Blob.equal(sum, digest);
 
-  let digest3 = Sha512.Digest(#sha512);
+  let digest3 = Sha512.new(#sha512);
   digest3.writeBlob(chunk0);
   digest3.writeBlob(chunk1);
   let sum2 = digest3.sum();

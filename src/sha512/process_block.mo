@@ -1,20 +1,7 @@
-import Nat64 "mo:core/Nat64";
 import K "constants";
 
 module {
-  type StaticDigest = {
-    // msg buffer
-    msg : [var Nat64];
-    var word : Nat64;
-    var i_msg : Nat8;
-    var i_byte : Nat8;
-    var i_block : Nat64;
-
-    // state variables
-    s : [var Nat64];
-  };
-
-  let rot = Nat64.bitrotRight;
+  func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
 
   public func process_block_from_buffer(s : [var Nat64], msg : [var Nat64]) : () {
     // Below is an inlined and unrolled version of this code:
