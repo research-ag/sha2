@@ -146,6 +146,7 @@ module {
 
   public func sum(x : Digest) : Blob {
     assert not x.closed;
+    x.closed := true;
     // calculate padding
     // t = bytes in the last incomplete block (0-127)
     let t : Nat8 = (x.i_msg << 3) +% 8 -% x.i_byte;
@@ -176,6 +177,10 @@ module {
     writeWord(x, n_bits);
 
     // retrieve sum
+    stateToBlob(x);
+  };
+
+  func stateToBlob(x : Digest) : Blob {
     let (d0, d1, d2, d3, d4, d5, d6, d7) = Prim.explodeNat64(x.s[0]);
     let (d8, d9, d10, d11, d12, d13, d14, d15) = Prim.explodeNat64(x.s[1]);
     let (d16, d17, d18, d19, d20, d21, d22, d23) = Prim.explodeNat64(x.s[2]);
@@ -229,27 +234,9 @@ module {
     ]);
   };
 
-  /*
-  TODO: peekSum
-
-  func stateToBlob(x : Digest) : Blob = Prim.arrayToBlob(
-    switch (x.algo) {
-      case (#sha224) State.toArray28(x.state);
-      case (#sha256) State.toArray32(x.state);
-    }
-  );
-
-  public func sum(x : Digest) : Blob {
-    assert not x.closed;
-    writePadding(x);
-    x.closed := true;
-    stateToBlob(x);
-  };
-
   public func peekSum(x : Digest) : Blob {
     if (x.closed) stateToBlob(x) else sum(clone(x));
   };
-  */
 
   // Calculate SHA2 hash digest from Iter, Array, Blob, VarArray, List.
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {

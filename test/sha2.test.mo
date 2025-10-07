@@ -58,31 +58,31 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   do {
     let d = Sha512.new(algo);
     d.writeArray(data);
-    //assert (d.peekSum() == h);
+    assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
     d.writeVarArray(Array.toVarArray(data));
-    //assert (d.peekSum() == h);
+    assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
     d.writeBlob(Blob.fromArray(data));
-    //assert (d.peekSum() == h);
+    assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
     d.writeList(List.fromArray(data));
-    //assert (d.peekSum() == h);
+    assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
     d.writeIter(data.vals());
-    // assert (d.peekSum() == h);
+    assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
 };
@@ -321,6 +321,14 @@ for (l in range(0, 81)) {
   compare512(a, #sha512, digests512[l]);
 };
 
+do {
+  let d = Sha512.new(#sha512);
+  for (l in range(0, 81)) {
+    assert (d.peekSum() == Blob.fromArray(digests512[l]));
+    d.writeArray([0xa5]);
+  };
+};
+
 // special message
 do {
   let h : Blob = "\21\58\1F\AD\8A\C6\FB\3F\3D\9D\E2\3C\2E\16\3D\CA\AB\BE\10\7E\E8\4C\26\A1\DF\F8\98\60\33\D7\2F\31\73\10\B4\88\9B\53\B5\F1\A5\7B\E8\01\CE\24\1F\A2\7B\5B\98\3F\B0\8D\9B\E3\E2\E2\DC\84\23\D7\F4\50";
@@ -336,6 +344,7 @@ do {
     Sha512.new(#sha512),
   );
   digest256.reset(); // test reset() as well
+  digest512.reset(); // test reset() as well
   for (i in range(0, 5000)) {
     digest256.writeBlob(data);
     digest512.writeBlob(data);
