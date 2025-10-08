@@ -6,19 +6,16 @@ module {
   type Digest = {
     buffer : Buffer.Self;
     state : State.Self;
-    var closed : Bool;
   };
 
   let natToNat32 = Prim.natToNat32;
 
-  public func write(x : Digest, data : Blob) : () {
-    assert not x.closed;
-    let sz = data.size();
+  public func write(x : Digest, data : (Nat) -> Nat8, sz : Nat) : () {
     if (sz == 0) return;
     var pos = 0;
     let (buf, state) = (x.buffer, x.state);
     if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, func(i) = data[i], sz, 0);
+      pos := Buffer.write_chunk(buf, data, sz, 0);
       if (buf.i_msg == 32) {
         state.process_block_from_msg(buf.msg);
         buf.i_msg := 0;
@@ -26,9 +23,9 @@ module {
       };
     };
     // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_blob(data, pos);
+    let end = state.process_blocks_from_func(data, sz, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, func(i) = data[i], sz, end);
+    ignore Buffer.write_chunk(buf, data, sz, end);
     if (buf.i_msg == 32) {
       state.process_block_from_msg(buf.msg);
       buf.i_msg := 0;

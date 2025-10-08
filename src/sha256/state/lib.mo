@@ -2,11 +2,11 @@ import Nat "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import ProcessBlob "whole_blocks/Blob";
-import ProcessArray "whole_blocks/Array";
-import ProcessVarArray "whole_blocks/VarArray";
-import ProcessPositional "whole_blocks/Positional";
-import ProcessNext "whole_blocks/Next";
+import fromBlob "whole_blocks/blob";
+import fromArray "whole_blocks/array";
+import fromVarArray "whole_blocks/varArray";
+import fromPositional "whole_blocks/positional";
+import fromNext "whole_blocks/next";
 
 import Block "block";
 
@@ -17,25 +17,13 @@ module {
   public func set(s : Self, vals : [Nat16]) {
     for (i in Nat.range(0, 16)) s[i] := vals[i];
   };
-  public func clone(s : Self) : Self = VarArray.clone(s);
-  public func process_blocks_from_blob(s : Self, data : Blob, start : Nat) : Nat {
-    ProcessBlob.process_blocks(s, data, start);
-  };
-  public func process_blocks_from_array(s : Self, data : [Nat8], start : Nat) : Nat {
-    ProcessArray.process_blocks(s, data, start);
-  };
-  public func process_blocks_from_vararray(s : Self, data : [var Nat8], start : Nat) : Nat {
-    ProcessVarArray.process_blocks(s, data, start);
-  };
-  public func process_blocks_from_func(s : Self, data : Nat -> Nat8, sz : Nat, start : Nat) : Nat {
-    ProcessPositional.process_blocks(s, data, sz, start);
-  };
-  public func process_blocks_from_stream(s : Self, data : () -> Nat8, sz : Nat, start : Nat) : Nat {
-    ProcessNext.process_blocks(s, data, sz, start);
-  };
-  public func process_block_from_msg(s : Self, msg : [var Nat16]) {
-    Block.process_block(s, msg);
-  };
+  public let clone = VarArray.clone;
+  public let process_blocks_from_blob = fromBlob.process_blocks;
+  public let process_blocks_from_array = fromArray.process_blocks;
+  public let process_blocks_from_vararray = fromVarArray.process_blocks;
+  public let process_blocks_from_func = fromPositional.process_blocks;
+  public let process_blocks_from_stream = fromNext.process_blocks;
+  public let process_block_from_msg = Block.process_block;
   public func toArray28(s : Self) : [Nat8] {
     let (d0, d1) = Prim.explodeNat16(s[0]);
     let (d2, d3) = Prim.explodeNat16(s[1]);

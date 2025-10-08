@@ -11,12 +11,7 @@ import Prim "mo:prim";
 
 import Buffer "sha256/buffer";
 import State "sha256/state";
-
-import WriteArray "sha256/write/Array";
-import WriteVarArray "sha256/write/VarArray";
-import WriteBlob "sha256/write/Blob";
-import WritePos "sha256/write/Positional";
-import WriteNext "sha256/write/Next";
+import Write "sha256/write";
 
 module {
   public type Self = Digest;
@@ -115,11 +110,11 @@ module {
     // skipping here because we won't use x anymore: buf.i_msg := 0;
   };
 
-  public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
-  public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
-  public func writeVarArray(x : Digest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
-  public func writePositional(x : Digest, data : Nat -> Nat8, sz : Nat) : () = WritePos.write(x, data, sz);
-  public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = WriteNext.write(x, data, sz);
+  public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
+  public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
+  public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
+  public func writePositional(x : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.positional(x, data, sz);
+  public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(x, data, sz);
 
   public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
     assert not x.closed;
