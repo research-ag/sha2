@@ -7,7 +7,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_block(sh : [var Nat16], sl : [var Nat16], msg : [var Nat16]) : () {
+  public func process_block(s : [var Nat16], msg : [var Nat16]) : () {
     let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
     let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);
     let w02 = nat16To32(msg[4]) << 16 | nat16To32(msg[5]);
@@ -83,14 +83,14 @@ module {
     };
 */
     // compress
-    let a_0 = nat16To32(sh[0]) << 16 | nat16To32(sl[0]);
-    let b_0 = nat16To32(sh[1]) << 16 | nat16To32(sl[1]);
-    let c_0 = nat16To32(sh[2]) << 16 | nat16To32(sl[2]);
-    let d_0 = nat16To32(sh[3]) << 16 | nat16To32(sl[3]);
-    let e_0 = nat16To32(sh[4]) << 16 | nat16To32(sl[4]);
-    let f_0 = nat16To32(sh[5]) << 16 | nat16To32(sl[5]);
-    let g_0 = nat16To32(sh[6]) << 16 | nat16To32(sl[6]);
-    let h_0 = nat16To32(sh[7]) << 16 | nat16To32(sl[7]);
+    let a_0 = nat16To32(s[0]) << 16 | nat16To32(s[1]);
+    let b_0 = nat16To32(s[2]) << 16 | nat16To32(s[3]);
+    let c_0 = nat16To32(s[4]) << 16 | nat16To32(s[5]);
+    let d_0 = nat16To32(s[6]) << 16 | nat16To32(s[7]);
+    let e_0 = nat16To32(s[8]) << 16 | nat16To32(s[9]);
+    let f_0 = nat16To32(s[10]) << 16 | nat16To32(s[11]);
+    let g_0 = nat16To32(s[12]) << 16 | nat16To32(s[13]);
+    let h_0 = nat16To32(s[14]) << 16 | nat16To32(s[15]);
     var a = a_0;
     var b = b_0;
     var c = c_0;
@@ -192,13 +192,13 @@ module {
     f +%= f_0;
     g +%= g_0;
     h +%= h_0;
-    sh[0] := nat32To16(a >> 16); sl[0] := nat32To16(a & 0xffff);
-    sh[1] := nat32To16(b >> 16); sl[1] := nat32To16(b & 0xffff);
-    sh[2] := nat32To16(c >> 16); sl[2] := nat32To16(c & 0xffff);
-    sh[3] := nat32To16(d >> 16); sl[3] := nat32To16(d & 0xffff);
-    sh[4] := nat32To16(e >> 16); sl[4] := nat32To16(e & 0xffff);
-    sh[5] := nat32To16(f >> 16); sl[5] := nat32To16(f & 0xffff);
-    sh[6] := nat32To16(g >> 16); sl[6] := nat32To16(g & 0xffff);
-    sh[7] := nat32To16(h >> 16); sl[7] := nat32To16(h & 0xffff);
+    s[0] := nat32To16(a >> 16); s[1] := nat32To16(a & 0xffff);
+    s[2] := nat32To16(b >> 16); s[3] := nat32To16(b & 0xffff);
+    s[4] := nat32To16(c >> 16); s[5] := nat32To16(c & 0xffff);
+    s[6] := nat32To16(d >> 16); s[7] := nat32To16(d & 0xffff);
+    s[8] := nat32To16(e >> 16); s[9] := nat32To16(e & 0xffff);
+    s[10] := nat32To16(f >> 16); s[11] := nat32To16(f & 0xffff);
+    s[12] := nat32To16(g >> 16); s[13] := nat32To16(g & 0xffff);
+    s[14] := nat32To16(h >> 16); s[15] := nat32To16(h & 0xffff);
   };
 }

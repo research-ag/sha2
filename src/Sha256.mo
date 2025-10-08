@@ -15,7 +15,8 @@ import State "sha256/state";
 import WriteArray "sha256/write/Array";
 import WriteVarArray "sha256/write/VarArray";
 import WriteBlob "sha256/write/Blob";
-import WriteList "sha256/write/List";
+import WritePos "sha256/write/Positional";
+import WriteNext "sha256/write/Next";
 
 module {
   public type Self = Digest;
@@ -39,20 +40,14 @@ module {
     if (algo_ == #sha224) {
       {
         algo = #sha224;
-        state = (
-          [var 0xc105, 0x367c, 0x3070, 0xf70e, 0xffc0, 0x6858, 0x64f9, 0xbefa],
-          [var 0x9ed8, 0xd507, 0xdd17, 0x5939, 0x0b31, 0x1511, 0x8fa7, 0x4fa4],
-        );
+        state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
         buffer = buf;
         var closed = false;
       };
     } else {
       {
         algo = #sha256;
-        state = (
-          [var 0x6a09, 0xbb67, 0x3c6e, 0xa54f, 0x510e, 0x9b05, 0x1f83, 0x5be0],
-          [var 0xe667, 0xae85, 0xf372, 0xf53a, 0x527f, 0x688c, 0xd9ab, 0xcd19],
-        );
+        state = [var 0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19];
         buffer = buf;
         var closed = false;
       };
@@ -60,17 +55,12 @@ module {
   };
 
   public func reset(x : Digest) {
+    assert not x.closed;
     x.buffer.reset();
     if (x.algo == #sha224) {
-      x.state.set(
-        [0xc105, 0x367c, 0x3070, 0xf70e, 0xffc0, 0x6858, 0x64f9, 0xbefa],
-        [0x9ed8, 0xd507, 0xdd17, 0x5939, 0x0b31, 0x1511, 0x8fa7, 0x4fa4],
-      );
+      x.state.set([0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4]);
     } else {
-      x.state.set(
-        [0x6a09, 0xbb67, 0x3c6e, 0xa54f, 0x510e, 0x9b05, 0x1f83, 0x5be0],
-        [0xe667, 0xae85, 0xf372, 0xf53a, 0x527f, 0x688c, 0xd9ab, 0xcd19],
-      );
+      x.state.set([0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19]);
     };
   };
 
@@ -78,8 +68,8 @@ module {
     assert not x.closed;
     {
       algo = x.algo;
-      buffer = Buffer.clone(x.buffer);
-      state = State.clone(x.state);
+      buffer = x.buffer.clone();
+      state = x.state.clone();
       var closed = false;
     };
   };
@@ -128,7 +118,8 @@ module {
   public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
   public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
   public func writeVarArray(x : Digest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
-  public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
+  public func writePositional(x : Digest, data : Nat -> Nat8, sz : Nat) : () = WritePos.write(x, data, sz);
+  public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = WriteNext.write(x, data, sz);
 
   public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
     assert not x.closed;
@@ -208,18 +199,22 @@ module {
     return sum(digest);
   };
 
-  /// Calculate the SHA2 hash digest from `Blob`.
-  /// Allowed values for `algo` are: `#sha224`, `#256`
-  public func fromList(algo : Algorithm, data : Types.List<Nat8>) : Blob {
-    let digest = new(algo);
-    writeList(digest, data);
-    return sum(digest);
-  };
-
   // Calculate SHA2 hash digest from Iter.
   public func fromIter(algo : Algorithm, data : Types.Iter<Nat8>) : Blob {
     let digest = new(algo);
     writeIter(digest, data);
+    return sum(digest);
+  };
+
+  public func fromPositional(algo : Algorithm, data : Nat -> Nat8, size : Nat) : Blob {
+    let digest = new(algo);
+    writePositional(digest, data, size);
+    return sum(digest);
+  };
+
+  public func fromNext(algo : Algorithm, data : () -> Nat8, size : Nat) : Blob {
+    let digest = new(algo);
+    writeNext(digest, data, size);
     return sum(digest);
   };
 };

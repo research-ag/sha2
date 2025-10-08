@@ -6,6 +6,7 @@ import Random "mo:core/Random";
 import Prim "mo:prim";
 import Bench "mo:bench";
 import Sha256 "../src/Sha256";
+import Util "../src/util";
 
 module {
   public func init() : Bench.Bench {
@@ -18,8 +19,10 @@ module {
       "fromBlob",
       "fromArray",
       "fromVarArray",
-      "fromList",
       "fromIter",
+      "fromPositional",
+      "fromNext",
+      "fromList",
     ];
     let cols = [
       "0",
@@ -66,9 +69,6 @@ module {
             func() = ignore Sha256.fromVarArray(#sha256, varArray);
           };
           case (3) {
-            func() = ignore Sha256.fromList(#sha256, list);
-          };
-          case (4) {
             var itemsLeft = source.size();
             let iter = {
               next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
@@ -77,6 +77,19 @@ module {
               };
             };
             func() = ignore Sha256.fromIter(#sha256, iter);
+          };
+          case (4) {
+            let at = func(i : Nat) : Nat8 = source[i];
+            func() = ignore Sha256.fromPositional(#sha256, at, source.size());
+          };
+          case (5) {
+            var i = 0;
+            func next() : Nat8 { let r = source[i]; i += 1; r };
+            func() = ignore Sha256.fromNext(#sha256, next, source.size());
+          };
+          case (6) {
+            let next = Util.listRange<Nat8>(list, 0);
+            func() = ignore Sha256.fromNext(#sha256, next, source.size());
           };
           case (_) Prim.trap("Row not implemented");
         };

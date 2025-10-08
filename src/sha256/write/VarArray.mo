@@ -13,12 +13,12 @@ module {
 
   public func write(x : Digest, data : [var Nat8]) : () {
     assert not x.closed;
-    let s = data.size();
-    if (s == 0) return;
+    let sz = data.size();
+    if (sz == 0) return;
     var pos = 0;
     let (buf, state) = (x.buffer, x.state);
     if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, func(i) = data[i], s, 0);
+      pos := Buffer.write_chunk(buf, func(i) = data[i], sz, 0);
       if (buf.i_msg == 32) {
         state.process_block_from_msg(buf.msg);
         buf.i_msg := 0;
@@ -28,7 +28,7 @@ module {
     // if (buf.i_msg != 0) return;
     let end = state.process_blocks_from_vararray(data, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, func(i) = data[i], s, end);
+    ignore Buffer.write_chunk(buf, func(i) = data[i], sz, end);
     if (buf.i_msg == 32) {
       state.process_block_from_msg(buf.msg);
       buf.i_msg := 0;

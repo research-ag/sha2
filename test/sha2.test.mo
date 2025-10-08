@@ -8,14 +8,18 @@ import { range } "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
+import Util "../src/util";
 
 func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   let h = Blob.fromArray(hash);
   assert (Sha256.fromArray(algo, data) == h);
   assert (Sha256.fromVarArray(algo, Array.toVarArray(data)) == h);
   assert (Sha256.fromBlob(algo, Blob.fromArray(data)) == h);
-  assert (Sha256.fromList(algo, List.fromArray(data)) == h);
   assert (Sha256.fromIter(algo, data.vals()) == h);
+  assert (Sha256.fromPositional(algo, func(i) = data[i], data.size()) == h);
+  var i = 0;
+  func next() : Nat8 { let r = data[i]; i += 1; r };
+  assert (Sha256.fromNext(algo, next, data.size()) == h);
   do {
     let d = Sha256.new(algo);
     d.writeArray(data);
@@ -36,7 +40,15 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   };
   do {
     let d = Sha256.new(algo);
-    d.writeList(List.fromArray(data));
+    var i = 0;
+    func next() : Nat8 { let r = data[i]; i += 1; r };
+    d.writeNext(next, data.size());
+    assert (d.peekSum() == h);
+    assert (d.sum() == h);
+  };
+  do {
+    let d = Sha256.new(algo);
+    d.writePositional(func (i) = data[i], data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };

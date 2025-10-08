@@ -8,8 +8,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_blocks(s : [var Nat16], data : [var Nat8], start : Nat) : Nat {
-    let sz = data.size();
+  public func process_blocks(s : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers
     var a = nat16To32(s[0]) << 16 | nat16To32(s[1]);
@@ -31,22 +30,22 @@ module {
       let f_0 = f;
       let g_0 = g;
       let h_0 = h;
-      let w00 = nat16To32(nat8To16(data[i])) << 24 | nat16To32(nat8To16(data[i+1])) << 16 | nat16To32(nat8To16(data[i+2])) << 8 | nat16To32(nat8To16(data[i+3]));    
-      let w01 = nat16To32(nat8To16(data[i+4])) << 24 | nat16To32(nat8To16(data[i+5])) << 16 | nat16To32(nat8To16(data[i+6])) << 8 | nat16To32(nat8To16(data[i+7]));    
-      let w02 = nat16To32(nat8To16(data[i+8])) << 24 | nat16To32(nat8To16(data[i+9])) << 16 | nat16To32(nat8To16(data[i+10])) << 8 | nat16To32(nat8To16(data[i+11]));    
-      let w03 = nat16To32(nat8To16(data[i+12])) << 24 | nat16To32(nat8To16(data[i+13])) << 16 | nat16To32(nat8To16(data[i+14])) << 8 | nat16To32(nat8To16(data[i+15]));    
-      let w04 = nat16To32(nat8To16(data[i+16])) << 24 | nat16To32(nat8To16(data[i+17])) << 16 | nat16To32(nat8To16(data[i+18])) << 8 | nat16To32(nat8To16(data[i+19]));    
-      let w05 = nat16To32(nat8To16(data[i+20])) << 24 | nat16To32(nat8To16(data[i+21])) << 16 | nat16To32(nat8To16(data[i+22])) << 8 | nat16To32(nat8To16(data[i+23]));    
-      let w06 = nat16To32(nat8To16(data[i+24])) << 24 | nat16To32(nat8To16(data[i+25])) << 16 | nat16To32(nat8To16(data[i+26])) << 8 | nat16To32(nat8To16(data[i+27]));    
-      let w07 = nat16To32(nat8To16(data[i+28])) << 24 | nat16To32(nat8To16(data[i+29])) << 16 | nat16To32(nat8To16(data[i+30])) << 8 | nat16To32(nat8To16(data[i+31]));    
-      let w08 = nat16To32(nat8To16(data[i+32])) << 24 | nat16To32(nat8To16(data[i+33])) << 16 | nat16To32(nat8To16(data[i+34])) << 8 | nat16To32(nat8To16(data[i+35]));    
-      let w09 = nat16To32(nat8To16(data[i+36])) << 24 | nat16To32(nat8To16(data[i+37])) << 16 | nat16To32(nat8To16(data[i+38])) << 8 | nat16To32(nat8To16(data[i+39]));    
-      let w10 = nat16To32(nat8To16(data[i+40])) << 24 | nat16To32(nat8To16(data[i+41])) << 16 | nat16To32(nat8To16(data[i+42])) << 8 | nat16To32(nat8To16(data[i+43]));    
-      let w11 = nat16To32(nat8To16(data[i+44])) << 24 | nat16To32(nat8To16(data[i+45])) << 16 | nat16To32(nat8To16(data[i+46])) << 8 | nat16To32(nat8To16(data[i+47]));    
-      let w12 = nat16To32(nat8To16(data[i+48])) << 24 | nat16To32(nat8To16(data[i+49])) << 16 | nat16To32(nat8To16(data[i+50])) << 8 | nat16To32(nat8To16(data[i+51]));    
-      let w13 = nat16To32(nat8To16(data[i+52])) << 24 | nat16To32(nat8To16(data[i+53])) << 16 | nat16To32(nat8To16(data[i+54])) << 8 | nat16To32(nat8To16(data[i+55]));    
-      let w14 = nat16To32(nat8To16(data[i+56])) << 24 | nat16To32(nat8To16(data[i+57])) << 16 | nat16To32(nat8To16(data[i+58])) << 8 | nat16To32(nat8To16(data[i+59]));    
-      let w15 = nat16To32(nat8To16(data[i+60])) << 24 | nat16To32(nat8To16(data[i+61])) << 16 | nat16To32(nat8To16(data[i+62])) << 8 | nat16To32(nat8To16(data[i+63]));    
+        let w00 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w01 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w02 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w03 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w04 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w05 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w06 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w07 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w08 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w09 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w10 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w11 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w12 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w13 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w14 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
+        let w15 = nat16To32(nat8To16(data())) << 24 | nat16To32(nat8To16(data())) << 16 | nat16To32(nat8To16(data())) << 8 | nat16To32(nat8To16(data()));    
       let w16 = w00 +% rot(w01, 07) ^ rot(w01, 18) ^ (w01 >> 03) +% w09 +% rot(w14, 17) ^ rot(w14, 19) ^ (w14 >> 10);
       let w17 = w01 +% rot(w02, 07) ^ rot(w02, 18) ^ (w02 >> 03) +% w10 +% rot(w15, 17) ^ rot(w15, 19) ^ (w15 >> 10);
       let w18 = w02 +% rot(w03, 07) ^ rot(w03, 18) ^ (w03 >> 03) +% w11 +% rot(w16, 17) ^ rot(w16, 19) ^ (w16 >> 10);
