@@ -84,4 +84,26 @@ module {
     };
     return i;
   };
+
+  // Write chunk of data to buffer until either the block is full or the end of the data is reached
+  public func write_iter(x : Self, next : () -> ?Nat8) {
+    if (not x.high) {
+      let ?val = next() else return;
+      x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(val);
+      x.i_msg +%= 1;
+      x.high := true;
+    };
+
+    while (x.i_msg < 32) {
+      let ?val0 = next() else return;
+      let ?val1 = next() else {
+        // high must be true here
+        x.word := nat8To16(val0) << 8;
+        x.high := false;
+        return;
+      };
+      x.msg[nat8ToNat(x.i_msg)] := nat8To16(val0) << 8 ^ nat8To16(val1);
+      x.i_msg +%= 1;
+    };
+  };
 }

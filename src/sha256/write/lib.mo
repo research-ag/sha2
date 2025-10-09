@@ -3,6 +3,7 @@ import Blob "./blob";
 import VarArray "./varArray";
 import Pos "./positional";
 import Next "./next";
+import Iter "./iter";
 import Buffer "../buffer";
 import State "../state";
 
@@ -31,5 +32,9 @@ module {
   public func next(x : Digest, data : () -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Next.write(x, data, sz);
+  };
+  public func iter(x : Digest, data : () -> ?Nat8) : () {
+    assert not x.closed;
+    Iter.write(x, data);
   };
 };

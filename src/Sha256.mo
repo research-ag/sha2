@@ -13,6 +13,7 @@ import Buffer "sha256/buffer";
 import State "sha256/state";
 import Write "sha256/write";
 
+import ProcIter "sha256/state/whole_blocks/iter";
 module {
   public type Self = Digest;
 
@@ -115,48 +116,7 @@ module {
   public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
   public func writePositional(x : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.positional(x, data, sz);
   public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(x, data, sz);
-
-  public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
-    assert not x.closed;
-    let (buf, state) = (x.buffer, x.state);
-    let msg = buf.msg;
-    let next = iter.next;
-
-    var i_msg = buf.i_msg;
-    var i_block = buf.i_block;
-
-    if (not buf.high) {
-      let ?val = next() else return;
-      msg[nat8ToNat(i_msg)] := buf.word ^ nat8To16(val);
-      i_msg +%= 1;
-      buf.high := true; 
-      if (i_msg == 32) {
-        state.process_block_from_msg(buf.msg);
-        i_msg := 0;
-        i_block +%= 1;
-      };
-    };
-
-    label reading loop {
-      let ?val0 = next() else break reading;
-      let ?val1 = next() else {
-        // high must be true here
-        buf.word := nat8To16(val0) << 8;
-        buf.high := false;
-        break reading;
-      };
-      msg[nat8ToNat(i_msg)] := nat8To16(val0) << 8 ^ nat8To16(val1);
-      i_msg +%= 1;
-      if (i_msg == 32) {
-        state.process_block_from_msg(buf.msg);
-        i_msg := 0;
-        i_block +%= 1;
-      };
-      continue reading;
-    };
-    buf.i_msg := i_msg;
-    buf.i_block := i_block;
-  };
+  public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
 
   func stateToBlob(x : Digest) : Blob = Prim.arrayToBlob(
     switch (x.algo) {

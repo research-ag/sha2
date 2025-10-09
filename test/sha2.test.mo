@@ -8,7 +8,6 @@ import { range } "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
-import Util "../src/util";
 
 func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   let h = Blob.fromArray(hash);
