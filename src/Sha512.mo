@@ -913,8 +913,9 @@ module {
     };
 
     public func writeIter(iter : { next() : ?Nat8 }) : () {
+      let next = iter.next;
       label reading loop {
-        switch (iter.next()) {
+        switch (next()) {
           case (?val) {
             // The following is an inlined version of writeByte(val)
             word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
