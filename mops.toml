@@ -1,6 +1,6 @@
 [package]
 name = "sha2"
-version = "0.1.7"
+version = "0.1.8"
 description = "Optimized implementation of all SHA2 functions"
 repository = "https://github.com/research-ag/sha2"
 keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
@@ -17,5 +17,5 @@ bench = "1.0.0"
 moc = "0.14.13"
 
 [toolchain]
-wasmtime = "37.0.1"
+wasmtime = "37.0.2"
 moc = "0.16.3"

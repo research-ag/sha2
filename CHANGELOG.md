@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.8
+
+* Improve performance of writing Iter
+
 ## 0.1.7
 
 * Switch from base to core
