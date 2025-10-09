@@ -140,40 +140,40 @@ module {
   /// Allowed values for `algo` are: `#sha224`, `#256`
   public func fromBlob(algo : Algorithm, data : Blob) : Blob {
     let digest = new(algo);
-    writeBlob(digest, data);
+    Write.blob(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA256 hash digest from [Nat8].
   public func fromArray(algo : Algorithm, data : [Nat8]) : Blob {
     let digest = new(algo);
-    writeArray(digest, data);
+    Write.array(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA256 hash digest from [Nat8].
   public func fromVarArray(algo : Algorithm, data : [var Nat8]) : Blob {
     let digest = new(algo);
-    writeVarArray(digest, data);
+    Write.varArray(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA2 hash digest from Iter.
   public func fromIter(algo : Algorithm, data : Types.Iter<Nat8>) : Blob {
     let digest = new(algo);
-    writeIter(digest, data);
+    Write.iter(digest, data.next);
     return sum(digest);
   };
 
   public func fromPositional(algo : Algorithm, data : Nat -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
-    writePositional(digest, data, size);
+    Write.positional(digest, data, size);
     return sum(digest);
   };
 
   public func fromNext(algo : Algorithm, data : () -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
-    writeNext(digest, data, size);
+    Write.next(digest, data, size);
     return sum(digest);
   };
 };
