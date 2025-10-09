@@ -819,8 +819,9 @@ module {
 
     // Note: setting i_max always to s - 1 also works (only for multiples of 2).
     public func writeIter(iter : { next() : ?Nat8 }) : () {
+      let next = iter.next;
       label reading loop {
-        switch (iter.next()) {
+        switch (next()) {
           case (?val) {
             // The following is an inlined version of writeByte(val)
             if (high) {
