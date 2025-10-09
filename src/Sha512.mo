@@ -109,8 +109,9 @@ module {
     var i_byte = x.i_byte;
     var i_msg = x.i_msg;
     var i_block = x.i_block;
+    let next = iter.next;
     label reading loop {
-      switch (iter.next()) {
+      switch (next()) {
         case (?val) {
           // The following is an inlined version of writeByte(val)
           word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
