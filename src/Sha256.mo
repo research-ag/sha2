@@ -833,7 +833,7 @@ module {
       let backup : [var Nat8] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ];
       var pos = 0;
       ignore do ? {
-        label reading loop {
+        loop {
           let b00 = data()!; backup[0] := b00; pos := 1;
           let b01 = data()!; backup[1] := b01; pos := 2;
           let b02 = data()!; backup[2] := b02; pos := 3;
@@ -1090,7 +1090,6 @@ module {
       };
     };
 
-    // Note: setting i_max always to s - 1 also works (only for multiples of 2).
     public func writeIter(iter : { next() : ?Nat8 }) : () {
       let next = iter.next;
       
@@ -1143,6 +1142,7 @@ module {
         writeByte(blob[i]);
         i += 1;
       };
+      // Note: setting i_max always to s - 1 also works (only for multiples of 2).
       let i_max : Nat = i + ((s - i) / 2) * 2;
       while (i < i_max) {
         msg[Nat8.toNat(i_msg)] := nat8To16(blob[i]) << 8 ^ nat8To16(blob[i+1]);
@@ -1172,6 +1172,7 @@ module {
         writeByte(arr[i]);
         i += 1;
       };
+      // Note: setting i_max always to s - 1 also works (only for multiples of 2).
       let i_max : Nat = i + ((s - i) / 2) * 2;
       while (i < i_max) {
         msg[Nat8.toNat(i_msg)] := nat8To16(arr[i]) << 8 ^ nat8To16(arr[i+1]);
