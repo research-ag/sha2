@@ -98,16 +98,19 @@ mops bench --replica pocket-ic
 or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
 ### Performance
 
-We measure performance with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a message of  all the same bytes is not a reliable way to measure. It produces significantly different results.
+We measure performance with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a message of all the same bytes is not a reliable way to measure. It produces significantly different results.
 ### Memory
 
-Hashing also creates garbage.
-As can be seen from the benchmarks results our Sha256 engine does not produce garbage depending on the message length, only constant garbage.
-This is quote remarkable.
+The hash engines are designed to not make any heap allocations when consuming the message.
+This can be seen in the benchmark results.
 
-Sha512 on the other hand does produce garbage.
+By this statement we mean that the heap allocations do not depend linearly on the message length.
+There is a constant heap allocation when the hash engine (Digest instance) is created.
+There may also be a constant heap allocation every time the writeX function is called.
+But the heap allocation does not increase with the message length.
 
-Based on time and memory results, it is advisable to use Sha256 over Sha512 despite the slightly higher performance per byte of Sha512.
+This is true for the Sha256 and Sha512 engines.
+It is also true for all different write functions (type `Blob`, `Array`, `Iter<Nat8>`).
 ## Implementation notes
 
 The round loops are unrolled.
