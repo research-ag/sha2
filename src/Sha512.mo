@@ -103,9 +103,9 @@ module {
   public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
   public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
   public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
-  public func writeList(x : Digest, data : Types.List<Nat8>) : () = Write.list(x, data);
   public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
   public func writePositional(x : Digest, at : Nat -> Nat8, len : Nat) : () = Write.positional(x, at, len);
+  public func writeNext(x : Digest, next : () -> Nat8, len : Nat) : () = Write.next(x, next, len);
 
   public func sum(x : Digest) : Blob {
     assert not x.closed;
@@ -222,14 +222,14 @@ module {
     writeVarArray(d, arr);
     return sum(d);
   };
-  public func fromList(algo : Algorithm, l : Types.List<Nat8>) : Blob {
-    let d = new(algo);
-    writeList(d, l);
-    return sum(d);
-  };
   public func fromPositional(algo : Algorithm, at : Nat -> Nat8, len : Nat) : Blob {
     let d = new(algo);
     writePositional(d, at, len);
+    return sum(d);
+  };
+  public func fromNext(algo : Algorithm, next : () -> Nat8, len : Nat) : Blob {
+    let d = new(algo);
+    writeNext(d, next, len);
     return sum(d);
   };
 

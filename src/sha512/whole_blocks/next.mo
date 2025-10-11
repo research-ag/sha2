@@ -1,7 +1,5 @@
-import List "mo:core/List";
 import Prim "mo:prim";
 import K "../constants";
-import Util "../../util";
 
 module {
   func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
@@ -10,10 +8,7 @@ module {
   let nat16To32 = Prim.nat16ToNat32;
   let nat8To16 = Prim.nat8ToNat16;
 
-
-  public func process_blocks(state : [var Nat64], data : List.List<Nat8>, start : Nat) : Nat {
-    let s = List.size(data);
-    let read = Util.listRange(data, start);
+  public func process_blocks(state : [var Nat64], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers
     var a = state[0];
@@ -25,7 +20,7 @@ module {
     var g = state[6];
     var h = state[7];
     var t = 0 : Nat64;
-    var i_max : Nat = i + ((s - i) / 128) * 128;
+    var i_max : Nat = i + ((sz - i) / 128) * 128;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;
@@ -36,22 +31,22 @@ module {
       let g_0 = g;
       let h_0 = h;
 
-      let w00 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w01 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w02 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w03 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w04 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w05 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w06 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w07 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w08 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w09 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w10 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w11 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w12 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w13 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w14 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
-      let w15 = nat32To64(nat16To32(nat8To16(read()))) << 56 | nat32To64(nat16To32(nat8To16(read()))) << 48 | nat32To64(nat16To32(nat8To16(read()))) << 40 | nat32To64(nat16To32(nat8To16(read()))) << 32 | nat32To64(nat16To32(nat8To16(read()))) << 24 | nat32To64(nat16To32(nat8To16(read()))) << 16 | nat32To64(nat16To32(nat8To16(read()))) << 8 | nat32To64(nat16To32(nat8To16(read())));
+      let w00 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w01 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w02 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w03 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w04 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w05 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w06 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w07 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w08 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w09 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w10 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w11 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w12 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w13 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w14 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
+      let w15 = nat32To64(nat16To32(nat8To16(data()))) << 56 | nat32To64(nat16To32(nat8To16(data()))) << 48 | nat32To64(nat16To32(nat8To16(data()))) << 40 | nat32To64(nat16To32(nat8To16(data()))) << 32 | nat32To64(nat16To32(nat8To16(data()))) << 24 | nat32To64(nat16To32(nat8To16(data()))) << 16 | nat32To64(nat16To32(nat8To16(data()))) << 8 | nat32To64(nat16To32(nat8To16(data())));
 
       let w16 = w00 +% rot(w01, 01) ^ rot(w01, 08) ^ (w01 >> 07) +% w09 +% rot(w14, 19) ^ rot(w14, 61) ^ (w14 >> 06);
       let w17 = w01 +% rot(w02, 01) ^ rot(w02, 08) ^ (w02 >> 07) +% w10 +% rot(w15, 19) ^ rot(w15, 61) ^ (w15 >> 06);

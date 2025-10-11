@@ -1,11 +1,9 @@
-import Types "mo:core/Types";
 import Array "./array";
 import Blob "./blob";
 import VarArray "./varArray";
 import Pos "./positional";
-//import Next "./next";
+import Next "./next";
 import Iter "./iter";
-import List "./list";
 
 module {
   public type Digest = {
@@ -36,18 +34,12 @@ module {
     assert not x.closed;
     Pos.write(x, data, sz);
   };
-  /*
   public func next(x : Digest, data : () -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Next.write(x, data, sz);
   };
-  */
   public func iter(x : Digest, data : () -> ?Nat8) {
     assert not x.closed;
     Iter.write(x, data);
-  };
-  public func list(x : Digest, data : Types.List<Nat8>) {
-    assert not x.closed;
-    List.write(x, data);
   };
 };
