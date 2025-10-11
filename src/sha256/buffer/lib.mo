@@ -56,32 +56,41 @@ module {
     let s = len;
     if (start >= s) return start;
     var i = start;
+    let msg = x.msg;
+    var i_msg = x.i_msg;
     if (not x.high) {
-      x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(at(i));
-      x.i_msg +%= 1;
+      msg[nat8ToNat(i_msg)] := x.word ^ nat8To16(at(i));
+      i_msg +%= 1;
       x.high := true;
       i += 1;
-      if (x.i_msg == 32) return i;
+      if (i_msg == 32) {
+        x.i_msg := i_msg;
+        return i;
+      };
     };
     let i_max : Nat = i + ((s - i) / 2) * 2;
     // Note: setting i_max always to s - 1 also works (only for multiples of 2).
     while (i < i_max) {
-      x.msg[nat8ToNat(x.i_msg)] := nat8To16(at(i)) << 8 ^ nat8To16(at(i + 1));
-      x.i_msg +%= 1;
+      msg[nat8ToNat(i_msg)] := nat8To16(at(i)) << 8 ^ nat8To16(at(i + 1));
+      i_msg +%= 1;
       i += 2;
-      if (x.i_msg == 32) return i;
+      if (i_msg == 32) {
+        x.i_msg := i_msg;
+        return i;
+      };
     };
     while (i < s) {
       if (x.high) {
         x.word := nat8To16(at(i)) << 8;
         x.high := false;
       } else {
-        x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(at(i));
-        x.i_msg +%= 1;
+        msg[nat8ToNat(i_msg)] := x.word ^ nat8To16(at(i));
+        i_msg +%= 1;
         x.high := true;
       };
       i += 1;
     };
+    x.i_msg := i_msg;
     return i;
   };
 
