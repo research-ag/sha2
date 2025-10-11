@@ -1,7 +1,7 @@
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import K "../constants";
-import WriteByte "../write/byte";
+import WritePos "../write/positional";
 
 module {
 
@@ -366,11 +366,6 @@ module {
       state[7] := h;
 
       // write remaining bytes from backup to buffer
-//      ignore buf.write_chunk(func(i) = backup[i], pos, 0);
-      var i = 0;
-      while (i < pos) {
-        WriteByte.writeByte(x, backup[i]);
-        i += 1;
-      };
+      WritePos.write(x, func(i) = backup[i], pos);
     };
 }

@@ -18,6 +18,7 @@ module {
       "fromBlob",
       "fromArray",
       "fromVarArray",
+      "fromPositional",
       "fromIter",
       "fromList",
     ];
@@ -66,6 +67,9 @@ module {
             func() = ignore Sha512.fromVarArray(#sha512, varArray);
           };
           case (3) {
+            func() = ignore Sha512.fromPositional(#sha512, func(i) = source[i], source.size());
+          };
+          case (4) {
             var itemsLeft = source.size();
             let iter = {
               next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
@@ -75,7 +79,7 @@ module {
             };
             func() = ignore Sha512.fromIter(#sha512, iter);
           };
-          case (4) {
+          case (5) {
             func() = ignore Sha512.fromList(#sha512, list);
           };
           case (_) Prim.trap("Row not implemented");

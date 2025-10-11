@@ -2,7 +2,7 @@ import Types "mo:core/Types";
 import Array "./array";
 import Blob "./blob";
 import VarArray "./varArray";
-//import Pos "./positional";
+import Pos "./positional";
 //import Next "./next";
 import Iter "./iter";
 import List "./list";
@@ -32,11 +32,11 @@ module {
     assert not x.closed;
     VarArray.write(x, data);
   };
-  /*
   public func positional(x : Digest, data : Nat -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Pos.write(x, data, sz);
   };
+  /*
   public func next(x : Digest, data : () -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Next.write(x, data, sz);

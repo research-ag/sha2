@@ -100,50 +100,12 @@ module {
     };
   };
 
-  /*
-  public func writeIter2(x : Digest, iter : { next() : ?Nat8 }) : () {
-    assert not x.closed;
-    var word = x.word;
-    var i_byte = x.i_byte;
-    var i_msg = x.i_msg;
-    var i_block = x.i_block;
-    let next = iter.next;
-    label reading loop {
-      switch (next()) {
-        case (?val) {
-          // The following is an inlined version of writeByte(val)
-          word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
-          i_byte -%= 1;
-          if (i_byte == 0) {
-            x.msg[Nat8.toNat(i_msg)] := word;
-            word := 0;
-            i_byte := 8;
-            i_msg +%= 1;
-            if (i_msg == 16) {
-              ProcessBlock.process_block_from_buffer(x.s, x.msg);
-              i_msg := 0;
-              i_block +%= 1;
-            };
-          };
-          continue reading;
-        };
-        case (null) {
-          break reading;
-        };
-      };
-    };
-    x.word := word;
-    x.i_byte := i_byte;
-    x.i_msg := i_msg;
-    x.i_block := i_block;
-  };
-  */
-
   public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
   public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
   public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
   public func writeList(x : Digest, data : Types.List<Nat8>) : () = Write.list(x, data);
   public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
+  public func writePositional(x : Digest, at : Nat -> Nat8, len : Nat) : () = Write.positional(x, at, len);
 
   public func sum(x : Digest) : Blob {
     assert not x.closed;
@@ -263,6 +225,11 @@ module {
   public func fromList(algo : Algorithm, l : Types.List<Nat8>) : Blob {
     let d = new(algo);
     writeList(d, l);
+    return sum(d);
+  };
+  public func fromPositional(algo : Algorithm, at : Nat -> Nat8, len : Nat) : Blob {
+    let d = new(algo);
+    writePositional(d, at, len);
     return sum(d);
   };
 

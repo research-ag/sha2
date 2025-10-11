@@ -66,6 +66,7 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   assert (Sha512.fromIter(algo, data.vals()) == h);
   assert (Sha512.fromVarArray(algo, Array.toVarArray(data)) == h);
   assert (Sha512.fromList(algo, List.fromArray(data)) == h);
+  assert (Sha512.fromPositional(algo, func(i) = data[i], data.size()) == h);
   do {
     let d = Sha512.new(algo);
     d.writeArray(data);
@@ -93,6 +94,12 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   do {
     let d = Sha512.new(algo);
     d.writeIter(data.vals());
+    assert (d.peekSum() == h);
+    assert (d.sum() == h);
+  };
+  do {
+    let d = Sha512.new(algo);
+    d.writePositional(func(i) = data[i], data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
