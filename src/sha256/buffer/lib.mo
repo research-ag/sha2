@@ -96,6 +96,7 @@ module {
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
   public func write_iter(x : Self, next : () -> ?Nat8) {
+    // TODO: optimize
     if (not x.high) {
       let ?val = next() else return;
       x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(val);
