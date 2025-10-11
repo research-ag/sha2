@@ -89,14 +89,18 @@ module {
   };
 
   // We must be at a word boundary, i.e. i_byte must be equal to 8
-  private func writeWord(x : Digest, val : Nat64) : () {
+  func writeWord(x : Digest, val : Nat64) : () {
     assert (x.i_byte == 8);
-    x.msg[Nat8.toNat(x.i_msg)] := val;
-    x.i_msg +%= 1;
-    if (x.i_msg == 16) {
-      ProcessBlock.process_block_from_buffer(x.s, x.msg);
+    let msg = x.msg;
+    var i_msg = x.i_msg;
+    msg[Nat8.toNat(i_msg)] := val;
+    i_msg +%= 1;
+    if (i_msg == 16) {
+      ProcessBlock.process_block_from_buffer(x.s, msg);
       x.i_msg := 0;
       x.i_block +%= 1;
+    } else { 
+      x.i_msg := i_msg;
     };
   };
 
@@ -204,32 +208,32 @@ module {
   // Calculate SHA2 hash digest from Iter, Array, Blob, VarArray, List.
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let d = new(algo);
-    writeIter(d, iter);
+    Write.iter(d, iter.next);
     return sum(d);
   };
   public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
     let d = new(algo);
-    writeArray(d, arr);
+    Write.array(d, arr);
     return sum(d);
   };
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let d = new(algo);
-    writeBlob(d, b);
+    Write.blob(d, b);
     return sum(d);
   };
   public func fromVarArray(algo : Algorithm, arr : [var Nat8]) : Blob {
     let d = new(algo);
-    writeVarArray(d, arr);
+    Write.varArray(d, arr);
     return sum(d);
   };
   public func fromPositional(algo : Algorithm, at : Nat -> Nat8, len : Nat) : Blob {
     let d = new(algo);
-    writePositional(d, at, len);
+    Write.positional(d, at, len);
     return sum(d);
   };
   public func fromNext(algo : Algorithm, next : () -> Nat8, len : Nat) : Blob {
     let d = new(algo);
-    writeNext(d, next, len);
+    Write.next(d, next, len);
     return sum(d);
   };
 

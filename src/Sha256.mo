@@ -18,12 +18,7 @@ module {
 
   public type Algorithm = { #sha224; #sha256 };
 
-  let nat32To64 = Prim.nat32ToNat64;
-  let nat8To16 = Prim.nat8ToNat16;
-  let nat8ToNat = Prim.nat8ToNat;
-  let intToNat64Wrap = Prim.intToNat64Wrap;
-
-  type Digest = {
+  public type Digest = {
     algo : Algorithm;
     buffer : Buffer.Self;
     state : State.Self;
@@ -68,6 +63,11 @@ module {
       var closed = false;
     };
   };
+
+  let nat32To64 = Prim.nat32ToNat64;
+  let nat8To16 = Prim.nat8ToNat16;
+  let nat8ToNat = Prim.nat8ToNat;
+  let intToNat64Wrap = Prim.intToNat64Wrap;
 
   func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
