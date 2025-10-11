@@ -16,18 +16,25 @@ module {
   };
 
   public func writeByte(x : Digest, val : Nat8) : () {
-    x.word := (x.word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
-    x.i_byte -%= 1;
-    if (x.i_byte == 0) {
-      x.msg[Nat8.toNat(x.i_msg)] := x.word;
+    var word = x.word;
+    word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));
+    let i_byte = x.i_byte;
+    if (i_byte == 1) {
+      var i_msg = x.i_msg;
+      x.msg[Nat8.toNat(i_msg)] := word;
       x.word := 0;
       x.i_byte := 8;
-      x.i_msg +%= 1;
-      if (x.i_msg == 16) {
+      i_msg +%= 1;
+      if (i_msg == 16) {
         ProcessBlock.process_block_from_buffer(x.s, x.msg);
         x.i_msg := 0;
         x.i_block +%= 1;
+      } else {
+        x.i_msg := i_msg;
       };
+    } else {
+      x.i_byte := i_byte -% 1;
+      x.word := word;
     };
   };
 }
