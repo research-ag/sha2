@@ -8,7 +8,7 @@ module {
     state : State.Self;
   };
 
-  public func write(x : Digest, next : () -> ?Nat8) : () {
+  public func write(x : Digest, next : () -> ?Nat8) {
     let (buf, state) = (x.buffer, x.state);
     
     if (buf.i_msg > 0 or not buf.high) {

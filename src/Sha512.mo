@@ -15,10 +15,7 @@ import Prim "mo:prim";
 import K "sha512/constants";
 import ProcessBlock "sha512/process_block";
 import Byte "sha512/write/byte";
-import WriteBlob "sha512/write/Blob";
-import WriteArray "sha512/write/Array";
-import WriteVarArray "sha512/write/VarArray";
-import WriteList "sha512/write/List";
+import Write "sha512/write";
 
 module {
   public type Self = Digest;
@@ -103,7 +100,8 @@ module {
     };
   };
 
-  public func writeIter(x : Digest, iter : { next() : ?Nat8 }) : () {
+  /*
+  public func writeIter2(x : Digest, iter : { next() : ?Nat8 }) : () {
     assert not x.closed;
     var word = x.word;
     var i_byte = x.i_byte;
@@ -139,11 +137,13 @@ module {
     x.i_msg := i_msg;
     x.i_block := i_block;
   };
+  */
 
-  public func writeBlob(x : Digest, data : Blob) : () = WriteBlob.write(x, data);
-  public func writeArray(x : Digest, data : [Nat8]) : () = WriteArray.write(x, data);
-  public func writeVarArray(x : Digest, data : [var Nat8]) : () = WriteVarArray.write(x, data);
-  public func writeList(x : Digest, data : Types.List<Nat8>) : () = WriteList.write(x, data);
+  public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
+  public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
+  public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
+  public func writeList(x : Digest, data : Types.List<Nat8>) : () = Write.list(x, data);
+  public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
 
   public func sum(x : Digest) : Blob {
     assert not x.closed;

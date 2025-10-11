@@ -10,7 +10,7 @@ module {
 
   let natToNat32 = Prim.natToNat32;
 
-  public func write(x : Digest, data : Blob) : () {
+  public func write(x : Digest, data : Blob) {
     let sz = data.size();
     if (sz == 0) return;
     var pos = 0;

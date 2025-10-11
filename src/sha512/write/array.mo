@@ -2,7 +2,7 @@ import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
 import ProcessBlock "../process_block";
-import Process "../whole_blocks/Blob";
+import Process "../whole_blocks/array";
 import Byte "byte";
 
 module {
@@ -15,11 +15,9 @@ module {
     var i_block : Nat64;
     // state variables
     s : [var Nat64];
-    var closed : Bool;
   };
 
-  public func write(x : Digest, data : Blob) : () {
-    assert not x.closed;
+  public func write(x : Digest, data : [Nat8]) {
     let sz = data.size();
     if (sz == 0) return;
     var pos = 0;
@@ -33,7 +31,7 @@ module {
 
   // Write blob to buffer until either the block is full or the end of the blob is reached
   // The return value refers to the interval that was written in the form [start,end)
-  func write_data_to_buffer(x : Digest, data : Blob, start : Nat) : (end : Nat) {
+  func write_data_to_buffer(x : Digest, data : [Nat8], start : Nat) : (end : Nat) {
     let sz = data.size();
     if (start >= sz) return start;
     var i = start;

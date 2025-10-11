@@ -1,18 +1,25 @@
+import Types "mo:core/Types";
 import Array "./array";
 import Blob "./blob";
 import VarArray "./varArray";
-import Pos "./positional";
-import Next "./next";
+//import Pos "./positional";
+//import Next "./next";
 import Iter "./iter";
-import Buffer "../buffer";
-import State "../state";
+import List "./list";
 
 module {
-  type Digest = {
-    buffer : Buffer.Self;
-    state : State.Self;
+  public type Digest = {
+    // msg buffer
+    msg : [var Nat64];
+    var word : Nat64;
+    var i_msg : Nat8;
+    var i_byte : Nat8;
+    var i_block : Nat64;
+    // state variables
+    s : [var Nat64];
     var closed : Bool;
   };
+
   public func blob(x : Digest, data : Blob) {
     assert not x.closed;
     Blob.write(x, data);
@@ -25,16 +32,22 @@ module {
     assert not x.closed;
     VarArray.write(x, data);
   };
-  public func positional(x : Digest, data : Nat -> Nat8, sz : Nat) {
+  /*
+  public func positional(x : Digest, data : Nat -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Pos.write(x, data, sz);
   };
-  public func next(x : Digest, data : () -> Nat8, sz : Nat) {
+  public func next(x : Digest, data : () -> Nat8, sz : Nat) : () {
     assert not x.closed;
     Next.write(x, data, sz);
   };
+  */
   public func iter(x : Digest, data : () -> ?Nat8) {
     assert not x.closed;
     Iter.write(x, data);
+  };
+  public func list(x : Digest, data : Types.List<Nat8>) {
+    assert not x.closed;
+    List.write(x, data);
   };
 };

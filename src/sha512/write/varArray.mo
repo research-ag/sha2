@@ -2,7 +2,7 @@ import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
 import ProcessBlock "../process_block";
-import Process "../whole_blocks/VarArray";
+import Process "../whole_blocks/varArray";
 import Byte "byte";
 
 module {
@@ -15,11 +15,9 @@ module {
     var i_block : Nat64;
     // state variables
     s : [var Nat64];
-    var closed : Bool;
   };
 
-  public func write(x : Digest, data : [var Nat8]) : () {
-    assert not x.closed;
+  public func write(x : Digest, data : [var Nat8]) {
     let sz = data.size();
     if (sz == 0) return;
     var pos = 0;

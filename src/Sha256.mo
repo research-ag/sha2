@@ -13,7 +13,6 @@ import Buffer "sha256/buffer";
 import State "sha256/state";
 import Write "sha256/write";
 
-import ProcIter "sha256/state/whole_blocks/iter";
 module {
   public type Self = Digest;
 
