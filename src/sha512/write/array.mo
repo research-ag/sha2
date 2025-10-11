@@ -43,8 +43,9 @@ module {
     // round the remaining length of sz - i down to a multiple of 8
     let i_max : Nat = i + ((sz - i) / 8) * 8;
     var i_msg = x.i_msg;
+    let msg = x.msg;
     while (i < i_max) {
-      x.msg[Nat8.toNat(i_msg)] :=
+      msg[Nat8.toNat(i_msg)] :=
       Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i]))) << 56
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+1]))) << 48
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+2]))) << 40
@@ -56,7 +57,7 @@ module {
       i += 8;
       i_msg +%= 1;
       if (i_msg == 16) {
-        ProcessBlock.process_block_from_buffer(x.s, x.msg);
+        ProcessBlock.process_block_from_buffer(x.s, msg);
         x.i_msg := 0;
         x.i_block +%= 1;
         return i;

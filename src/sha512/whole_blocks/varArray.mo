@@ -9,7 +9,7 @@ module {
   let nat8To16 = Prim.nat8ToNat16;
 
   public func process_blocks(state : [var Nat64], data : [var Nat8], start : Nat) : Nat {
-    let s = data.size();
+    let sz = data.size();
     var i = start;
     // load state registers
     var a = state[0];
@@ -21,7 +21,7 @@ module {
     var g = state[6];
     var h = state[7];
     var t = 0 : Nat64;
-    var i_max : Nat = i + ((s - i) / 128) * 128;
+    var i_max : Nat = i + ((sz - i) / 128) * 128;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;

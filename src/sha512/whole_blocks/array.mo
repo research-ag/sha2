@@ -9,7 +9,7 @@ module {
   let nat8To16 = Prim.nat8ToNat16;
 
   public func process_blocks(state : [var Nat64], data : [Nat8], start : Nat) : Nat {
-    let s = data.size();
+    let sz = data.size();
     var i = start;
     // load state registers
     var a = state[0];
@@ -21,7 +21,7 @@ module {
     var g = state[6];
     var h = state[7];
     var t = 0 : Nat64;
-    var i_max : Nat = i + ((s - i) / 128) * 128;
+    var i_max : Nat = i + ((sz - i) / 128) * 128;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;
@@ -48,7 +48,7 @@ module {
       let w13 = nat32To64(nat16To32(nat8To16(data[i+104]))) << 56 | nat32To64(nat16To32(nat8To16(data[i+105]))) << 48 | nat32To64(nat16To32(nat8To16(data[i+106]))) << 40 | nat32To64(nat16To32(nat8To16(data[i+107]))) << 32 | nat32To64(nat16To32(nat8To16(data[i+108]))) << 24 | nat32To64(nat16To32(nat8To16(data[i+109]))) << 16 | nat32To64(nat16To32(nat8To16(data[i+110]))) << 8 | nat32To64(nat16To32(nat8To16(data[i+111])));
       let w14 = nat32To64(nat16To32(nat8To16(data[i+112]))) << 56 | nat32To64(nat16To32(nat8To16(data[i+113]))) << 48 | nat32To64(nat16To32(nat8To16(data[i+114]))) << 40 | nat32To64(nat16To32(nat8To16(data[i+115]))) << 32 | nat32To64(nat16To32(nat8To16(data[i+116]))) << 24 | nat32To64(nat16To32(nat8To16(data[i+117]))) << 16 | nat32To64(nat16To32(nat8To16(data[i+118]))) << 8 | nat32To64(nat16To32(nat8To16(data[i+119])));
       let w15 = nat32To64(nat16To32(nat8To16(data[i+120]))) << 56 | nat32To64(nat16To32(nat8To16(data[i+121]))) << 48 | nat32To64(nat16To32(nat8To16(data[i+122]))) << 40 | nat32To64(nat16To32(nat8To16(data[i+123]))) << 32 | nat32To64(nat16To32(nat8To16(data[i+124]))) << 24 | nat32To64(nat16To32(nat8To16(data[i+125]))) << 16 | nat32To64(nat16To32(nat8To16(data[i+126]))) << 8 | nat32To64(nat16To32(nat8To16(data[i+127])));
-
+  
       let w16 = w00 +% rot(w01, 01) ^ rot(w01, 08) ^ (w01 >> 07) +% w09 +% rot(w14, 19) ^ rot(w14, 61) ^ (w14 >> 06);
       let w17 = w01 +% rot(w02, 01) ^ rot(w02, 08) ^ (w02 >> 07) +% w10 +% rot(w15, 19) ^ rot(w15, 61) ^ (w15 >> 06);
       let w18 = w02 +% rot(w03, 01) ^ rot(w03, 08) ^ (w03 >> 07) +% w11 +% rot(w16, 19) ^ rot(w16, 61) ^ (w16 >> 06);
