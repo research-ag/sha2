@@ -2,7 +2,6 @@
 
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
-import List "mo:core/List";
 import Nat8 "mo:core/Nat8";
 import { range } "mo:core/Nat";
 import VarArray "mo:core/VarArray";

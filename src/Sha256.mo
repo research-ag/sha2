@@ -117,22 +117,25 @@ module {
   public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(x, data, sz);
   public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
 
-  func stateToBlob(x : Digest) : Blob = Prim.arrayToBlob(
-    switch (x.algo) {
-      case (#sha224) State.toArray28(x.state);
-      case (#sha256) State.toArray32(x.state);
-    }
-  );
+  func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
+    case (#sha224) State.toNat8Array(x.state, 28);
+    case (#sha256) State.toNat8Array(x.state, 32);
+  };
 
-  public func sum(x : Digest) : Blob {
+  func stateBlob(x : Digest) : Blob = Prim.arrayToBlob(stateNat8(x));
+
+  func sum_(x : Digest) {
     assert not x.closed;
     writePadding(x);
     x.closed := true;
-    stateToBlob(x);
   };
 
+  public func sumToNat8Array(x : Digest) : [Nat8] { sum_(x); stateNat8(x) };
+
+  public func sum(x : Digest) : Blob = Prim.arrayToBlob(sumToNat8Array(x));
+
   public func peekSum(x : Digest) : Blob {
-    if (x.closed) stateToBlob(x) else sum(clone(x));
+    if (x.closed) stateBlob(x) else sum(clone(x));
   };
 
   /// Calculate the SHA2 hash digest from `Blob`.
