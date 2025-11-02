@@ -6,7 +6,7 @@ import Random "mo:core/Random";
 import Prim "mo:prim";
 import Bench "mo:bench";
 import Sha512 "../src/Sha512";
-import Util "./util";
+import _ListTools "../src/util/List";
 
 module {
   public func init() : Bench.Bench {
@@ -60,22 +60,22 @@ module {
 
         switch (row) {
           case (0) {
-            func() = ignore Sha512.fromBlob(#sha512, blob);
+            func() = ignore Sha512.fromBlob(blob);
           };
           case (1) {
-            func() = ignore Sha512.fromArray(#sha512, source);
+            func() = ignore Sha512.fromArray(source);
           };
           case (2) {
-            func() = ignore Sha512.fromVarArray(#sha512, varArray);
+            func() = ignore Sha512.fromVarArray(varArray);
           };
           case (3) {
             func at(i : Nat) : Nat8 = source[i];
-            func() = ignore Sha512.fromPositional(#sha512, at, source.size());
+            func() = ignore Sha512.fromPositional(at, source.size());
           };
           case (4) {
             var j = 0;
             func next() : Nat8 { let r = source[j]; j += 1; r };
-            func() = ignore Sha512.fromNext(#sha512, next, source.size());
+            func() = ignore Sha512.fromNext(next, source.size());
           };
           case (5) {
             var itemsLeft = source.size();
@@ -85,11 +85,11 @@ module {
                 ?0x5f;
               };
             };
-            func() = ignore Sha512.fromIter(#sha512, iter);
+            func() = ignore Sha512.fromIter(iter);
           };
           case (6) {
-            let next = Util.listRange<Nat8>(list, 0);
-            func() = ignore Sha512.fromNext(#sha512, next, source.size());
+            let next = list.stream();
+            func() = ignore Sha512.fromNext(next, source.size());
           };
           case (_) Prim.trap("Row not implemented");
         };

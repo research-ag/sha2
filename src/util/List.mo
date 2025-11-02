@@ -15,21 +15,25 @@ module {
     }
   };
 
-  public func listRange<T>(list : List.List<T>, start : Nat) : () -> T {
+  public func size<T>(self : List.List<T>) : Nat = List.size(self);
+
+  public let start = 0;  
+
+  public func stream<T>(self : List.List<T>, start : (implicit : Nat)) : () -> T {
     var blockIndex = 0;
     var elementIndex = 0;
     if (start != 0) {
       let (block, element) = locate(start - 1);
       blockIndex := block;
-      elementIndex := element + 1
+      elementIndex := element + 1;
     };
-    var db : [var ?T] = list.blocks[blockIndex];
+    var db : [var ?T] = self.blocks[blockIndex];
     var dbSize = db.size();
     func next() : T {
       // Note: next() traps when reading beyond end of list
       if (elementIndex == dbSize) {
         blockIndex += 1;
-        db := list.blocks[blockIndex];
+        db := self.blocks[blockIndex];
         dbSize := db.size();
         elementIndex := 0
       };

@@ -6,7 +6,7 @@ import Random "mo:core/Random";
 import Prim "mo:prim";
 import Bench "mo:bench";
 import Sha256 "../src/Sha256";
-import Util "./util";
+import _ListTools "../src/util/List";
 
 module {
   public func init() : Bench.Bench {
@@ -60,22 +60,22 @@ module {
 
         switch (row) {
           case (0) {
-            func() = ignore Sha256.fromBlob(#sha256, blob);
+            func() = ignore Sha256.fromBlob(blob);
           };
           case (1) {
-            func() = ignore Sha256.fromArray(#sha256, source);
+            func() = ignore Sha256.fromArray(source);
           };
           case (2) {
-            func() = ignore Sha256.fromVarArray(#sha256, varArray);
+            func() = ignore Sha256.fromVarArray(varArray);
           };
           case (3) {
             let at = func(i : Nat) : Nat8 = source[i];
-            func() = ignore Sha256.fromPositional(#sha256, at, source.size());
+            func() = ignore Sha256.fromPositional(at, source.size());
           };
           case (4) {
             var i = 0;
             func next() : Nat8 { let r = source[i]; i += 1; r };
-            func() = ignore Sha256.fromNext(#sha256, next, source.size());
+            func() = ignore Sha256.fromNext(next, source.size());
           };
           case (5) {
             var itemsLeft = source.size();
@@ -85,11 +85,11 @@ module {
                 ?0x5f;
               };
             };
-            func() = ignore Sha256.fromIter(#sha256, iter);
+            func() = ignore Sha256.fromIter(iter);
           };
           case (6) {
-            let next = Util.listRange<Nat8>(list, 0);
-            func() = ignore Sha256.fromNext(#sha256, next, source.size());
+            let next = list.stream();
+            func() = ignore Sha256.fromNext(next, source.size());
           };
           case (_) Prim.trap("Row not implemented");
         };
