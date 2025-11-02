@@ -12,9 +12,9 @@ import Block "block";
 
 module {
   // indices 0,2,4,6,8,10,12,14 = high bytes, indices 1,3,5,7,9,11,13,15 = low bytes
-  public type Self = [var Nat16];
+  public type State = [var Nat16];
 
-  public func set(self : Self, vals : [Nat16]) {
+  public func set(self : State, vals : [Nat16]) {
     for (i in Nat.range(0, 16)) self[i] := vals[i];
   };
   public let clone = VarArray.clone;
@@ -25,7 +25,7 @@ module {
   public let process_blocks_from_stream = fromNext.process_blocks;
   public let process_block_from_msg = Block.process_block;
 
-  public func toNat8Array(self : Self, len : Nat) : [Nat8] {
+  public func toNat8Array(self : State, len : Nat) : [Nat8] {
     let (d0, d1) = Prim.explodeNat16(self[0]);
     let (d2, d3) = Prim.explodeNat16(self[1]);
     let (d4, d5) = Prim.explodeNat16(self[2]);

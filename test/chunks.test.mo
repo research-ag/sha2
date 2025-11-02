@@ -12,17 +12,17 @@ do {
   let chunk1 : Blob = "\00\00\00\20\63\48\52\4d\00\00\7a\25\00\00\80\83\00\00\f9\ff\00\00\80\e9\00\00\75\30\00\00\ea\60\00";
   let combined = Array.concat(Blob.toArray(chunk0), Blob.toArray(chunk1));
 
-  let digest = Sha256.fromArray(#sha256, combined);
+  let digest = Sha256.fromArray(combined);
   Prim.debugPrint("Digest: " # debug_show (digest));
 
-  let digest2 = Sha256.new(#sha256);
+  let digest2 = Sha256.new();
   digest2.writeIter(chunk0.vals());
   digest2.writeIter(chunk1.vals());
   let sum = digest2.sum();
   Prim.debugPrint("Digest2: " # debug_show (sum));
   assert Blob.equal(sum, digest);
 
-  let digest3 = Sha256.new(#sha256);
+  let digest3 = Sha256.new();
   digest3.writeBlob(chunk0);
   digest3.writeBlob(chunk1);
   let sum2 = digest3.sum();

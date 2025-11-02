@@ -4,8 +4,8 @@ import ProcIter "../state/whole_blocks/iter";
 
 module {
   type Digest = {
-    buffer : Buffer.Self;
-    state : State.Self;
+    buffer : Buffer.Buffer;
+    state : State.State;
   };
 
   public func write(x : Digest, next : () -> ?Nat8) {

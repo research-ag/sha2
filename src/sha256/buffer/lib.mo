@@ -2,26 +2,26 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
-  public type Self = {
+  public type Buffer = {
     msg : [var Nat16];
     var i_msg : Nat8;
     var i_block : Nat32;
     var high : Bool;
     var word : Nat16;
   };
-  public func new() : Self = {
+  public func new() : Buffer = {
     msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var i_msg : Nat8 = 0;
     var i_block : Nat32 = 0;
     var high : Bool = true;
     var word : Nat16 = 0;
   };
-  public func reset(self : Self) {
+  public func reset(self : Buffer) {
     self.i_msg := 0;
     self.i_block := 0;
     self.high := true;
   };
-  public func clone(self : Self) : Self = {
+  public func clone(self : Buffer) : Buffer = {
     msg = VarArray.clone(self.msg);
     var i_msg = self.i_msg;
     var i_block = self.i_block;
@@ -52,7 +52,7 @@ module {
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
   // The return value refers to the interval that was written in the form [start,end)
-  public func write_chunk(self : Self, at : Nat -> Nat8, len : Nat, start : Nat) : (end : Nat) {
+  public func write_chunk(self : Buffer, at : Nat -> Nat8, len : Nat, start : Nat) : (end : Nat) {
     let s = len;
     if (start >= s) return start;
     var i = start;
@@ -95,7 +95,7 @@ module {
   };
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
-  public func write_iter(self : Self, next : () -> ?Nat8) {
+  public func write_iter(self : Buffer, next : () -> ?Nat8) {
     let msg = self.msg;
     var i_msg = self.i_msg;
     if (not self.high) {

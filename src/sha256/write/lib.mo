@@ -9,8 +9,8 @@ import State "../state";
 
 module {
   type Digest = {
-    buffer : Buffer.Self;
-    state : State.Self;
+    buffer : Buffer.Buffer;
+    state : State.State;
     var closed : Bool;
   };
   public func blob(x : Digest, data : Blob) {

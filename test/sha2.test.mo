@@ -194,7 +194,7 @@ for (l in range(0, 65)) {
 };
 
 do {
-  let d = Sha256.new(#sha256);
+  let d = Sha256.new();
   for (l in range(0, 65)) {
     assert (d.peekSum() == Blob.fromArray(digests[l]));
     d.writeArray([0xa5]);
@@ -343,7 +343,7 @@ for (l in range(0, 81)) {
 };
 
 do {
-  let d = Sha512.new(#sha512);
+  let d = Sha512.new();
   for (l in range(0, 81)) {
     assert (d.peekSum() == Blob.fromArray(digests512[l]));
     d.writeArray([0xa5]);
@@ -361,8 +361,8 @@ do {
 do {
   let data = Blob.fromVarArray(VarArray.repeat<Nat8>(0, 128));
   let (digest256, digest512) = (
-    Sha256.new(#sha256),
-    Sha512.new(#sha512),
+    Sha256.new(),
+    Sha512.new(),
   );
   digest256.reset(); // test reset() as well
   digest512.reset(); // test reset() as well
@@ -378,10 +378,10 @@ do {
 
 // test consecutive writeBlob's of different lengths
 do {
-  let hash256_b = Sha256.new(#sha256);
-  let hash512_b = Sha512.new(#sha512);
-  let hash256_arr = Sha256.new(#sha256);
-  let hash512_arr = Sha512.new(#sha512);
+  let hash256_b = Sha256.new();
+  let hash512_b = Sha512.new();
+  let hash256_arr = Sha256.new();
+  let hash512_arr = Sha512.new();
   for (l in range(0, 11)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
@@ -399,10 +399,10 @@ do {
 };
 
 do {
-  let hash256_b = Sha256.new(#sha256);
-  let hash512_b = Sha512.new(#sha512);
-  let hash256_arr = Sha256.new(#sha256);
-  let hash512_arr = Sha512.new(#sha512);
+  let hash256_b = Sha256.new();
+  let hash512_b = Sha512.new();
+  let hash256_arr = Sha256.new();
+  let hash512_arr = Sha512.new();
   for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);
@@ -428,10 +428,10 @@ do {
 };
 
 do {
-  let hash256_b = Sha256.new(#sha256);
-  let hash256_arr = Sha256.new(#sha256);
-  let hash512_b = Sha512.new(#sha512);
-  let hash512_arr = Sha512.new(#sha512);
+  let hash256_b = Sha256.new();
+  let hash256_arr = Sha256.new();
+  let hash512_b = Sha512.new();
+  let hash512_arr = Sha512.new();
   for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
     let b = Blob.fromArray(arr);

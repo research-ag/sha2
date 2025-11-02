@@ -4,8 +4,8 @@ import State "../state";
 
 module {
   type Digest = {
-    buffer : Buffer.Self;
-    state : State.Self;
+    buffer : Buffer.Buffer;
+    state : State.State;
   };
 
   let natToNat32 = Prim.natToNat32;

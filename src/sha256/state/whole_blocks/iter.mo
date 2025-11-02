@@ -9,7 +9,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_blocks(s : [var Nat16], data : () -> ?Nat8, buf : Buffer.Self) {
+  public func process_blocks(s : [var Nat16], data : () -> ?Nat8, buf : Buffer.Buffer) {
     var blocks : Nat32 = 0;
     // load state registers
     var a = nat16To32(s[0]) << 16 | nat16To32(s[1]);

@@ -14,20 +14,19 @@ import State "sha256/state";
 import Write "sha256/write";
 
 module {
-  public type Self = Digest;
-
   public type Algorithm = { #sha224; #sha256 };
+  public let algo = #sha256; // default algorithm
 
   public type Digest = {
     algo : Algorithm;
-    buffer : Buffer.Self;
-    state : State.Self;
+    buffer : Buffer.Buffer;
+    state : State.State;
     var closed : Bool;
   };
 
-  public func new(algo_ : Algorithm) : Digest {
+  public func new(algo : (implicit : Algorithm)) : Digest {
     let buf = Buffer.new();
-    if (algo_ == #sha224) {
+    if (algo == #sha224) {
       {
         algo = #sha224;
         state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
@@ -140,40 +139,40 @@ module {
 
   /// Calculate the SHA2 hash digest from `Blob`.
   /// Allowed values for `algo` are: `#sha224`, `#256`
-  public func fromBlob(algo : Algorithm, data : Blob) : Blob {
+  public func fromBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
     let digest = new(algo);
     Write.blob(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA256 hash digest from [Nat8].
-  public func fromArray(algo : Algorithm, data : [Nat8]) : Blob {
+  public func fromArray(algo : (implicit : Algorithm), data : [Nat8]) : Blob {
     let digest = new(algo);
     Write.array(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA256 hash digest from [Nat8].
-  public func fromVarArray(algo : Algorithm, data : [var Nat8]) : Blob {
+  public func fromVarArray(algo : (implicit : Algorithm), data : [var Nat8]) : Blob {
     let digest = new(algo);
     Write.varArray(digest, data);
     return sum(digest);
   };
 
   // Calculate SHA2 hash digest from Iter.
-  public func fromIter(algo : Algorithm, data : Types.Iter<Nat8>) : Blob {
+  public func fromIter(algo : (implicit : Algorithm), data : Types.Iter<Nat8>) : Blob {
     let digest = new(algo);
     Write.iter(digest, data.next);
     return sum(digest);
   };
 
-  public func fromPositional(algo : Algorithm, data : Nat -> Nat8, size : Nat) : Blob {
+  public func fromPositional(algo : (implicit : Algorithm), data : Nat -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
     Write.positional(digest, data, size);
     return sum(digest);
   };
 
-  public func fromNext(algo : Algorithm, data : () -> Nat8, size : Nat) : Blob {
+  public func fromNext(algo : (implicit : Algorithm), data : () -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
     Write.next(digest, data, size);
     return sum(digest);
