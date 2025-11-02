@@ -16,17 +16,17 @@ module {
     var high : Bool = true;
     var word : Nat16 = 0;
   };
-  public func reset(x : Self) {
-    x.i_msg := 0;
-    x.i_block := 0;
-    x.high := true;
+  public func reset(self : Self) {
+    self.i_msg := 0;
+    self.i_block := 0;
+    self.high := true;
   };
-  public func clone(x : Self) : Self = {
-    msg = VarArray.clone(x.msg);
-    var i_msg = x.i_msg;
-    var i_block = x.i_block;
-    var high = x.high;
-    var word = x.word;
+  public func clone(self : Self) : Self = {
+    msg = VarArray.clone(self.msg);
+    var i_msg = self.i_msg;
+    var i_block = self.i_block;
+    var high = self.high;
+    var word = self.word;
   };
 
   let nat8To16 = Prim.nat8ToNat16;
@@ -52,19 +52,19 @@ module {
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
   // The return value refers to the interval that was written in the form [start,end)
-  public func write_chunk(x : Self, at : Nat -> Nat8, len : Nat, start : Nat) : (end : Nat) {
+  public func write_chunk(self : Self, at : Nat -> Nat8, len : Nat, start : Nat) : (end : Nat) {
     let s = len;
     if (start >= s) return start;
     var i = start;
-    let msg = x.msg;
-    var i_msg = x.i_msg;
-    if (not x.high) {
-      msg[nat8ToNat(i_msg)] := x.word ^ nat8To16(at(i));
+    let msg = self.msg;
+    var i_msg = self.i_msg;
+    if (not self.high) {
+      msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(at(i));
       i_msg +%= 1;
-      x.high := true;
+      self.high := true;
       i += 1;
       if (i_msg == 32) {
-        x.i_msg := i_msg;
+        self.i_msg := i_msg;
         return i;
       };
     };
@@ -75,51 +75,51 @@ module {
       i_msg +%= 1;
       i += 2;
       if (i_msg == 32) {
-        x.i_msg := i_msg;
+        self.i_msg := i_msg;
         return i;
       };
     };
     while (i < s) {
-      if (x.high) {
-        x.word := nat8To16(at(i)) << 8;
-        x.high := false;
+      if (self.high) {
+        self.word := nat8To16(at(i)) << 8;
+        self.high := false;
       } else {
-        msg[nat8ToNat(i_msg)] := x.word ^ nat8To16(at(i));
+        msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(at(i));
         i_msg +%= 1;
-        x.high := true;
+        self.high := true;
       };
       i += 1;
     };
-    x.i_msg := i_msg;
+    self.i_msg := i_msg;
     return i;
   };
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
-  public func write_iter(x : Self, next : () -> ?Nat8) {
-    let msg = x.msg;
-    var i_msg = x.i_msg;
-    if (not x.high) {
+  public func write_iter(self : Self, next : () -> ?Nat8) {
+    let msg = self.msg;
+    var i_msg = self.i_msg;
+    if (not self.high) {
       let ?val = next() else return;
-      msg[nat8ToNat(i_msg)] := x.word ^ nat8To16(val);
+      msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(val);
       i_msg +%= 1;
-      x.high := true;
+      self.high := true;
     };
 
     while (i_msg < 32) {
       let ?val0 = next() else {
-        x.i_msg := i_msg;
+        self.i_msg := i_msg;
         return;
       };
       let ?val1 = next() else {
         // high must be true here
-        x.word := nat8To16(val0) << 8;
-        x.high := false;
-        x.i_msg := i_msg;
+        self.word := nat8To16(val0) << 8;
+        self.high := false;
+        self.i_msg := i_msg;
         return;
       };
       msg[nat8ToNat(i_msg)] := nat8To16(val0) << 8 ^ nat8To16(val1);
       i_msg +%= 1;
     };
-    x.i_msg := i_msg;
+    self.i_msg := i_msg;
   };
 }

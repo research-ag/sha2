@@ -58,32 +58,32 @@ module {
     }
   };
 
-  public func reset(x : Digest) {
-    assert not x.closed;
-    x.i_msg := 0;
-    x.i_byte := 8;
-    x.i_block := 0;
-    let i = switch (x.algo) {
+  public func reset(self : Digest) {
+    assert not self.closed;
+    self.i_msg := 0;
+    self.i_byte := 8;
+    self.i_block := 0;
+    let i = switch (self.algo) {
       case (#sha512_224) 0;
       case (#sha512_256) 1;
       case (#sha384) 2;
       case (#sha512) 3;
     };
     for (j in Nat.range(0, 8)) {
-      x.s[j] := K.ivs[i][j];
+      self.s[j] := K.ivs[i][j];
     };
   };
-  
-  public func clone(x : Digest) : Digest {
-    assert not x.closed;
+
+  public func clone(self : Digest) : Digest {
+    assert not self.closed;
     {
-      algo = x.algo;
-      msg = VarArray.clone(x.msg);
-      var word = x.word;
-      var i_msg = x.i_msg;
-      var i_byte = x.i_byte;
-      var i_block = x.i_block;
-      s = VarArray.clone(x.s);
+      algo = self.algo;
+      msg = VarArray.clone(self.msg);
+      var word = self.word;
+      var i_msg = self.i_msg;
+      var i_byte = self.i_byte;
+      var i_block = self.i_block;
+      s = VarArray.clone(self.s); // TODO: use dot noations once new motoko-core is available
       var closed = false;
     };
   };
@@ -104,47 +104,47 @@ module {
     };
   };
 
-  public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
-  public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
-  public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
-  public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
-  public func writePositional(x : Digest, at : Nat -> Nat8, len : Nat) : () = Write.positional(x, at, len);
-  public func writeNext(x : Digest, next : () -> Nat8, len : Nat) : () = Write.next(x, next, len);
+  public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
+  public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
+  public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
+  public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
+  public func writePositional(self : Digest, at : Nat -> Nat8, len : Nat) : () = Write.positional(self, at, len);
+  public func writeNext(self : Digest, next : () -> Nat8, len : Nat) : () = Write.next(self, next, len);
 
-  public func sum(x : Digest) : Blob {
-    assert not x.closed;
-    x.closed := true;
+  public func sum(self : Digest) : Blob {
+    assert not self.closed;
+    self.closed := true;
     // calculate padding
     // t = bytes in the last incomplete block (0-127)
-    let t : Nat8 = (x.i_msg << 3) +% 8 -% x.i_byte;
+    let t : Nat8 = (self.i_msg << 3) +% 8 -% self.i_byte;
     // p = length of padding (1-128)
     var p : Nat8 = if (t < 112) (112 -% t) else (240 -% t);
     // n_bits = length of message in bits
     // Note: This implementation only handles messages < 2^64 bits
-    let n_bits : Nat64 = ((x.i_block << 7) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
+    let n_bits : Nat64 = ((self.i_block << 7) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
 
     // write 1-7 padding bytes 
-    Byte.writeByte(x, 0x80);
+    Byte.writeByte(self, 0x80);
     p -%= 1;
     while (p & 0x7 != 0) {
-      Byte.writeByte(x, 0);
+      Byte.writeByte(self, 0);
       p -%= 1;
     };
     // write padding words
     p >>= 3;
     while (p != 0) {
-      writeWord(x, 0);
+      writeWord(self, 0);
       p -%= 1;
     };
 
     // write length (16 bytes)
     // Note: this exactly fills the block buffer, hence process_block will get
     // triggered by the last writeByte
-    writeWord(x, 0);
-    writeWord(x, n_bits);
+    writeWord(self, 0);
+    writeWord(self, n_bits);
 
     // retrieve sum
-    stateToBlob(x);
+    stateToBlob(self);
   };
 
   func stateToBlob(x : Digest) : Blob {
@@ -201,8 +201,8 @@ module {
     ]);
   };
 
-  public func peekSum(x : Digest) : Blob {
-    if (x.closed) stateToBlob(x) else sum(clone(x));
+  public func peekSum(self : Digest) : Blob {
+    if (self.closed) stateToBlob(self) else sum(clone(self));
   };
 
   // Calculate SHA2 hash digest from Iter, Array, Blob, VarArray, List.

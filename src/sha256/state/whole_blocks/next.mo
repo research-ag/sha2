@@ -8,17 +8,17 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_blocks(s : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
+  public func process_blocks(self : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers
-    var a = nat16To32(s[0]) << 16 | nat16To32(s[1]);
-    var b = nat16To32(s[2]) << 16 | nat16To32(s[3]);
-    var c = nat16To32(s[4]) << 16 | nat16To32(s[5]);
-    var d = nat16To32(s[6]) << 16 | nat16To32(s[7]);
-    var e = nat16To32(s[8]) << 16 | nat16To32(s[9]);
-    var f = nat16To32(s[10]) << 16 | nat16To32(s[11]);
-    var g = nat16To32(s[12]) << 16 | nat16To32(s[13]);
-    var h = nat16To32(s[14]) << 16 | nat16To32(s[15]);
+    var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
+    var b = nat16To32(self[2]) << 16 | nat16To32(self[3]);
+    var c = nat16To32(self[4]) << 16 | nat16To32(self[5]);
+    var d = nat16To32(self[6]) << 16 | nat16To32(self[7]);
+    var e = nat16To32(self[8]) << 16 | nat16To32(self[9]);
+    var f = nat16To32(self[10]) << 16 | nat16To32(self[11]);
+    var g = nat16To32(self[12]) << 16 | nat16To32(self[13]);
+    var h = nat16To32(self[14]) << 16 | nat16To32(self[15]);
     var t = 0 : Nat32;
     var i_max : Nat = i + ((sz - i) / 64) * 64;
     while (i < i_max) {
@@ -173,14 +173,14 @@ module {
       i += 64;
     };
     // write state back to registers
-    s[0] := nat32To16(a >> 16); s[1] := nat32To16(a & 0xffff);
-    s[2] := nat32To16(b >> 16); s[3] := nat32To16(b & 0xffff);
-    s[4] := nat32To16(c >> 16); s[5] := nat32To16(c & 0xffff);
-    s[6] := nat32To16(d >> 16); s[7] := nat32To16(d & 0xffff);
-    s[8] := nat32To16(e >> 16); s[9] := nat32To16(e & 0xffff);
-    s[10] := nat32To16(f >> 16); s[11] := nat32To16(f & 0xffff);
-    s[12] := nat32To16(g >> 16); s[13] := nat32To16(g & 0xffff);
-    s[14] := nat32To16(h >> 16); s[15] := nat32To16(h & 0xffff);
+    self[0] := nat32To16(a >> 16); self[1] := nat32To16(a & 0xffff);
+    self[2] := nat32To16(b >> 16); self[3] := nat32To16(b & 0xffff);
+    self[4] := nat32To16(c >> 16); self[5] := nat32To16(c & 0xffff);
+    self[6] := nat32To16(d >> 16); self[7] := nat32To16(d & 0xffff);
+    self[8] := nat32To16(e >> 16); self[9] := nat32To16(e & 0xffff);
+    self[10] := nat32To16(f >> 16); self[11] := nat32To16(f & 0xffff);
+    self[12] := nat32To16(g >> 16); self[13] := nat32To16(g & 0xffff);
+    self[14] := nat32To16(h >> 16); self[15] := nat32To16(h & 0xffff);
 
     return i
   };

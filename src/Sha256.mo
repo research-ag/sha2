@@ -44,22 +44,22 @@ module {
     };
   };
 
-  public func reset(x : Digest) {
-    assert not x.closed;
-    x.buffer.reset();
-    if (x.algo == #sha224) {
-      x.state.set([0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4]);
+  public func reset(self : Digest) {
+    assert not self.closed;
+    self.buffer.reset();
+    if (self.algo == #sha224) {
+      self.state.set([0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4]);
     } else {
-      x.state.set([0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19]);
+      self.state.set([0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19]);
     };
   };
 
-  public func clone(x : Digest) : Digest {
-    assert not x.closed;
+  public func clone(self : Digest) : Digest {
+    assert not self.closed;
     {
-      algo = x.algo;
-      buffer = x.buffer.clone();
-      state = x.state.clone();
+      algo = self.algo;
+      buffer = self.buffer.clone();
+      state = State.clone(self.state); // TODO: use dot noations once new motoko-core is available
       var closed = false;
     };
   };
@@ -110,12 +110,12 @@ module {
     // skipping here because we won't use x anymore: buf.i_msg := 0;
   };
 
-  public func writeBlob(x : Digest, data : Blob) : () = Write.blob(x, data);
-  public func writeArray(x : Digest, data : [Nat8]) : () = Write.array(x, data);
-  public func writeVarArray(x : Digest, data : [var Nat8]) : () = Write.varArray(x, data);
-  public func writePositional(x : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.positional(x, data, sz);
-  public func writeNext(x : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(x, data, sz);
-  public func writeIter(x : Digest, data : Types.Iter<Nat8>) : () = Write.iter(x, data.next);
+  public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
+  public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
+  public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
+  public func writePositional(self : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.positional(self, data, sz);
+  public func writeNext(self : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(self, data, sz);
+  public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
 
   func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
     case (#sha224) State.toNat8Array(x.state, 28);
@@ -130,12 +130,12 @@ module {
     x.closed := true;
   };
 
-  public func sumToNat8Array(x : Digest) : [Nat8] { sum_(x); stateNat8(x) };
+  public func sumToNat8Array(self : Digest) : [Nat8] { sum_(self); stateNat8(self) };
 
-  public func sum(x : Digest) : Blob = Prim.arrayToBlob(sumToNat8Array(x));
+  public func sum(self : Digest) : Blob = Prim.arrayToBlob(sumToNat8Array(self));
 
-  public func peekSum(x : Digest) : Blob {
-    if (x.closed) stateBlob(x) else sum(clone(x));
+  public func peekSum(self : Digest) : Blob {
+    if (self.closed) stateBlob(self) else sum(clone(self));
   };
 
   /// Calculate the SHA2 hash digest from `Blob`.
