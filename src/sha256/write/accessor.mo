@@ -10,12 +10,14 @@ module {
 
   let natToNat32 = Prim.natToNat32;
 
-  public func write(x : Digest, data : (Nat) -> Nat8, sz : Nat) {
-    if (sz == 0) return;
-    var pos = 0;
+  // Write `len` bytes taken from the `start` position
+  public func write(x : Digest, data : (Nat) -> Nat8, start : Nat, len : Nat) {
+    if (len == 0) return;
+    let sz = start + len; // required absolute data size
     let (buf, state) = (x.buffer, x.state);
+    var pos = start;
     if (buf.i_msg > 0 or not buf.high) {
-      pos := Buffer.write_chunk(buf, data, sz, 0);
+      pos := buf.load_chunk(data, sz, start);
       if (buf.i_msg == 32) {
         state.process_block_from_msg(buf.msg);
         buf.i_msg := 0;
@@ -25,7 +27,7 @@ module {
     // if (buf.i_msg != 0) return;
     let end = state.process_blocks_from_accessor(data, sz, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore Buffer.write_chunk(buf, data, sz, end);
+    ignore buf.load_chunk(data, sz, end);
     if (buf.i_msg == 32) {
       state.process_block_from_msg(buf.msg);
       buf.i_msg := 0;

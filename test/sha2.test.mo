@@ -14,7 +14,7 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   assert (Sha256.fromVarArray(algo, Array.toVarArray(data)) == h);
   assert (Sha256.fromBlob(algo, Blob.fromArray(data)) == h);
   assert (Sha256.fromIter(algo, data.vals()) == h);
-  assert (Sha256.fromUncheckedAccessor(algo, func(i) = data[i], data.size()) == h);
+  assert (Sha256.fromUncheckedAccessor(algo, func(i) = data[i], 0, data.size()) == h);
   var i = 0;
   func next() : Nat8 { let r = data[i]; i += 1; r };
   assert (Sha256.fromUncheckedReader(algo, next, data.size()) == h);
@@ -46,7 +46,7 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   };
   do {
     let d = Sha256.new(algo);
-    d.writeUncheckedAccessor(func (i) = data[i], data.size());
+    d.writeUncheckedAccessor(func (i) = data[i], 0, data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };

@@ -70,7 +70,7 @@ module {
           };
           case (3) {
             let at = func(i : Nat) : Nat8 = source[i];
-            func() = ignore Sha256.fromUncheckedAccessor(at, source.size());
+            func() = ignore Sha256.fromUncheckedAccessor(at, 0, source.size());
           };
           case (4) {
             var i = 0;

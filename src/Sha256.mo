@@ -112,13 +112,13 @@ module {
   public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
   public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
-  public func writeUncheckedAccessor(self : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.accessor(self, data, sz);
-  public func writeUncheckedReader(self : Digest, data : () -> Nat8, sz : Nat) : () = Write.reader(self, data, sz);
+  public func writeUncheckedAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = Write.accessor(self, data, start, len);
+  public func writeUncheckedReader(self : Digest, data : () -> Nat8, len : Nat) : () = Write.reader(self, data, len);
   public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
 
   func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
-    case (#sha224) State.toNat8Array(x.state, 28);
-    case (#sha256) State.toNat8Array(x.state, 32);
+    case (#sha224) x.state.toNat8Array(28);
+    case (#sha256) x.state.toNat8Array(32);
   };
 
   func stateBlob(x : Digest) : Blob = Prim.arrayToBlob(stateNat8(x));
@@ -167,16 +167,18 @@ module {
   };
 
   // Calculate SHA256 hash digest from a positional accessor without bounds check.
-  public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, size : Nat) : Blob {
+  // Take `len` bytes counting from the `start` index.
+  public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let digest = new(algo);
-    Write.accessor(digest, data, size);
+    Write.accessor(digest, data, start, len);
     return sum(digest);
   };
 
   // Calculate SHA256 hash digest from an iterator function without bounds check.
-  public func fromUncheckedReader(algo : (implicit : Algorithm), data : () -> Nat8, size : Nat) : Blob {
+  // Take `len` bytes.
+  public func fromUncheckedReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
     let digest = new(algo);
-    Write.reader(digest, data, size);
+    Write.reader(digest, data, len);
     return sum(digest);
   };
 };

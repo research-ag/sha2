@@ -8,6 +8,8 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  // sz: absolute data size
+  // start: start position
   public func process_blocks(self : [var Nat16], data : Nat -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers

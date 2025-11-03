@@ -50,11 +50,12 @@ module {
   };
   */
 
-  // Write chunk of data to buffer until either the block is full or the end of the data is reached
-  // The return value refers to the interval that was written in the form [start,end)
-  public func write_chunk(self : Buffer, at : Nat -> Nat8, len : Nat, start : Nat) : (end : Nat) {
-    let s = len;
-    if (start >= s) return start;
+  // Write chunk of input data to buffer until either the block is full or the end of the input data is reached
+  // The return value refers to the input interval that was written in the form [start,end)
+  // sz: absolute data size
+  // start: start position in data
+  public func load_chunk(self : Buffer, at : Nat -> Nat8, sz : Nat, start : Nat) : (end : Nat) {
+    if (start >= sz) return start;
     var i = start;
     let msg = self.msg;
     var i_msg = self.i_msg;
@@ -68,8 +69,8 @@ module {
         return i;
       };
     };
-    let i_max : Nat = i + ((s - i) / 2) * 2;
-    // Note: setting i_max always to s - 1 also works (only for multiples of 2).
+    let i_max : Nat = i + ((sz - i) / 2) * 2;
+    // Note: setting i_max always to sz - 1 also works (only for multiples of 2).
     while (i < i_max) {
       msg[nat8ToNat(i_msg)] := nat8To16(at(i)) << 8 ^ nat8To16(at(i + 1));
       i_msg +%= 1;
@@ -79,7 +80,7 @@ module {
         return i;
       };
     };
-    while (i < s) {
+    while (i < sz) {
       if (self.high) {
         self.word := nat8To16(at(i)) << 8;
         self.high := false;
@@ -95,7 +96,7 @@ module {
   };
 
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
-  public func write_iter(self : Buffer, next : () -> ?Nat8) {
+  public func load_iter(self : Buffer, next : () -> ?Nat8) {
     let msg = self.msg;
     var i_msg = self.i_msg;
     if (not self.high) {

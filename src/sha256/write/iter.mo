@@ -1,6 +1,6 @@
 import Buffer "../buffer";
 import State "../state";
-import ProcIter "../state/whole_blocks/iter";
+import __ "../state/whole_blocks/iter"; // state.process_blocks
 
 module {
   type Digest = {
@@ -8,11 +8,12 @@ module {
     state : State.State;
   };
 
+  // Write entire data
   public func write(x : Digest, next : () -> ?Nat8) {
     let (buf, state) = (x.buffer, x.state);
     
     if (buf.i_msg > 0 or not buf.high) {
-      Buffer.write_iter(buf, next);
+      buf.load_iter(next);
       if (buf.i_msg == 32) {
         state.process_block_from_msg(buf.msg);
         buf.i_msg := 0;
@@ -25,7 +26,7 @@ module {
     // must have buf.i_msg == 0 and buf.high == true here 
     // continue to try to read entire blocks at once from the iterator
 
-    ProcIter.process_blocks(state, next, buf);
+    state.process_blocks(next, buf);
   };
 
 };

@@ -25,13 +25,13 @@ module {
     assert not x.closed;
     VarArray.write(x, data);
   };
-  public func accessor(x : Digest, data : Nat -> Nat8, sz : Nat) {
+  public func accessor(x : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     assert not x.closed;
-    Accessor.write(x, data, sz);
+    Accessor.write(x, data, start, len);
   };
-  public func reader(x : Digest, data : () -> Nat8, sz : Nat) {
+  public func reader(x : Digest, data : () -> Nat8, len : Nat) {
     assert not x.closed;
-    Reader.write(x, data, sz);
+    Reader.write(x, data, len);
   };
   public func iter(x : Digest, data : () -> ?Nat8) {
     assert not x.closed;

@@ -28,8 +28,8 @@ module {
     ignore write_data_to_buffer(x, data, sz, end);
   };
 
-  // Write blob to buffer until either the block is full or the end of the blob is reached
-  // The return value refers to the interval that was written in the form [start,end)
+  // Write input data to buffer until either the block is full or the end of the input is reached
+  // The return value refers to the input interval that was written in the form [start,end)
   func write_data_to_buffer(x : Digest, data : Nat -> Nat8, sz : Nat, start : Nat) : (end : Nat) {
     if (start >= sz) return start;
     var i = start;
