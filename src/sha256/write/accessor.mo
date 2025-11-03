@@ -23,7 +23,7 @@ module {
       };
     };
     // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_func(data, sz, pos);
+    let end = state.process_blocks_from_accessor(data, sz, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
     ignore Buffer.write_chunk(buf, data, sz, end);
     if (buf.i_msg == 32) {

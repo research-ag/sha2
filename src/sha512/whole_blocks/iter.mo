@@ -1,7 +1,7 @@
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import K "../constants";
-import WritePos "../write/positional";
+import Accessor "../write/accessor";
 
 module {
 
@@ -366,6 +366,6 @@ module {
       state[7] := h;
 
       // write remaining bytes from backup to buffer
-      WritePos.write(x, func(i) = backup[i], pos);
+      Accessor.write(x, func(i) = backup[i], pos);
     };
 }

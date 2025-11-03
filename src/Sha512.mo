@@ -107,8 +107,8 @@ module {
   public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
   public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
-  public func writePositional(self : Digest, at : Nat -> Nat8, len : Nat) : () = Write.positional(self, at, len);
-  public func writeNext(self : Digest, next : () -> Nat8, len : Nat) : () = Write.next(self, next, len);
+  public func writeUncheckedAccessor(self : Digest, at : Nat -> Nat8, len : Nat) : () = Write.accessor(self, at, len);
+  public func writeUncheckedReader(self : Digest, next : () -> Nat8, len : Nat) : () = Write.reader(self, next, len);
 
   public func sum(self : Digest) : Blob {
     assert not self.closed;
@@ -225,14 +225,14 @@ module {
     Write.varArray(d, arr);
     return sum(d);
   };
-  public func fromPositional(algo : (implicit : Algorithm), at : Nat -> Nat8, len : Nat) : Blob {
+  public func fromUncheckedAccessor(algo : (implicit : Algorithm), at : Nat -> Nat8, len : Nat) : Blob {
     let d = new(algo);
-    Write.positional(d, at, len);
+    Write.accessor(d, at, len);
     return sum(d);
   };
-  public func fromNext(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
+  public func fromUncheckedReader(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
     let d = new(algo);
-    Write.next(d, next, len);
+    Write.reader(d, next, len);
     return sum(d);
   };
 

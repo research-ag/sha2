@@ -14,10 +14,10 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   assert (Sha256.fromVarArray(algo, Array.toVarArray(data)) == h);
   assert (Sha256.fromBlob(algo, Blob.fromArray(data)) == h);
   assert (Sha256.fromIter(algo, data.vals()) == h);
-  assert (Sha256.fromPositional(algo, func(i) = data[i], data.size()) == h);
+  assert (Sha256.fromUncheckedAccessor(algo, func(i) = data[i], data.size()) == h);
   var i = 0;
   func next() : Nat8 { let r = data[i]; i += 1; r };
-  assert (Sha256.fromNext(algo, next, data.size()) == h);
+  assert (Sha256.fromUncheckedReader(algo, next, data.size()) == h);
   do {
     let d = Sha256.new(algo);
     d.writeArray(data);
@@ -40,13 +40,13 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
     let d = Sha256.new(algo);
     var i = 0;
     func next() : Nat8 { let r = data[i]; i += 1; r };
-    d.writeNext(next, data.size());
+    d.writeUncheckedReader(next, data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha256.new(algo);
-    d.writePositional(func (i) = data[i], data.size());
+    d.writeUncheckedAccessor(func (i) = data[i], data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
@@ -64,10 +64,10 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   assert (Sha512.fromBlob(algo, Blob.fromArray(data)) == h);
   assert (Sha512.fromIter(algo, data.vals()) == h);
   assert (Sha512.fromVarArray(algo, Array.toVarArray(data)) == h);
-  assert (Sha512.fromPositional(algo, func(i) = data[i], data.size()) == h);
+  assert (Sha512.fromUncheckedAccessor(algo, func(i) = data[i], data.size()) == h);
   var i = 0;
   func next() : Nat8 { let r = data[i]; i += 1; r };
-  assert (Sha512.fromNext(algo, next, data.size()) == h);
+  assert (Sha512.fromUncheckedReader(algo, next, data.size()) == h);
   do {
     let d = Sha512.new(algo);
     d.writeArray(data);
@@ -94,7 +94,7 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   };
   do {
     let d = Sha512.new(algo);
-    d.writePositional(func(i) = data[i], data.size());
+    d.writeUncheckedAccessor(func(i) = data[i], data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
@@ -102,7 +102,7 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
     let d = Sha512.new(algo);
     var i = 0;
     func next() : Nat8 { let r = data[i]; i += 1; r };
-    d.writeNext(next, data.size());
+    d.writeUncheckedReader(next, data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };

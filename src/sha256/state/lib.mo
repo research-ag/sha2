@@ -5,8 +5,8 @@ import Prim "mo:prim";
 import fromBlob "whole_blocks/blob";
 import fromArray "whole_blocks/array";
 import fromVarArray "whole_blocks/varArray";
-import fromPositional "whole_blocks/positional";
-import fromNext "whole_blocks/next";
+import fromAccessor "whole_blocks/accessor";
+import fromReader "whole_blocks/reader";
 
 import Block "block";
 
@@ -21,8 +21,8 @@ module {
   public let process_blocks_from_blob = fromBlob.process_blocks;
   public let process_blocks_from_array = fromArray.process_blocks;
   public let process_blocks_from_vararray = fromVarArray.process_blocks;
-  public let process_blocks_from_func = fromPositional.process_blocks;
-  public let process_blocks_from_stream = fromNext.process_blocks;
+  public let process_blocks_from_accessor = fromAccessor.process_blocks;
+  public let process_blocks_from_reader = fromReader.process_blocks;
   public let process_block_from_msg = Block.process_block;
 
   public func toNat8Array(self : State, len : Nat) : [Nat8] {

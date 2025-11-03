@@ -112,8 +112,8 @@ module {
   public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
   public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
-  public func writePositional(self : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.positional(self, data, sz);
-  public func writeNext(self : Digest, data : () -> Nat8, sz : Nat) : () = Write.next(self, data, sz);
+  public func writeUncheckedAccessor(self : Digest, data : Nat -> Nat8, sz : Nat) : () = Write.accessor(self, data, sz);
+  public func writeUncheckedReader(self : Digest, data : () -> Nat8, sz : Nat) : () = Write.reader(self, data, sz);
   public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
 
   func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
@@ -152,7 +152,7 @@ module {
     return sum(digest);
   };
 
-  // Calculate SHA256 hash digest from [Nat8].
+  // Calculate SHA256 hash digest from [var Nat8].
   public func fromVarArray(algo : (implicit : Algorithm), data : [var Nat8]) : Blob {
     let digest = new(algo);
     Write.varArray(digest, data);
@@ -166,15 +166,17 @@ module {
     return sum(digest);
   };
 
-  public func fromPositional(algo : (implicit : Algorithm), data : Nat -> Nat8, size : Nat) : Blob {
+  // Calculate SHA256 hash digest from a positional accessor without bounds check.
+  public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
-    Write.positional(digest, data, size);
+    Write.accessor(digest, data, size);
     return sum(digest);
   };
 
-  public func fromNext(algo : (implicit : Algorithm), data : () -> Nat8, size : Nat) : Blob {
+  // Calculate SHA256 hash digest from an iterator function without bounds check.
+  public func fromUncheckedReader(algo : (implicit : Algorithm), data : () -> Nat8, size : Nat) : Blob {
     let digest = new(algo);
-    Write.next(digest, data, size);
+    Write.reader(digest, data, size);
     return sum(digest);
   };
 };

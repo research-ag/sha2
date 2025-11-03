@@ -2,7 +2,7 @@ import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
 import ProcessBlock "../process_block";
-import Process "../whole_blocks/positional";
+import Process "../whole_blocks/accessor";
 import Byte "byte";
 
 module {
