@@ -6,6 +6,7 @@ import { type Digest } "../../types";
 module {
   // Write entire data
   public func write(x : Digest, next : () -> ?Nat8) {
+    assert not x.closed;
     let (buf, state) = (x.buffer, x.state);
     
     if (buf.i_msg > 0 or not buf.high) {

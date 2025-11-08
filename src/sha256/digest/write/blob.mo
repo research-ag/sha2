@@ -8,6 +8,7 @@ module {
 
   // Write entire data
   public func write(x : Digest, data : Blob) {
+    assert not x.closed;
     let sz = data.size();
     if (sz == 0) return;
     var pos = 0;

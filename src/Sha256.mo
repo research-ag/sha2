@@ -7,7 +7,7 @@
 /// * Output types: `Blob`
 
 import { type Iter } "mo:core/Types";
-import Prim "mo:prim";
+import { arrayToBlob } "mo:prim";
 
 import Buffer "sha256/buffer";
 import State "sha256/state";
@@ -18,6 +18,7 @@ module {
   public type Algorithm = { #sha224; #sha256 };
   public let algo = #sha256; // default algorithm
 
+  // Digest type with the algorithm field
   public type Digest = {
     algo : Algorithm;
     buffer : Types.Buffer;
@@ -59,55 +60,9 @@ module {
     {
       algo = self.algo;
       buffer = self.buffer.clone();
-      state = State.clone(self.state); // TODO: use dot noations once new motoko-core is available
+      state = State.clone(self.state); // TODO: use dot notations once new motoko-core is available
       var closed = false;
     };
-  };
-
-  let nat32To64 = Prim.nat32ToNat64;
-  let nat8To16 = Prim.nat8ToNat16;
-  let nat8ToNat = Prim.nat8ToNat;
-  let intToNat64Wrap = Prim.intToNat64Wrap;
-
-  func writePadding(x : Digest) : () {
-    let (buf, state) = (x.buffer, x.state);
-    let msg = buf.msg;
-    var i_msg = buf.i_msg;
-    // n_bits = length of message in bits
-    let t : Nat8 = if (buf.high) i_msg << 1 else i_msg << 1 +% 1;
-    let n_bits : Nat64 = ((nat32To64(buf.i_block) << 6) +% intToNat64Wrap(nat8ToNat(t))) << 3;
-    // separator byte
-    if (buf.high) {
-      msg[nat8ToNat(i_msg)] := 0x8000;
-    } else {
-      msg[nat8ToNat(i_msg)] := buf.word | 0x80;
-    };
-    i_msg +%= 1;
-    // zero padding with extra block if necessary
-    if (i_msg > 28) {
-      while (i_msg < 32) {
-        msg[nat8ToNat(i_msg)] := 0;
-        i_msg +%= 1;
-      };
-      state.process_block_from_msg(msg); // Note: function does not rely on buf.i_msg
-      i_msg := 0;
-      // skipping here because we won't use buf.i_block anymore: x.i_block +%= 1;
-    };
-    // zero padding in last block
-    while (i_msg < 28) {
-      msg[nat8ToNat(i_msg)] := 0;
-      i_msg +%= 1;
-    };
-    // 8 length bytes
-    // Note: this exactly fills the block buffer, hence process_block will get
-    // triggered by the last writeByte
-    let (l0, l1, l2, l3, l4, l5, l6, l7) = Prim.explodeNat64(n_bits);
-    msg[28] := nat8To16(l0) << 8 | nat8To16(l1);
-    msg[29] := nat8To16(l2) << 8 | nat8To16(l3);
-    msg[30] := nat8To16(l4) << 8 | nat8To16(l5);
-    msg[31] := nat8To16(l6) << 8 | nat8To16(l7);
-    state.process_block_from_msg(msg); // Note: function does not rely on buf.i_msg
-    // skipping here because we won't use x anymore: buf.i_msg := 0;
   };
 
   public func writeBlob(self : Digest, data : Blob) : () = self.writeBlob(data);
@@ -122,17 +77,14 @@ module {
     case (#sha256) x.state.toNat8Array(32);
   };
 
-  func stateBlob(x : Digest) : Blob = Prim.arrayToBlob(stateNat8(x));
+  func stateBlob(x : Digest) : Blob = arrayToBlob(stateNat8(x));
 
-  func sum_(x : Digest) {
-    assert not x.closed;
-    writePadding(x);
-    x.closed := true;
+  public func sumToNat8Array(self : Digest) : [Nat8] {
+    self.close();
+    return stateNat8(self); // TODO: use dot notation
   };
 
-  public func sumToNat8Array(self : Digest) : [Nat8] { sum_(self); stateNat8(self) };
-
-  public func sum(self : Digest) : Blob = Prim.arrayToBlob(sumToNat8Array(self));
+  public func sum(self : Digest) : Blob = arrayToBlob(sumToNat8Array(self)); // TODO: use dot notation once available for Array in core
 
   public func peekSum(self : Digest) : Blob {
     if (self.closed) stateBlob(self) else sum(clone(self));

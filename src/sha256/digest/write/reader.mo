@@ -8,6 +8,7 @@ module {
 
   // Write `len` bytes
   public func write(x : Digest, data : () -> Nat8, len : Nat) {
+    assert not x.closed;
     if (len == 0) return;
     var pos = 0;
     let (buf, state) = (x.buffer, x.state);

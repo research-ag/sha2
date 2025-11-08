@@ -8,6 +8,7 @@ module {
 
   // Write `len` bytes taken from the `start` position
   public func write(x : Digest, data : (Nat) -> Nat8, start : Nat, len : Nat) {
+    assert not x.closed;
     if (len == 0) return;
     let sz = start + len; // required absolute data size
     let (buf, state) = (x.buffer, x.state);
