@@ -6,12 +6,13 @@
 /// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
 /// * Output types: `Blob`
 
-import Types "mo:core/Types";
+import { type Iter } "mo:core/Types";
 import Prim "mo:prim";
 
 import Buffer "sha256/buffer";
 import State "sha256/state";
 import _Digest "sha256/digest";
+import Types "sha256/types";
 
 module {
   public type Algorithm = { #sha224; #sha256 };
@@ -19,8 +20,8 @@ module {
 
   public type Digest = {
     algo : Algorithm;
-    buffer : Buffer.Buffer;
-    state : State.State;
+    buffer : Types.Buffer;
+    state : Types.State;
     var closed : Bool;
   };
 
@@ -114,7 +115,7 @@ module {
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = self.writeVarArray(data);
   public func writeUncheckedAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(data, start, len);
   public func writeUncheckedReader(self : Digest, data : () -> Nat8, len : Nat) : () = self.writeReader(data, len);
-  public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = self.writeIter(data.next);
+  public func writeIter(self : Digest, data : Iter<Nat8>) : () = self.writeIter(data.next);
 
   func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
     case (#sha224) x.state.toNat8Array(28);
@@ -160,7 +161,7 @@ module {
   };
 
   // Calculate SHA2 hash digest from Iter.
-  public func fromIter(algo : (implicit : Algorithm), data : Types.Iter<Nat8>) : Blob {
+  public func fromIter(algo : (implicit : Algorithm), data : Iter<Nat8>) : Blob {
     let digest = new(algo);
     digest.writeIter(data.next);
     return sum(digest);

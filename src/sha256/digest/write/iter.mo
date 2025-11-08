@@ -1,13 +1,9 @@
 import Buffer "../../buffer";
 import State "../../state";
 import _ProcessMsg "../../state/process/blocks/iter"; // state.process_blocks
+import { type Digest } "../../types";
 
 module {
-  type Digest = {
-    buffer : Buffer.Buffer;
-    state : State.State;
-  };
-
   // Write entire data
   public func write(x : Digest, next : () -> ?Nat8) {
     let (buf, state) = (x.buffer, x.state);

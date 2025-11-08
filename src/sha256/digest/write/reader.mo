@@ -1,13 +1,9 @@
 import Prim "mo:prim";
 import Buffer "../../buffer";
 import State "../../state";
+import { type Digest } "../../types";
 
 module {
-  type Digest = {
-    buffer : Buffer.Buffer;
-    state : State.State;
-  };
-
   let natToNat32 = Prim.natToNat32;
 
   // Write `len` bytes

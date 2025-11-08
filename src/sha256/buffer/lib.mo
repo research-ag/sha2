@@ -1,14 +1,9 @@
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
+import { type Buffer } "../types";
 
 module {
-  public type Buffer = {
-    msg : [var Nat16];
-    var i_msg : Nat8;
-    var i_block : Nat32;
-    var high : Bool;
-    var word : Nat16;
-  };
+
   public func new() : Buffer = {
     msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var i_msg : Nat8 = 0;

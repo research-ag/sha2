@@ -6,13 +6,9 @@ import Reader "./write/reader";
 import Iter "./write/iter";
 import Buffer "../buffer";
 import State "../state";
+import { type Digest } "../types";
 
 module {
-  type Digest = {
-    buffer : Buffer.Buffer;
-    state : State.State;
-    var closed : Bool;
-  };
   public func writeBlob(self : Digest, data : Blob) {
     assert not self.closed;
     Blob.write(self, data);

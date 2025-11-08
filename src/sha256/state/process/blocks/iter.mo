@@ -1,6 +1,7 @@
 import Prim "mo:prim";
-import Buffer "../../../buffer";
 import K "../constants";
+import { type Buffer } "../../../types";
+import _Buffer "../../../buffer"; // buf.load_chunk
 
 module {
   let nat32To16 = Prim.nat32ToNat16;
@@ -9,7 +10,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer.Buffer) {
+  public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer) {
     var blocks : Nat32 = 0;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
