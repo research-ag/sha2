@@ -8,7 +8,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_blocks(self : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
+  public func process(self : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);

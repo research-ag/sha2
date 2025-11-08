@@ -1,6 +1,6 @@
 import Prim "mo:prim";
-import Buffer "../buffer";
-import State "../state";
+import Buffer "../../buffer";
+import State "../../state";
 
 module {
   type Digest = {

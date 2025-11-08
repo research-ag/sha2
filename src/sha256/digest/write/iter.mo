@@ -1,6 +1,6 @@
-import Buffer "../buffer";
-import State "../state";
-import __ "../state/whole_blocks/iter"; // state.process_blocks
+import Buffer "../../buffer";
+import State "../../state";
+import _ProcessMsg "../../state/process/blocks/iter"; // state.process_blocks
 
 module {
   type Digest = {
@@ -26,7 +26,7 @@ module {
     // must have buf.i_msg == 0 and buf.high == true here 
     // continue to try to read entire blocks at once from the iterator
 
-    state.process_blocks(next, buf);
+    state.process(next, buf);
   };
 
 };

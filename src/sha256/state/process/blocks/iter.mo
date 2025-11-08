@@ -1,5 +1,5 @@
 import Prim "mo:prim";
-import Buffer "../../buffer";
+import Buffer "../../../buffer";
 import K "../constants";
 
 module {
@@ -9,7 +9,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_blocks(self : [var Nat16], data : () -> ?Nat8, buf : Buffer.Buffer) {
+  public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer.Buffer) {
     var blocks : Nat32 = 0;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
@@ -256,6 +256,7 @@ module {
     buf.i_block +%= blocks;
 
     // write remaining bytes from backup to buffer
+    // TODO: do this part outside the function?
     ignore buf.load_chunk(func(i) = backup[i], pos, 0);
   };
 

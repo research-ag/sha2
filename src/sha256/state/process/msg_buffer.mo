@@ -7,7 +7,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  public func process_block(self : [var Nat16], msg : [var Nat16]) : () {
+  public func process(self : [var Nat16], msg : [var Nat16]) : () {
     let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
     let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);
     let w02 = nat16To32(msg[4]) << 16 | nat16To32(msg[5]);

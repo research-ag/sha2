@@ -1,6 +1,6 @@
 import Prim "mo:prim";
-import Buffer "../buffer";
-import State "../state";
+import Buffer "../../buffer";
+import State "../../state";
 
 module {
   type Digest = {
@@ -11,7 +11,7 @@ module {
   let natToNat32 = Prim.natToNat32;
 
   // Write entire data
-  public func write(x : Digest, data : [Nat8]) {
+  public func write(x : Digest, data : [var Nat8]) {
     let sz = data.size();
     if (sz == 0) return;
     var pos = 0;
@@ -25,7 +25,7 @@ module {
       };
     };
     // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_array(data, pos);
+    let end = state.process_blocks_from_vararray(data, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
     ignore buf.load_chunk(func(i) = data[i], sz, end);
     if (buf.i_msg == 32) {

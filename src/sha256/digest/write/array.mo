@@ -1,6 +1,6 @@
 import Prim "mo:prim";
-import Buffer "../buffer";
-import State "../state";
+import Buffer "../../buffer";
+import State "../../state";
 
 module {
   type Digest = {
@@ -10,14 +10,14 @@ module {
 
   let natToNat32 = Prim.natToNat32;
 
-  // Write `len` bytes taken from the `start` position
-  public func write(x : Digest, data : (Nat) -> Nat8, start : Nat, len : Nat) {
-    if (len == 0) return;
-    let sz = start + len; // required absolute data size
+  // Write entire data
+  public func write(x : Digest, data : [Nat8]) {
+    let sz = data.size();
+    if (sz == 0) return;
+    var pos = 0;
     let (buf, state) = (x.buffer, x.state);
-    var pos = start;
     if (buf.i_msg > 0 or not buf.high) {
-      pos := buf.load_chunk(data, sz, start);
+      pos := buf.load_chunk(func(i) = data[i], sz, 0);
       if (buf.i_msg == 32) {
         state.process_block_from_msg(buf.msg);
         buf.i_msg := 0;
@@ -25,9 +25,9 @@ module {
       };
     };
     // if (buf.i_msg != 0) return;
-    let end = state.process_blocks_from_accessor(data, sz, pos);
+    let end = state.process_blocks_from_array(data, pos);
     buf.i_block +%= natToNat32(end - pos) / 64;
-    ignore buf.load_chunk(data, sz, end);
+    ignore buf.load_chunk(func(i) = data[i], sz, end);
     if (buf.i_msg == 32) {
       state.process_block_from_msg(buf.msg);
       buf.i_msg := 0;

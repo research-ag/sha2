@@ -2,13 +2,12 @@ import Nat "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
-import fromBlob "whole_blocks/blob";
-import fromArray "whole_blocks/array";
-import fromVarArray "whole_blocks/varArray";
-import fromAccessor "whole_blocks/accessor";
-import fromReader "whole_blocks/reader";
-
-import Block "block";
+import fromBlob "process/blocks/blob";
+import fromArray "process/blocks/array";
+import fromVarArray "process/blocks/varArray";
+import fromAccessor "process/blocks/accessor";
+import fromReader "process/blocks/reader";
+import fromMsg "process/msg_buffer";
 
 module {
   // indices 0,2,4,6,8,10,12,14 = high bytes, indices 1,3,5,7,9,11,13,15 = low bytes
@@ -18,12 +17,12 @@ module {
     for (i in Nat.range(0, 16)) self[i] := vals[i];
   };
   public let clone = VarArray.clone;
-  public let process_blocks_from_blob = fromBlob.process_blocks;
-  public let process_blocks_from_array = fromArray.process_blocks;
-  public let process_blocks_from_vararray = fromVarArray.process_blocks;
-  public let process_blocks_from_accessor = fromAccessor.process_blocks;
-  public let process_blocks_from_reader = fromReader.process_blocks;
-  public let process_block_from_msg = Block.process_block;
+  public let process_blocks_from_blob = fromBlob.process;
+  public let process_blocks_from_array = fromArray.process;
+  public let process_blocks_from_vararray = fromVarArray.process;
+  public let process_blocks_from_accessor = fromAccessor.process;
+  public let process_blocks_from_reader = fromReader.process;
+  public let process_block_from_msg = fromMsg.process;
 
   public func toNat8Array(self : State, len : Nat) : [Nat8] {
     let (d0, d1) = Prim.explodeNat16(self[0]);
