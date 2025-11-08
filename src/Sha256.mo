@@ -112,7 +112,7 @@ module {
     return sum(digest);
   };
 
-  // Calculate SHA2 hash digest from Iter.
+  // Calculate SHA256 hash digest from entire Iter.
   public func fromIter(algo : (implicit : Algorithm), data : Iter<Nat8>) : Blob {
     let digest = new(algo);
     digest.writeIter(data.next);

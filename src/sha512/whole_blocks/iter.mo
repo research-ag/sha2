@@ -366,6 +366,6 @@ module {
       state[7] := h;
 
       // write remaining bytes from backup to buffer
-      Accessor.write(x, func(i) = backup[i], pos);
+      Accessor.write(x, func(i) = backup[i], 0, pos);
     };
 }

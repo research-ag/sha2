@@ -9,7 +9,7 @@
 import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
-import Types "mo:core/Types";
+import { type Iter } "mo:core/Types";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import K "sha512/constants";
@@ -106,8 +106,8 @@ module {
   public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
   public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
-  public func writeIter(self : Digest, data : Types.Iter<Nat8>) : () = Write.iter(self, data.next);
-  public func writeUncheckedAccessor(self : Digest, at : Nat -> Nat8, len : Nat) : () = Write.accessor(self, at, len);
+  public func writeIter(self : Digest, data : Iter<Nat8>) : () = Write.iter(self, data.next);
+  public func writeUncheckedAccessor(self : Digest, at : Nat -> Nat8, start : Nat, len : Nat) : () = Write.accessor(self, at, start, len);
   public func writeUncheckedReader(self : Digest, next : () -> Nat8, len : Nat) : () = Write.reader(self, next, len);
 
   public func sum(self : Digest) : Blob {
@@ -204,32 +204,44 @@ module {
     if (self.closed) stateToBlob(self) else sum(clone(self));
   };
 
-  // Calculate SHA2 hash digest from Iter, Array, Blob, VarArray, List.
-  public func fromIter(algo : (implicit : Algorithm), iter : { next() : ?Nat8 }) : Blob {
-    let d = new(algo);
-    Write.iter(d, iter.next);
-    return sum(d);
-  };
-  public func fromArray(algo : (implicit : Algorithm), arr : [Nat8]) : Blob {
-    let d = new(algo);
-    Write.array(d, arr);
-    return sum(d);
-  };
+  // Calculate SHA512 hash digest from `Blob`.
   public func fromBlob(algo : (implicit : Algorithm), b : Blob) : Blob {
     let d = new(algo);
     Write.blob(d, b);
     return sum(d);
   };
+
+  // Calculate SHA512 hash digest from `[Nat8]`.
+  public func fromArray(algo : (implicit : Algorithm), arr : [Nat8]) : Blob {
+    let d = new(algo);
+    Write.array(d, arr);
+    return sum(d);
+  };
+
+  // Calculate SHA256 hash digest from `[var Nat8]`.
   public func fromVarArray(algo : (implicit : Algorithm), arr : [var Nat8]) : Blob {
     let d = new(algo);
     Write.varArray(d, arr);
     return sum(d);
   };
-  public func fromUncheckedAccessor(algo : (implicit : Algorithm), at : Nat -> Nat8, len : Nat) : Blob {
+
+  // Calculate SHA512 hash digest from entire `Iter<Nat8>`.
+  public func fromIter(algo : (implicit : Algorithm), iter : Iter<Nat8>) : Blob {
     let d = new(algo);
-    Write.accessor(d, at, len);
+    Write.iter(d, iter.next);
     return sum(d);
   };
+
+  // Calculate SHA512 hash digest from a positional accessor function without bounds check.
+  // Take `len` bytes counting from the `start` index.
+  public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
+    let d = new(algo);
+    Write.accessor(d, data, start, len);
+    return sum(d);
+  };
+
+  // Calculate SHA512 hash digest from an iterator function without bounds check.
+  // Take `len` bytes.
   public func fromUncheckedReader(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
     let d = new(algo);
     Write.reader(d, next, len);

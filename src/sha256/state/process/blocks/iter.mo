@@ -257,7 +257,6 @@ module {
     buf.i_block +%= blocks;
 
     // write remaining bytes from backup to buffer
-    // TODO: do this part outside the function?
     ignore buf.load_chunk(func(i) = backup[i], pos, 0);
   };
 

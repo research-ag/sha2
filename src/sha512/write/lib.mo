@@ -30,9 +30,10 @@ module {
     assert not x.closed;
     VarArray.write(x, data);
   };
-  public func accessor(x : Digest, data : Nat -> Nat8, sz : Nat) : () {
+  // TODO: replace sz by len
+  public func accessor(x : Digest, data : Nat -> Nat8, start : Nat, sz : Nat) : () {
     assert not x.closed;
-    Accessor.write(x, data, sz);
+    Accessor.write(x, data, start, sz);
   };
   public func reader(x : Digest, data : () -> Nat8, sz : Nat) : () {
     assert not x.closed;
