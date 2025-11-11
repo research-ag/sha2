@@ -215,18 +215,6 @@ module {
     return stateBlob(self);
   };
 
-  /// Same as sum() but returns the hash as a `[Nat8]` instead.
-  ///
-  /// ```motoko
-  /// let digest = Sha256.new();
-  /// digest.writeBlob("Hello world");
-  /// let hash : [Nat8] = digest.sumToNat8Array();
-  /// ```
-  public func sumToNat8Array(self : Digest) : [Nat8] {
-    self.close();
-    return stateNat8(self);
-  };
-
   /// Get the current hash value without finalizing the digest.
   /// This internally clones the digest, finalizes the clone, and returns the hash.
   /// The purpose is to allow obtaining intermediate hash values without closing the original digest.
