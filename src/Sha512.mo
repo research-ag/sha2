@@ -3,8 +3,23 @@
 /// Features:
 ///
 /// * Algorithms: `sha512_224`, `sha512_256`, `sha384`, `sha512`
-/// * Input types: `Blob`, `[Nat8]`, `Iter<Nat8>`
+/// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`,
+/// *   `at : Nat -> Nat8` (unchecked accessor), 
+/// *   `next : () -> Nat8` (unchecked reader)
 /// * Output types: `Blob`
+///
+/// Import with this line in mops.toml:
+/// ```
+/// sha2 = "1.0.0"
+/// ```
+/// and this line in your Motoko code:
+/// ```motoko
+/// import Sha512 "mo:sha2/Sha512";
+/// ```
+///
+/// The package allows incremental hashing by creating a `Digest` instance,
+/// writing data to it in increments, and finalizing it to get the hash. It also provides
+/// convenience functions to compute the hash from various input types in a single step.
 
 import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";
@@ -24,8 +39,10 @@ module {
     #sha512_224;
     #sha512_256;
   };
-  public let algo = #sha512; // default algorithm
+  public let algo = #sha512; // default algorithm used as implicit argument
 
+  /// Digest type (including the algorithm field)
+  /// As a static record it can be declared `stable`.
   public type Digest = {
     algo : Algorithm;
     // msg buffer
@@ -39,6 +56,26 @@ module {
     var closed : Bool;
   };
 
+  /// Create a new SHA2 digest instance for the specified algorithm.
+  /// The digest can be used to incrementally hash data by calling write functions,
+  /// then finalized with `sum()`.
+  ///
+  /// If incremental hashing is not needed, consider using the convenience functions `fromBlob`, `fromArray`, etc.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello");
+  /// digest.writeBlob(" world");
+  /// let hash = digest.sum();
+  /// ```
+  ///
+  /// After finalizing with `sum()` the digest is "closed", i.e. no more data can be written to it.
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new(#sha384);
+  /// ``` 
   public func new(algo : (implicit : Algorithm)) : Digest {
     {
       algo;
@@ -57,6 +94,18 @@ module {
     }
   };
 
+  /// Reset the digest state to start a new hash computation.
+  /// After reset, the digest can be reused to hash new data.
+  /// This works even if the digest was previously finalized (is closed).
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("First message");
+  /// let hash1 = digest.sum();
+  /// digest.reset();
+  /// digest.writeBlob("Second message");
+  /// let hash2 = digest.sum();
+  /// ```
   public func reset(self : Digest) {
     assert not self.closed;
     self.i_msg := 0;
@@ -73,6 +122,18 @@ module {
     };
   };
 
+  /// Create an independent copy of the digest with the same internal state.
+  /// This allows to finalize one of the two copies with `sum()` and to keep writing more data to the other.
+  /// For example, one can obtain intermediate hashes like this.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello");
+  /// let clone = digest.clone();
+  /// let intermediate = clone.sum();
+  /// digest.writeBlob(" world");
+  /// let final = digest.sum();
+  /// ```
   public func clone(self : Digest) : Digest {
     assert not self.closed;
     {
@@ -103,13 +164,82 @@ module {
     };
   };
 
+  /// Write a `Blob` to the digest.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello");
+  /// digest.writeBlob(" world");
+  /// let hash = digest.sum();
+  /// ```
   public func writeBlob(self : Digest, data : Blob) : () = Write.blob(self, data);
+  
+  /// Write a `[Nat8]` array to the digest.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeArray([72, 101, 108, 108, 111]); // "Hello"
+  /// digest.writeBlob(" world");
+  /// let hash = digest.sum();
+  /// ```
   public func writeArray(self : Digest, data : [Nat8]) : () = Write.array(self, data);
+  
+  /// Write a `[var Nat8]` array to the digest.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// let data : [var Nat8] = [var 72, 101, 108, 108, 111];
+  /// digest.writeVarArray(data);
+  /// let hash = digest.sum();
+  /// ```
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = Write.varArray(self, data);
-  public func writeIter(self : Digest, data : Iter<Nat8>) : () = Write.iter(self, data.next);
+  
+  /// Write data from a positional accessor function without bounds checking.
+  /// Takes `len` bytes starting from the `start` index.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
+  /// func accessor(i : Nat) : Nat8 = data[i];
+  /// digest.writeUncheckedAccessor(accessor, 0, 5); // "Hello"
+  /// digest.writeUncheckedAccessor(accessor, 5, 6); // " world"
+  /// let hash = digest.sum();
+  /// ```
   public func writeUncheckedAccessor(self : Digest, at : Nat -> Nat8, start : Nat, len : Nat) : () = Write.accessor(self, at, start, len);
+  
+  /// Write data from an iterator function without bounds checking.
+  /// Takes exactly `len` bytes by calling the iterator function.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// let data = [72, 101, 108, 108, 111];
+  /// var pos = 0;
+  /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
+  /// digest.writeUncheckedReader(reader, 5); // "Hello"
+  /// digest.writeUncheckedReader(reader, 6); // " world"
+  /// let hash = digest.sum();
+  /// ```
   public func writeUncheckedReader(self : Digest, next : () -> Nat8, len : Nat) : () = Write.reader(self, next, len);
+  
+  /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// let iter = [72, 101, 108, 108, 111].vals();
+  /// digest.writeIter(iter); // "Hello"
+  /// let hash = digest.sum();
+  /// ```
+  public func writeIter(self : Digest, data : Iter<Nat8>) : () = Write.iter(self, data.next);
 
+  /// Finalize the digest and return the hash as a `Blob`.
+  /// This closes the digest. It cannot be used for anything again unless it is reset with the `reset()` function.
+  /// For example, attempting to write more data to it or finalizing it a second time will trap.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello world");
+  /// let hash : Blob = digest.sum();
+  /// ```
   public func sum(self : Digest) : Blob {
     assert not self.closed;
     self.closed := true;
@@ -200,48 +330,143 @@ module {
     ]);
   };
 
+  /// Get the current hash value without finalizing the digest.
+  /// This internally clones the digest, finalizes the clone, and returns the hash.
+  /// The purpose is to allow obtaining intermediate hash values without closing the original digest.
+  ///
+  /// Additionally, `peekSum()` can be called on an already finalized digest.
+  /// It simply returns the final hash in that case.
+  ///
+  /// ```motoko
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello");
+  /// let intermediate = digest.peekSum();
+  /// digest.writeBlob(" world");
+  /// let final = digest.sum();
+  /// let sameFinal = digest.peekSum();
+  /// ```
   public func peekSum(self : Digest) : Blob {
     if (self.closed) stateToBlob(self) else sum(clone(self));
   };
 
-  // Calculate SHA512 hash digest from `Blob`.
+  /// Directly calculate the SHA2 hash digest from a `Blob`.
+  /// This is a convenience function that creates a digest, writes the data,
+  /// and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromBlob("Hello world");
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromBlob(#sha384, "Hello world");
+  /// ```
   public func fromBlob(algo : (implicit : Algorithm), b : Blob) : Blob {
     let d = new(algo);
     Write.blob(d, b);
     return sum(d);
   };
 
-  // Calculate SHA512 hash digest from `[Nat8]`.
+  /// Calculate the SHA2 hash digest from a `[Nat8]` array.
+  /// This is a convenience function that creates a digest, writes the data,
+  /// and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
+  /// let hash = Sha512.fromArray(data);
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromArray(#sha384, data);
+  /// ```
   public func fromArray(algo : (implicit : Algorithm), arr : [Nat8]) : Blob {
     let d = new(algo);
     Write.array(d, arr);
     return sum(d);
   };
 
-  // Calculate SHA256 hash digest from `[var Nat8]`.
+  /// Calculate the SHA2 hash digest from a `[var Nat8]` array.
+  /// This is a convenience function that creates a digest, writes the data,
+  /// and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// let data : [var Nat8] = [var 72, 101, 108, 108, 111];
+  /// let hash = Sha512.fromVarArray(data);
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromVarArray(#sha384, data);
+  /// ```
   public func fromVarArray(algo : (implicit : Algorithm), arr : [var Nat8]) : Blob {
     let d = new(algo);
     Write.varArray(d, arr);
     return sum(d);
   };
 
-  // Calculate SHA512 hash digest from entire `Iter<Nat8>`.
+  /// Calculate the SHA2 hash digest from an entire `Iter<Nat8>`.
+  /// This is a convenience function that creates a digest, writes all data
+  /// from the iterator, and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// let data = [72, 101, 108, 108, 111].vals();
+  /// let hash = Sha512.fromIter(data);
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromIter(#sha384, data);
+  /// ```
   public func fromIter(algo : (implicit : Algorithm), iter : Iter<Nat8>) : Blob {
     let d = new(algo);
     Write.iter(d, iter.next);
     return sum(d);
   };
 
-  // Calculate SHA512 hash digest from a positional accessor function without bounds check.
-  // Take `len` bytes counting from the `start` index.
+  /// Calculate the SHA2 hash digest from a positional accessor function without bounds check.
+  /// Takes `len` bytes counting from the `start` index.
+  /// This is a convenience function that creates a digest, writes the data,
+  /// and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
+  /// func accessor(i : Nat) : Nat8 = data[i];
+  /// let hash = Sha512.fromUncheckedAccessor(accessor, 0, 5);
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromUncheckedAccessor(#sha384, accessor, 0, 5);
+  /// ```
   public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let d = new(algo);
     Write.accessor(d, data, start, len);
     return sum(d);
   };
 
-  // Calculate SHA512 hash digest from an iterator function without bounds check.
-  // Take `len` bytes.
+  /// Calculate the SHA2 hash digest from an iterator function without bounds check.
+  /// Takes exactly `len` bytes by calling the iterator function.
+  /// This is a convenience function that creates a digest, writes the data,
+  /// and returns the final hash in one step.
+  ///
+  /// ```motoko
+  /// var pos = 0;
+  /// let data = [72, 101, 108, 108, 111];
+  /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
+  /// let hash = Sha512.fromUncheckedReader(reader, 5);
+  /// ```
+  ///
+  /// The default algorithm is `#sha512`. To use `#sha384`, `#sha512_256` or `#sha512_224`, pass it as an explicit argument: 
+  ///
+  /// ```motoko
+  /// let hash = Sha512.fromUncheckedReader(#sha384, reader, 5);
+  /// ```
   public func fromUncheckedReader(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
     let d = new(algo);
     Write.reader(d, next, len);
