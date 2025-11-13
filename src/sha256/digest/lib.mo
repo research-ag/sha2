@@ -1,29 +1,97 @@
+/// SHA-256 digest module
+///
+/// Handles writing data to the digest and closing it with padding.
+/// The functions in this module orchestrate:
+/// * writing data to the digest's internal buffer
+/// * processing the internal buffer to update the digest state 
+/// * processing full blocks of data directly from the input when possible
+///
+/// Methods: 
+///   writeBlob, writeArray, writeVarArray, writeAccessor, writeReader, writeIter,
+///   writePadding, close
+
 import Prim "mo:prim";
 
-import Array "./write/array";
-import Blob "./write/blob";
-import VarArray "./write/varArray";
-import Accessor "./write/accessor";
-import Reader "./write/reader";
-import Iter "./write/iter";
-import Buffer "../buffer";
-import State "../state";
+import _Buffer "../buffer";
+import _State "../state";
+import _ProcessMsg "../state/process/blocks/iter"; // state.process_blocks
 
 import { type Digest } "../types";
 import { type State } "../types";
 
 module {
-  public func writeBlob(self : Digest, data : Blob) = Blob.write(self, data);
-  public func writeArray(self : Digest, data : [Nat8]) = Array.write(self, data);
-  public func writeVarArray(self : Digest, data : [var Nat8]) = VarArray.write(self, data);
-  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) = Accessor.write(self, data, start, len);
-  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) = Reader.write(self, data, len);
-  public func writeIter(self : Digest, data : () -> ?Nat8) = Iter.write(self, data);
-
+  let natToNat32 = Prim.natToNat32;
   let nat8ToNat = Prim.nat8ToNat;
   let nat8To16 = Prim.nat8ToNat16;
   let nat32To64 = Prim.nat32ToNat64;
   let intToNat64Wrap = Prim.intToNat64Wrap;
+
+  func writeData(x : Digest, data : Nat -> Nat8, sz : Nat, start : Nat, process_blocks : Nat -> Nat) {
+    assert not x.closed;
+    if (sz == start) return;
+    let (buf, state) = (x.buffer, x.state);
+    var pos = start;
+    if (buf.i_msg > 0 or not buf.high) {
+      pos := buf.load_chunk(data, sz, start);
+      if (buf.i_msg == 32) {
+        state.process_block_from_msg(buf.msg);
+        buf.i_msg := 0;
+        buf.i_block +%= 1;
+      };
+    };
+    // if (buf.i_msg != 0) return;
+    let end = process_blocks(pos);
+    buf.i_block +%= natToNat32(end - pos) / 64;
+    ignore buf.load_chunk(data, sz, end);
+    if (buf.i_msg == 32) {
+      state.process_block_from_msg(buf.msg);
+      buf.i_msg := 0;
+      buf.i_block +%= 1;
+    };
+  };
+
+  public func writeBlob(self : Digest, data : Blob) {
+    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_blob(data, pos);
+    writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
+  };
+  public func writeArray(self : Digest, data : [Nat8]) {
+    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_array(data, pos);
+    writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
+  };
+  public func writeVarArray(self : Digest, data : [var Nat8]) {
+    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_vararray(data, pos);
+    writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
+  };
+  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
+    let sz = start + len;
+    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_accessor(data, sz, pos);
+    writeData(self, data, sz, start, process_blocks);
+  };
+  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) {
+    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_reader(data, len, pos);
+    writeData(self, func(_) = data(), len, 0, process_blocks);
+  };
+
+  public func writeIter(self : Digest, data : () -> ?Nat8) {
+    assert not self.closed;
+    let (buf, state) = (self.buffer, self.state);
+    
+    if (buf.i_msg > 0 or not buf.high) {
+      buf.load_iter(data);
+      if (buf.i_msg == 32) {
+        state.process_block_from_msg(buf.msg);
+        buf.i_msg := 0;
+        buf.i_block +%= 1;
+      };
+    };
+
+    if (buf.i_msg > 0 or not buf.high) return;
+
+    // must have buf.i_msg == 0 and buf.high == true here 
+    // continue to try to read entire blocks at once from the iterator
+
+    state.process(data, buf);
+  };
 
   public func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
