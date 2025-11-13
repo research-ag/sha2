@@ -18,23 +18,23 @@ prt (Sha512.fromBlob(#sha384, ""));
 prt (Sha256.fromArray([]));
 prt (Sha256.fromVarArray([var]));
 prt (Sha256.fromIter({ next = func () : ?Nat8 = null }));
-prt (Sha256.fromUncheckedReader(func () : Nat8 = 0, 0));
-prt (Sha256.fromUncheckedAccessor(func (i : Nat) : Nat8 = 0, 0, 0));
+prt (Sha256.fromReader(func () : Nat8 = 0, 0));
+prt (Sha256.fromAccessor(func (i : Nat) : Nat8 = 0, 0, 0));
 
 do {
   let l = List.empty<Nat8>();
   prt (Sha256.fromIter(List.values(l)));
-  prt (Sha256.fromUncheckedReader(l.stream(), l.size()));
+  prt (Sha256.fromReader(l.stream(), l.size()));
 };
 
 do {
   let l = List.fromArray(Blob.toArray("hello world!"));
-  prt (Sha256.fromUncheckedReader(l.stream(), 5));
-  prt (Sha256.fromUncheckedReader(l.stream(), l.size()));
-  prt (Sha256.fromUncheckedReader(l.stream(6), 5));
+  prt (Sha256.fromReader(l.stream(), 5));
+  prt (Sha256.fromReader(l.stream(), l.size()));
+  prt (Sha256.fromReader(l.stream(6), 5));
   prt (Sha256.fromBlob("world"));
   func at(i : Nat) : Nat8 = List.at(l, i);
-  prt (Sha256.fromUncheckedAccessor(at, 6, 5));
+  prt (Sha256.fromAccessor(at, 6, 5));
 };
 /*
 do {

@@ -19,8 +19,8 @@ module {
       "fromBlob",
       "fromArray",
       "fromVarArray",
-      "fromUncheckedAccessor",
-      "fromUncheckedReader",
+      "fromAccessor",
+      "fromReader",
       "fromIter",
       "fromList",
     ];
@@ -70,12 +70,12 @@ module {
           };
           case (3) {
             let at = func(i : Nat) : Nat8 = source[i];
-            func() = ignore Sha256.fromUncheckedAccessor(at, 0, source.size());
+            func() = ignore Sha256.fromAccessor(at, 0, source.size());
           };
           case (4) {
             var i = 0;
             func next() : Nat8 { let r = source[i]; i += 1; r };
-            func() = ignore Sha256.fromUncheckedReader(next, source.size());
+            func() = ignore Sha256.fromReader(next, source.size());
           };
           case (5) {
             var itemsLeft = source.size();
@@ -89,7 +89,7 @@ module {
           };
           case (6) {
             let next = list.stream();
-            func() = ignore Sha256.fromUncheckedReader(next, source.size());
+            func() = ignore Sha256.fromReader(next, source.size());
           };
           case (_) Prim.trap("Row not implemented");
         };

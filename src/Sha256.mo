@@ -155,32 +155,36 @@ module {
   /// ```
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = self.writeVarArray(data);
   
-  /// Write data from a positional accessor function without bounds checking.
+  /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
+  /// It it the responsibility of the caller to ensure that the accessor function
+  /// can provide valid data for all requested indices.
   ///
   /// ```motoko
   /// let digest = Sha256.new();
   /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
   /// func accessor(i : Nat) : Nat8 = data[i];
-  /// digest.writeUncheckedAccessor(accessor, 0, 5); // "Hello"
-  /// digest.writeUncheckedAccessor(accessor, 5, 6); // " world"
+  /// digest.writeAccessor(accessor, 0, 5); // "Hello"
+  /// digest.writeAccessor(accessor, 5, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeUncheckedAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(data, start, len);
+  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(data, start, len);
   
-  /// Write data from an iterator function without bounds checking.
-  /// Takes exactly `len` bytes by calling the iterator function.
+  /// Write data from a reader function.
+  /// Takes exactly `len` bytes by calling the reader function `len` times.
+  /// It it the responsibility of the caller to ensure that the reader function
+  /// can provide valid data for all requested bytes. 
   ///
   /// ```motoko
   /// let digest = Sha256.new();
   /// let data = [72, 101, 108, 108, 111];
   /// var pos = 0;
   /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
-  /// digest.writeUncheckedReader(reader, 5); // "Hello"
-  /// digest.writeUncheckedReader(reader, 6); // " world"
+  /// digest.writeReader(reader, 5); // "Hello"
+  /// digest.writeReader(reader, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeUncheckedReader(self : Digest, data : () -> Nat8, len : Nat) : () = self.writeReader(data, len);
+  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) : () = self.writeReader(data, len);
   
   /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
   ///
@@ -313,30 +317,34 @@ module {
     return sum(digest);
   };
 
-  /// Calculate the SHA2 hash digest from a positional accessor function without bounds check.
+  /// Calculate the SHA2 hash digest from a positional accessor function.
   /// Takes `len` bytes counting from the `start` index.
+  /// It it the responsibility of the caller to ensure that the accessor function
+  /// can provide valid data for all requested indices.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
   ///
   /// ```motoko
   /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
   /// func accessor(i : Nat) : Nat8 = data[i];
-  /// let hash = Sha256.fromUncheckedAccessor(accessor, 0, 5);
+  /// let hash = Sha256.fromAccessor(accessor, 0, 5);
   /// ```
   ///
   /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
   ///
   /// ```motoko
-  /// let hash = Sha256.fromUncheckedAccessor(#sha224, accessor, 0, 5);
+  /// let hash = Sha256.fromAccessor(#sha224, accessor, 0, 5);
   /// ```
-  public func fromUncheckedAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
+  public func fromAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeAccessor(data, start, len);
     return sum(digest);
   };
 
-  /// Calculate the SHA2 hash digest from an iterator function without bounds check.
-  /// Takes exactly `len` bytes by calling the iterator function.
+  /// Calculate the SHA2 hash digest from a reader function.
+  /// Takes exactly `len` bytes by calling the reader function `len` times.
+  /// It it the responsibility of the caller to ensure that the reader function
+  /// can provide valid data for all requested bytes. 
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
   ///
@@ -344,15 +352,15 @@ module {
   /// var pos = 0;
   /// let data = [72, 101, 108, 108, 111];
   /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
-  /// let hash = Sha256.fromUncheckedReader(reader, 5);
+  /// let hash = Sha256.fromReader(reader, 5);
   /// ```
   ///
   /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
   ///
   /// ```motoko
-  /// let hash = Sha256.fromUncheckedReader(#sha224, reader, 5);
+  /// let hash = Sha256.fromReader(#sha224, reader, 5);
   /// ```
-  public func fromUncheckedReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
+  public func fromReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeReader(data, len);
     return sum(digest);
