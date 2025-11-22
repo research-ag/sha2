@@ -4,7 +4,7 @@
 ///
 /// * Algorithms: `sha256`, `sha224`
 /// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`,
-/// *   `at : Nat -> Nat8` (unchecked accessor), 
+/// *   `at : Nat -> Nat8` (unchecked accessor),
 /// *   `next : () -> Nat8` (unchecked reader)
 /// * Output types: `Blob`
 ///
@@ -35,11 +35,8 @@ module {
 
   /// Digest type (including the algorithm field)
   /// As a static record it can be declared `stable`.
-  public type Digest = {
+  public type Digest = Types.Digest and {
     algo : Algorithm;
-    buffer : Types.Buffer;
-    state : Types.State;
-    var closed : Bool;
   };
 
   /// Create a new SHA2 digest instance for the specified algorithm.
@@ -57,11 +54,11 @@ module {
   ///
   /// After finalizing with `sum()` the digest is "closed", i.e. no more data can be written to it.
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit argument:
   ///
   /// ```motoko
   /// let digest = Sha256.new(#sha224);
-  /// ``` 
+  /// ```
   public func new(algo : (implicit : Algorithm)) : Digest {
     let buf = Buffer.new();
     if (algo == #sha224) {
@@ -134,7 +131,7 @@ module {
   /// let hash = digest.sum();
   /// ```
   public func writeBlob(self : Digest, data : Blob) : () = self.writeBlob(data);
-  
+
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko
@@ -144,7 +141,7 @@ module {
   /// let hash = digest.sum();
   /// ```
   public func writeArray(self : Digest, data : [Nat8]) : () = self.writeArray(data);
-  
+
   /// Write a `[var Nat8]` array to the digest.
   ///
   /// ```motoko
@@ -154,7 +151,7 @@ module {
   /// let hash = digest.sum();
   /// ```
   public func writeVarArray(self : Digest, data : [var Nat8]) : () = self.writeVarArray(data);
-  
+
   /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
   /// It it the responsibility of the caller to ensure that the accessor function
@@ -169,11 +166,11 @@ module {
   /// let hash = digest.sum();
   /// ```
   public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(data, start, len);
-  
+
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
   /// It it the responsibility of the caller to ensure that the reader function
-  /// can provide valid data for all requested bytes. 
+  /// can provide valid data for all requested bytes.
   ///
   /// ```motoko
   /// let digest = Sha256.new();
@@ -185,7 +182,7 @@ module {
   /// let hash = digest.sum();
   /// ```
   public func writeReader(self : Digest, data : () -> Nat8, len : Nat) : () = self.writeReader(data, len);
-  
+
   /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
   ///
   /// ```motoko
@@ -246,7 +243,7 @@ module {
   /// let hash = Sha256.fromBlob("Hello world");
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromBlob(#sha224, "Hello world");
@@ -266,7 +263,7 @@ module {
   /// let hash = Sha256.fromArray(data);
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromArray(#sha224, data);
@@ -286,7 +283,7 @@ module {
   /// let hash = Sha256.fromVarArray(data);
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromVarArray(#sha224, data);
@@ -306,7 +303,7 @@ module {
   /// let hash = Sha256.fromIter(data);
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromIter(#sha224, data);
@@ -330,7 +327,7 @@ module {
   /// let hash = Sha256.fromAccessor(accessor, 0, 5);
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromAccessor(#sha224, accessor, 0, 5);
@@ -344,7 +341,7 @@ module {
   /// Calculate the SHA2 hash digest from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
   /// It it the responsibility of the caller to ensure that the reader function
-  /// can provide valid data for all requested bytes. 
+  /// can provide valid data for all requested bytes.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
   ///
@@ -355,7 +352,7 @@ module {
   /// let hash = Sha256.fromReader(reader, 5);
   /// ```
   ///
-  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument: 
+  /// The default algorithm is `#sha256`. To use `#sha224`, pass it as an explicit first argument:
   ///
   /// ```motoko
   /// let hash = Sha256.fromReader(#sha224, reader, 5);

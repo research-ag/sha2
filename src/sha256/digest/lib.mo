@@ -136,8 +136,8 @@ module {
 
   public func close(self : Digest) {
     assert not self.closed;
-    writePadding(self);
     self.closed := true;
+    writePadding(self);
   };
 
   /*
