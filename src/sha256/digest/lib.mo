@@ -145,7 +145,7 @@ module {
     assert not self.closed;
     {
       buffer = self.buffer.clone();
-      state = State.clone(self.state); // TODO: use dot notations once new motoko-core is available
+      state = self.state.clone();
       var closed = false;
     };
   };

@@ -23,7 +23,6 @@ module {
     var pos = start;
     let sz = start + len; // required absolute data size
     if (x.i_msg > 0 or x.i_byte < 8) {
-// TODO: remove when working      pos := write_data_to_buffer(x, data, sz, 0);
       pos := write_data_to_buffer(x, data, sz, start);
     };
     let end = Process.process_blocks(x.s, data, sz, pos);

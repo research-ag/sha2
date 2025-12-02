@@ -176,7 +176,7 @@ module {
       var i_msg = self.i_msg;
       var i_byte = self.i_byte;
       var i_block = self.i_block;
-      s = VarArray.clone(self.s); // TODO: use dot noations once new motoko-core is available
+      s = self.s.clone();
       var closed = false;
     };
   };

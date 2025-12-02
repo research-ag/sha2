@@ -15,8 +15,6 @@ module {
     }
   };
 
-  public func size<T>(self : List.List<T>) : Nat = List.size(self);
-
   public let start = 0;  
 
   public func stream<T>(self : List.List<T>, start : (implicit : Nat)) : () -> T {
