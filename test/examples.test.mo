@@ -2,7 +2,6 @@ import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 import Blob "mo:core/Blob";
 import List "mo:core/List";
-import _ListTools "../src/util/List";
 import { print } "mo:core/Debug";
 
 func prt(b : Blob) = print(debug_show b);
@@ -24,14 +23,14 @@ prt (Sha256.fromAccessor(func (i : Nat) : Nat8 = 0, 0, 0));
 do {
   let l = List.empty<Nat8>();
   prt (Sha256.fromIter(List.values(l)));
-  prt (Sha256.fromReader(l.stream(), l.size()));
+  prt (Sha256.fromReader(l.reader(0), l.size()));
 };
 
 do {
   let l = List.fromArray(Blob.toArray("hello world!"));
-  prt (Sha256.fromReader(l.stream(), 5));
-  prt (Sha256.fromReader(l.stream(), l.size()));
-  prt (Sha256.fromReader(l.stream(6), 5));
+  prt (Sha256.fromReader(l.reader(0), 5));
+  prt (Sha256.fromReader(l.reader(0), l.size()));
+  prt (Sha256.fromReader(l.reader(6), 5));
   prt (Sha256.fromBlob("world"));
   func at(i : Nat) : Nat8 = List.at(l, i);
   prt (Sha256.fromAccessor(at, 6, 5));

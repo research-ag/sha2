@@ -7,7 +7,7 @@ keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-core = "https://github.com/dfinity/motoko-core#implicits-19"
+core = "https://github.com/dfinity/motoko-core#implicits-22"
 
 [dev-dependencies]
 test = "2.1.1"
@@ -17,5 +17,5 @@ bench = "1.0.0"
 moc = "0.16.3"
 
 [toolchain]
-wasmtime = "38.0.3"
-moc = "0.16.3-implicits-25"
+wasmtime = "39.0.1"
+moc = "0.16.3-implicits-26"

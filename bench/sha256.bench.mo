@@ -6,7 +6,6 @@ import Random "mo:core/Random";
 import Prim "mo:prim";
 import Bench "mo:bench";
 import Sha256 "../src/Sha256";
-import _ListTools "../src/util/List";
 
 module {
   public func init() : Bench.Bench {
@@ -88,7 +87,7 @@ module {
             func() = ignore Sha256.fromIter(iter);
           };
           case (6) {
-            let next = list.stream();
+            let next = list.reader(0);
             func() = ignore Sha256.fromReader(next, source.size());
           };
           case (_) Prim.trap("Row not implemented");
