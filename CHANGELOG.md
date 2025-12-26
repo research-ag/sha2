@@ -1,5 +1,9 @@
 # Sha2 changelog
 
+## 0.1.10
+
+* Bump dependency to core 2.0.0
+
 ## 0.1.9
 
 * Remove heap allocations (garbage) when writing Iter
