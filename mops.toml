@@ -1,21 +1,21 @@
 [package]
 name = "sha2"
-version = "0.1.9"
+version = "0.1.10"
 description = "Optimized implementation of all SHA2 functions"
 repository = "https://github.com/research-ag/sha2"
 keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-core = "1.0.0"
+core = "2.0.0"
 
 [dev-dependencies]
 test = "2.1.1"
 bench = "1.0.0"
 
 [requirements]
-moc = "0.14.13"
+moc = "1.0.0"
 
 [toolchain]
-wasmtime = "37.0.2"
-moc = "0.16.3"
+wasmtime = "40.0.0"
+moc = "1.0.0"
