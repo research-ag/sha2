@@ -16,7 +16,7 @@ This package implements all SHA2 functions:
 
 The API allows to hash types `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, and `List<Nat8>`.
 
-The API provides the usual Digest instance which accepts the message piecewise until finally computing the hash sum (digest).
+The API provides a Digest type which accepts the message piecewise until finally computing the hash sum (digest).
 This allows hashing very large messages over multiple executions of the canister, even across canister upgrades.
 ### Links
 
@@ -78,35 +78,40 @@ let hash3 : Blob = Sha256.fromArray(#sha224, data);
 let varData : [var Nat8] = [var 72, 101, 108, 108, 111];
 let hash4 : Blob = Sha512.fromVarArray(#sha384, varData);
 
-// Hash from positional function
+// Hash from positional byte accessor function
 func getByte(i : Nat) : Nat8 { /* return byte at position i */ };
-let hash5 : Blob = Sha256.fromPositional(#sha256, getByte, 100);
+let len = 100; // number of bytes to read
+let hash5 : Blob = Sha256.fromAccessor(#sha256, getByte, len);
 
-// Hash from iterator function
+// Hash from next-byte reader function
 var pos = 0;
 func nextByte() : Nat8 { pos += 1; /* return next byte */ };
-let hash6 : Blob = Sha512.fromNext(#sha512_256, nextByte, 100);
+let len = 100; // number of bytes to read
+let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, len);
 
 // Hash from Iter<Nat8>
-import Iter "mo:base/Iter";
-let iter = Iter.fromArray([72, 101, 108, 108, 111]);
+let iter = [72, 101, 108, 108, 111].vals();
 let hash7 : Blob = Sha256.fromIter(#sha256, iter);
+```
 
+To hash from `List<Nat8>` the most efficient way is to use the reader function as follows:
+
+```motoko
 // Hash from List<Nat8>
-import List "mo:base/List";
+import List "mo:core/List";
 let list = List.fromArray<Nat8>([72, 101, 108, 108, 111]);
-let hash8 : Blob = Sha512.fromIter(#sha512, List.toIter(list));
+let hash8 : Blob = Sha512.fromReader(#sha512, list.reader(0));
 ```
 
 ### 2. Streaming API with Digest engine
 
-For processing data in chunks, create a `Digest` instance and write to it incrementally:
+For processing data in chunks, create a `Digest` type and write to it incrementally:
 
 ```motoko
 import Sha256 "mo:sha2/Sha256";
 
 // Create a new digest engine
-let digest = Sha256.new(#sha256);
+let digest = Sha256.new();
 
 // Write data in chunks of different types
 digest.writeBlob("First chunk ");
@@ -138,7 +143,7 @@ Use `clone()` and `peekSum()` to get intermediate hashes without losing your pro
 
 ```motoko
 import Sha256 "mo:sha2/Sha256";
-import Debug "mo:base/Debug";
+import Debug "mo:core/Debug";
 
 let digest = Sha256.new(#sha256);
 
