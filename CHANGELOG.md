@@ -3,6 +3,9 @@
 ## 0.1.11
 
 * Bump bench dependency to 2.0.0
+* Remove unused test dependency
+* Make internal digest functions private
+* Add code documentation for all public functions
 
 ## 0.1.10
 

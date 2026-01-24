@@ -125,7 +125,7 @@ module {
     var high : Bool = true;
 
     /// Reset the hash engine to a state equivalent of a new one.
-    /// This erases all internal buffers and resets the the state to the IV.
+    /// This erases all internal buffers and resets the state to the IV.
     /// After this call, the hash engine can be used for an entirely new message.
     public func reset() {
       i_msg := 0;
