@@ -175,6 +175,7 @@ module {
       case (#sha512) { (64, 3) };
     };
 
+    /// Return the configured algorithm for this digest.
     public func algo() : Algorithm = algo_;
 
     var s0 : Nat64 = 0;
@@ -194,6 +195,9 @@ module {
     var i_byte : Nat8 = 8;
     var i_block : Nat64 = 0;
 
+    /// Reset the hash engine to a state equivalent of a new one.
+    /// This erases all internal buffers and resets the state to the IV.
+    /// After this call, the hash engine can be used for an entirely new message.
     public func reset() {
       i_msg := 0;
       i_byte := 8;
@@ -238,6 +242,7 @@ module {
       };
     };
 
+    /// Convert the class to static data.
     public func share() : StaticSha512 = {
       msg = Array.fromVarArray(msg);
       digest = Array.fromVarArray(digest);
@@ -248,6 +253,7 @@ module {
       s = [s0, s1, s2, s3, s4, s5, s6, s7];
     };
 
+    /// Restore the class from static data.
     public func unshare(state : StaticSha512) {
       assert msg.size() == state.msg.size();
       assert digest.size() == state.digest.size();
@@ -1262,7 +1268,7 @@ module {
       };
     };
 
-    public func write_iter_to_buffer(next : () -> ?Nat8) {
+    func write_iter_to_buffer(next : () -> ?Nat8) {
       loop {
         switch (next()) {
           case (?val) {
@@ -1282,6 +1288,7 @@ module {
       };
     };
 
+    /// Write bytes from an iterator into the digest.
     public func writeIter(iter : { next() : ?Nat8 }) : () {
       let next = iter.next;
       
@@ -1302,6 +1309,7 @@ module {
       process_blocks_from_iter(next);
     };
 
+    /// Write a `[Nat8]` array into the digest.
     public func writeArray(arr : [Nat8]) : () {
       let s = arr.size();
       if (s == 0) return;
@@ -1313,6 +1321,7 @@ module {
       ignore write_arr_to_buffer(arr, i);
     };
 
+    /// Write a `Blob` into the digest.
     public func writeBlob(blob : Blob) : () {
       let s = blob.size();
       if (s == 0) return;
@@ -1402,6 +1411,7 @@ module {
       return i;
     };
 
+    /// Finalize the digest and return the hash as a `Blob`.
     public func sum() : Blob {
       // calculate padding
       // t = bytes in the last incomplete block (0-127)
