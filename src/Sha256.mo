@@ -97,11 +97,11 @@ module {
   let nat32To16 = Prim.nat32ToNat16;
   let nat32To64 = Prim.nat32ToNat64;
   let nat16To32 = Prim.nat16ToNat32;
-//  let nat16To8 = Prim.nat16ToNat8;
   let nat8To16 = Prim.nat8ToNat16;
   let nat8ToNat = Prim.nat8ToNat;
 
   public class Digest(algo_ : Algorithm) {
+    /// Return the configured algorithm for this digest.
     public func algo() : Algorithm = algo_;
 
     // state variables in Nat16 form
@@ -124,6 +124,9 @@ module {
     var i_block : Nat32 = 0;
     var high : Bool = true;
 
+    /// Reset the hash engine to a state equivalent of a new one.
+    /// This erases all internal buffers and resets the state to the IV.
+    /// After this call, the hash engine can be used for an entirely new message.
     public func reset() {
       i_msg := 0;
       i_block := 0;
@@ -222,6 +225,7 @@ module {
       // skipping here: i_msg := 0;
     };
 
+    /// Convert the class to static data.
     public func share() : StaticSha256 = {
       i_msg;
       i_block;
@@ -235,6 +239,7 @@ module {
       sl = [s0l, s1l, s2l, s3l, s4l, s5l, s6l, s7l];
     };
 
+    /// Restore the class from static data.
     public func unshare(state : StaticSha256) {
       assert msg.size() == state.msg.size();
       assert digest.size() == state.digest.size();
@@ -818,7 +823,7 @@ module {
       return i
     };
 
-    public func process_blocks_from_iter(data : () -> ?Nat8) {
+    func process_blocks_from_iter(data : () -> ?Nat8) {
       // load state registers
       var a = nat16To32(s0h) << 16 | nat16To32(s0l);
       var b = nat16To32(s1h) << 16 | nat16To32(s1l);
@@ -1069,7 +1074,7 @@ module {
       };
     };
 
-    public func write_iter_to_buffer(next : () -> ?Nat8) {
+    func write_iter_to_buffer(next : () -> ?Nat8) {
       if (not high) {
         let ?val = next() else return;
         msg[nat8ToNat(i_msg)] := word ^ nat8To16(val);
@@ -1090,6 +1095,7 @@ module {
       };
     };
 
+    /// Write bytes from an iterator into the digest.
     public func writeIter(iter : { next() : ?Nat8 }) : () {
       let next = iter.next;
       
@@ -1110,6 +1116,7 @@ module {
       process_blocks_from_iter(next);
     };
 
+    /// Write data from a `Blob` into the digest.
     public func writeBlob(blob : Blob) : () {
       let s = blob.size();
       if (s == 0) return;
@@ -1121,6 +1128,7 @@ module {
       ignore write_blob_to_buffer(blob, i);
     };
 
+    /// Write a `[Nat8]` array into the digest.
     public func writeArray(arr : [Nat8]) : () {
       let s = arr.size();
       if (s == 0) return;
@@ -1192,6 +1200,7 @@ module {
       return i;
     };
 
+    /// Finalize the digest and return the hash as a `Blob`.
     public func sum() : Blob {
       writePadding();
 
