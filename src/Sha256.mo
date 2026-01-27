@@ -1250,7 +1250,7 @@ module {
   }; // class Digest
 
   /// Calculate SHA256 hash digest from `Iter`.
-  /// Allowed values for `algo` are: `#sha224`, `#256`
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let digest = Digest(algo);
     digest.writeIter(iter);
@@ -1258,7 +1258,7 @@ module {
   };
 
   /// Calculate SHA256 hash digest from `[Nat8]`.
-  /// Allowed values for `algo` are: `#sha224`, `#256`
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
     let digest = Digest(algo);
     digest.writeArray(arr);
@@ -1266,7 +1266,7 @@ module {
   };
 
   /// Calculate the SHA256 hash digest from `Blob`.
-  /// Allowed values for `algo` are: `#sha224`, `#256`
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let digest = Digest(algo);
     digest.writeBlob(b);
