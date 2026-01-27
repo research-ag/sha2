@@ -1,5 +1,10 @@
 # Sha2 changelog
 
+## 0.1.12
+
+* Add more code documentation
+* Rewrite benchmarks without bench package
+
 ## 0.1.11
 
 * Bump bench dependency to 2.0.0

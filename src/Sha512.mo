@@ -13,6 +13,7 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
+  /// Supported algorithms for the Sha512 Digest class.
   public type Algorithm = {
     #sha384;
     #sha512;
@@ -20,6 +21,8 @@ module {
     #sha512_256;
   };
 
+  /// Static data representing the state of a Sha512 Digest.
+  /// Used for persisting a Digest across upgrades.
   public type StaticSha512 = {
     msg : [Nat64];
     digest : [Nat8];
@@ -167,6 +170,12 @@ module {
   let nat16To32 = Prim.nat16ToNat32;
   let nat8To16 = Prim.nat8ToNat16;
 
+  /// Sha512 Digest class.
+  /// Supports incremental hashing of messages.
+  /// The desired algorithm is defined in the constructor.
+  /// Incrementally write data with `writeIter()`, `writeArray()`, or `writeBlob()`.
+  /// Obtain the final sum with `sum()`.
+  /// Use `reset()` to reuse the class for a new message.
   public class Digest(algo_ : Algorithm) {
     let (sum_bytes, iv) = switch (algo_) {
       case (#sha512_224) { (28, 0) };
@@ -1309,7 +1318,7 @@ module {
       process_blocks_from_iter(next);
     };
 
-    /// Write a `[Nat8]` array into the digest.
+    /// Write bytes from a `[Nat8]` array into the digest.
     public func writeArray(arr : [Nat8]) : () {
       let s = arr.size();
       if (s == 0) return;
@@ -1321,7 +1330,7 @@ module {
       ignore write_arr_to_buffer(arr, i);
     };
 
-    /// Write a `Blob` into the digest.
+    /// Write bytes from a `Blob` into the digest.
     public func writeBlob(blob : Blob) : () {
       let s = blob.size();
       if (s == 0) return;
@@ -1333,7 +1342,7 @@ module {
       ignore write_blob_to_buffer(blob, i);
     };
 
-    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // Write bytes from a `Blob` to buffer until either the block is full or the end of the blob is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_blob_to_buffer(blob : Blob, start : Nat) : (end : Nat) {
       let s = blob.size();
@@ -1372,7 +1381,7 @@ module {
       return i;
     };
 
-    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // Write bytes from a `[Nat8]` array to buffer until either the block is full or the end of the array is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_arr_to_buffer(arr : [Nat8], start : Nat) : (end : Nat) {
       let s = arr.size();
@@ -1497,21 +1506,24 @@ module {
     };
   }; // class Digest
 
-  // Calculate SHA2 hash digest from Iter.
+  /// Calculate SHA512 hash digest from `Iter`.
+  /// Allowed values for `algo` are: `#sha512_224`, `#sha512_256`, `#sha384`, `#sha512`
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let digest = Digest(algo);
     digest.writeIter(iter);
     return digest.sum();
   };
 
-  // Calculate SHA256 hash digest from [Nat8].
+  /// Calculate SHA512 hash digest from `[Nat8]`.
+  /// Allowed values for `algo` are: `#sha512_224`, `#sha512_256`, `#sha384`, `#sha512`
   public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
     let digest = Digest(algo);
     digest.writeArray(arr);
     return digest.sum();
   };
 
-  // Calculate SHA2 hash digest from Blob.
+  /// Calculate SHA512 hash digest from `Blob`.
+  /// Allowed values for `algo` are: `#sha512_224`, `#sha512_256`, `#sha384`, `#sha512`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let digest = Digest(algo);
     digest.writeBlob(b);
