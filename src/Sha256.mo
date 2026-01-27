@@ -14,7 +14,11 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 module {
+  /// Supported algorithms for the Sha256 Digest class.
   public type Algorithm = { #sha224; #sha256 };
+
+  /// Static data representing the state of a Sha256 Digest.
+  /// Used for persisting a Digest across upgrades.
   public type StaticSha256 = {
     msg : [Nat16];
     digest : [Nat8];
@@ -100,6 +104,12 @@ module {
   let nat8To16 = Prim.nat8ToNat16;
   let nat8ToNat = Prim.nat8ToNat;
 
+  /// Sha256 Digest class.
+  /// Supports incremental hashing of messages.
+  /// The desired algorithm is defined in the constructor.
+  /// Incrementally write data with `writeIter()`, `writeArray()`, or `writeBlob()`.
+  /// Obtain the final sum with `sum()`.
+  /// Use `reset()` to reuse the class for a new message.
   public class Digest(algo_ : Algorithm) {
     /// Return the configured algorithm for this digest.
     public func algo() : Algorithm = algo_;
@@ -1116,7 +1126,7 @@ module {
       process_blocks_from_iter(next);
     };
 
-    /// Write data from a `Blob` into the digest.
+    /// Write bytes from a `Blob` into the digest.
     public func writeBlob(blob : Blob) : () {
       let s = blob.size();
       if (s == 0) return;
@@ -1128,7 +1138,7 @@ module {
       ignore write_blob_to_buffer(blob, i);
     };
 
-    /// Write a `[Nat8]` array into the digest.
+    /// Write bytes from a `[Nat8]` array into the digest.
     public func writeArray(arr : [Nat8]) : () {
       let s = arr.size();
       if (s == 0) return;
@@ -1140,7 +1150,7 @@ module {
       ignore write_arr_to_buffer(arr, i);
     };
 
-    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // Write bytes from a `Blob` to buffer until either the block is full or the end of the blob is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_blob_to_buffer(blob : Blob, start : Nat) : (end : Nat) {
       let s = blob.size();
@@ -1170,7 +1180,7 @@ module {
       return i;
     };
 
-    // Write array to buffer until either the block is full or the end of the array is reached
+    // Write bytes from a `[Nat8]` array to buffer until either the block is full or the end of the array is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_arr_to_buffer(arr : [Nat8], start : Nat) : Nat {
       let s = arr.size();
@@ -1239,22 +1249,24 @@ module {
     };
   }; // class Digest
 
-  // Calculate SHA2 hash digest from Iter.
+  /// Calculate SHA256 hash digest from `Iter`.
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromIter(algo : Algorithm, iter : { next() : ?Nat8 }) : Blob {
     let digest = Digest(algo);
     digest.writeIter(iter);
     return digest.sum();
   };
 
-  // Calculate SHA256 hash digest from [Nat8].
+  /// Calculate SHA256 hash digest from `[Nat8]`.
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromArray(algo : Algorithm, arr : [Nat8]) : Blob {
     let digest = Digest(algo);
     digest.writeArray(arr);
     return digest.sum();
   };
 
-  /// Calculate the SHA2 hash digest from `Blob`.
-  /// Allowed values for `algo` are: `#sha224`, `#256`
+  /// Calculate the SHA256 hash digest from `Blob`.
+  /// Allowed values for `algo` are: `#sha224`, `#sha256`
   public func fromBlob(algo : Algorithm, b : Blob) : Blob {
     let digest = Digest(algo);
     digest.writeBlob(b);

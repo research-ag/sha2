@@ -3,29 +3,39 @@ import Blob "mo:core/Blob";
 import Text "mo:core/Text";
 import Random "mo:core/Random";
 import Prim "mo:prim";
-import Bench "mo:bench";
+
 import Sha256 "../src/Sha256";
 
 module {
-  public func init() : Bench.Bench {
-    let bench = Bench.Bench();
+  type Schema = {
+    name : Text;
+    description : Text;
+    rows : [Text];
+    cols : [Text];
+  };
 
-    bench.name("Sha256");
-    bench.description("Hash various message lengths from different types of input. Blocks are 64 bytes.");
+  class BenchV1(schema : Schema, run : (Nat, Nat) -> ()) {
+    public func getVersion() : Nat = 1;
+    public func getSchema() : Schema = schema;
+    public let runCell = run;
 
-    let rows = [
-      "fromBlob",
-      "fromArray",
-      "fromIter",
-    ];
-    let cols = [
-      "0",
-      "1k blocks",
-      "1M bytes",
-    ];
+    // unused stuff just to satisfy types
+    public func name(_ : Text) {};
+    public func description(_ : Text) {};
+    public func rows(_ : [Text]) {};
+    public func cols(_ : [Text]) {};
+    public func runner(_ : (Text, Text) -> ()) {};
+    // end unused stuff
+  };
 
-    bench.rows(rows);
-    bench.cols(cols);
+  public func init() : BenchV1 {
+    let schema : Schema = {
+      name = "Sha256 Benchmark";
+      description = "Hash various message lengths from different types of input. Blocks are 64 bytes.";
+      rows = [ "fromBlob", "fromArray", "fromIter" ];
+      cols = [ "0", "1k blocks", "1M bytes" ];
+    };
+    let (nRows, nCols) = (schema.rows.size(), schema.cols.size());
 
     let rng : Random.Random = Random.seed(0x5f5f5f5f5f5f5f5f);
 
@@ -36,10 +46,10 @@ module {
     ];
 
     let routines : [() -> ()] = Array.tabulate<() -> ()>(
-      rows.size() * cols.size(),
+      nRows * nCols,
       func(i) {
-        let row : Nat = i % rows.size();
-        let col : Nat = i / rows.size();
+        let row : Nat = i % nRows;
+        let col : Nat = i / nRows;
 
         let source = rowSourceArrays[col];
 
@@ -66,14 +76,8 @@ module {
       },
     );
 
-    bench.runner(
-      func(row, col) {
-        let ?ri = Array.indexOf<Text>(rows, Text.equal, row) else Prim.trap("Unknown row");
-        let ?ci = Array.indexOf<Text>(cols, Text.equal, col) else Prim.trap("Unknown column");
-        routines[ci * rows.size() + ri]();
-      }
-    );
+    func run(ri : Nat, ci : Nat) = routines[ci * nRows + ri]();
 
-    bench;
+    BenchV1(schema, run);
   };
 };
