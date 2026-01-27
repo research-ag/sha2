@@ -1318,7 +1318,7 @@ module {
       process_blocks_from_iter(next);
     };
 
-    /// Write a `[Nat8]` array into the digest.
+    /// Write bytes from a `[Nat8]` array into the digest.
     public func writeArray(arr : [Nat8]) : () {
       let s = arr.size();
       if (s == 0) return;
@@ -1330,7 +1330,7 @@ module {
       ignore write_arr_to_buffer(arr, i);
     };
 
-    /// Write a `Blob` into the digest.
+    /// Write bytes from a `Blob` into the digest.
     public func writeBlob(blob : Blob) : () {
       let s = blob.size();
       if (s == 0) return;
@@ -1342,7 +1342,7 @@ module {
       ignore write_blob_to_buffer(blob, i);
     };
 
-    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // Write bytes from a `Blob` to buffer until either the block is full or the end of the blob is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_blob_to_buffer(blob : Blob, start : Nat) : (end : Nat) {
       let s = blob.size();
@@ -1381,7 +1381,7 @@ module {
       return i;
     };
 
-    // Write blob to buffer until either the block is full or the end of the blob is reached
+    // Write bytes from a `[Nat8]` array to buffer until either the block is full or the end of the array is reached
     // The return value refers to the interval that was written in the form [start,end)
     func write_arr_to_buffer(arr : [Nat8], start : Nat) : (end : Nat) {
       let s = arr.size();
