@@ -49,7 +49,7 @@ module {
       nRows * nCols,
       func(i) {
         let row : Nat = i % nRows;
-        let col : Nat = i / nCols;
+        let col : Nat = i / nRows;
 
         let source = rowSourceArrays[col];
 
