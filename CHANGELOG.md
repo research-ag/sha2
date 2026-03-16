@@ -1,5 +1,11 @@
 # Sha2 changelog
 
+## 0.1.13
+
+* Bump moc dependency
+* Bump core dependency
+* Simplify bench code
+
 ## 0.1.12
 
 * Add more code documentation
