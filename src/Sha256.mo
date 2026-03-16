@@ -496,7 +496,7 @@ module {
         let f_0 = f;
         let g_0 = g;
         let h_0 = h;
-        let w00 = nat16To32(nat8To16(blob[i])) << 24 | nat16To32(nat8To16(blob[i+1])) << 16 | nat16To32(nat8To16(blob[i+2])) << 8 | nat16To32(nat8To16(blob[i+3]));    
+        let w00 = nat16To32(nat8To16(blob[i+0])) << 24 | nat16To32(nat8To16(blob[i+1])) << 16 | nat16To32(nat8To16(blob[i+2])) << 8 | nat16To32(nat8To16(blob[i+3]));    
         let w01 = nat16To32(nat8To16(blob[i+4])) << 24 | nat16To32(nat8To16(blob[i+5])) << 16 | nat16To32(nat8To16(blob[i+6])) << 8 | nat16To32(nat8To16(blob[i+7]));    
         let w02 = nat16To32(nat8To16(blob[i+8])) << 24 | nat16To32(nat8To16(blob[i+9])) << 16 | nat16To32(nat8To16(blob[i+10])) << 8 | nat16To32(nat8To16(blob[i+11]));    
         let w03 = nat16To32(nat8To16(blob[i+12])) << 24 | nat16To32(nat8To16(blob[i+13])) << 16 | nat16To32(nat8To16(blob[i+14])) << 8 | nat16To32(nat8To16(blob[i+15]));    
@@ -676,7 +676,7 @@ module {
         let f_0 = f;
         let g_0 = g;
         let h_0 = h;
-        let w00 = nat16To32(nat8To16(arr[i])) << 24 | nat16To32(nat8To16(arr[i+1])) << 16 | nat16To32(nat8To16(arr[i+2])) << 8 | nat16To32(nat8To16(arr[i+3]));    
+        let w00 = nat16To32(nat8To16(arr[i+0])) << 24 | nat16To32(nat8To16(arr[i+1])) << 16 | nat16To32(nat8To16(arr[i+2])) << 8 | nat16To32(nat8To16(arr[i+3]));    
         let w01 = nat16To32(nat8To16(arr[i+4])) << 24 | nat16To32(nat8To16(arr[i+5])) << 16 | nat16To32(nat8To16(arr[i+6])) << 8 | nat16To32(nat8To16(arr[i+7]));    
         let w02 = nat16To32(nat8To16(arr[i+8])) << 24 | nat16To32(nat8To16(arr[i+9])) << 16 | nat16To32(nat8To16(arr[i+10])) << 8 | nat16To32(nat8To16(arr[i+11]));    
         let w03 = nat16To32(nat8To16(arr[i+12])) << 24 | nat16To32(nat8To16(arr[i+13])) << 16 | nat16To32(nat8To16(arr[i+14])) << 8 | nat16To32(nat8To16(arr[i+15]));    

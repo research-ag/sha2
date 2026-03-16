@@ -1357,7 +1357,7 @@ module {
       let i_max : Nat = i + ((s - i) / 8) * 8;
       while (i < i_max) {
         msg[Nat8.toNat(i_msg)] :=
-        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i]))) << 56
+        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+0]))) << 56
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+1]))) << 48
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+2]))) << 40
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+3]))) << 32
@@ -1396,7 +1396,7 @@ module {
       let i_max : Nat = i + ((s - i) / 8) * 8;
       while (i < i_max) {
         msg[Nat8.toNat(i_msg)] :=
-        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i]))) << 56
+        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+0]))) << 56
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+1]))) << 48
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+2]))) << 40
         ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+3]))) << 32
