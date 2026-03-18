@@ -1,5 +1,10 @@
 # Sha2 changelog
 
+## 0.1.14
+
+* Use bench-helper package
+* Bump core dependency
+
 ## 0.1.13
 
 * Bump moc dependency
