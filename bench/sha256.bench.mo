@@ -1,27 +1,14 @@
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
-import Text "mo:core/Text";
 import Random "mo:core/Random";
-import Prim "mo:prim";
+import Runtime "mo:core/Runtime";
+import Bench "mo:bench-helper";
 
 import Sha256 "../src/Sha256";
 
 module {
-  type Schema = {
-    name : Text;
-    description : Text;
-    rows : [Text];
-    cols : [Text];
-  };
-
-  class BenchV1(schema : Schema, run : (Nat, Nat) -> ()) {
-    public func getVersion() : Nat = 1;
-    public func getSchema() : Schema = schema;
-    public let runCell = run;
-  };
-
-  public func init() : BenchV1 {
-    let schema : Schema = {
+  public func init() : Bench.V1 {
+    let schema : Bench.Schema = {
       name = "Sha256 Benchmark";
       description = "Hash various message lengths from different types of input. Blocks are 64 bytes.";
       rows = [ "fromBlob", "fromArray", "fromIter" ];
@@ -63,13 +50,13 @@ module {
             };
             func() = ignore Sha256.fromIter(#sha256, iter);
           };
-          case (_) Prim.trap("Row not implemented");
+          case (_) Runtime.trap("Row not implemented");
         };
       },
     );
 
     func run(ri : Nat, ci : Nat) = routines[ci * nRows + ri]();
 
-    BenchV1(schema, run);
+    Bench.V1(schema, run);
   };
 };
