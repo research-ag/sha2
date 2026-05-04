@@ -1,0 +1,27 @@
+{
+  "name": "sha2",
+  "version": "1.0.0",
+  "description": "[![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/sha2)](https://mops.one/sha2) [![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/sha2)](https://mops.one/sha2/docs) # SHA2 family",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/research-ag/sha2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/research-ag/sha2/issues"
+  },
+  "homepage": "https://github.com/research-ag/sha2#readme",
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "prettier-plugin-motoko": "^0.13.0"
+  }
+}
