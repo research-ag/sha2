@@ -52,7 +52,7 @@ import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
 ```
 
-In you `dfx.json` make sure you have the entry:
+In your `dfx.json` make sure you have the entry:
 
 ```
 "defaults": {
