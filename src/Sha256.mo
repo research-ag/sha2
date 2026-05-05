@@ -115,14 +115,22 @@ module {
     public func algo() : Algorithm = algo_;
 
     // state variables in Nat16 form
-    var s0h : Nat16 = 0; var s0l : Nat16 = 0;
-    var s1h : Nat16 = 0; var s1l : Nat16 = 0;
-    var s2h : Nat16 = 0; var s2l : Nat16 = 0;
-    var s3h : Nat16 = 0; var s3l : Nat16 = 0;
-    var s4h : Nat16 = 0; var s4l : Nat16 = 0;
-    var s5h : Nat16 = 0; var s5l : Nat16 = 0;
-    var s6h : Nat16 = 0; var s6l : Nat16 = 0;
-    var s7h : Nat16 = 0; var s7l : Nat16 = 0;
+    var s0h : Nat16 = 0;
+    var s0l : Nat16 = 0;
+    var s1h : Nat16 = 0;
+    var s1l : Nat16 = 0;
+    var s2h : Nat16 = 0;
+    var s2l : Nat16 = 0;
+    var s3h : Nat16 = 0;
+    var s3l : Nat16 = 0;
+    var s4h : Nat16 = 0;
+    var s4l : Nat16 = 0;
+    var s5h : Nat16 = 0;
+    var s5l : Nat16 = 0;
+    var s6h : Nat16 = 0;
+    var s6l : Nat16 = 0;
+    var s7h : Nat16 = 0;
+    var s7l : Nat16 = 0;
 
     let msg : [var Nat16] = VarArray.repeat<Nat16>(0, 32);
     let digest = switch (algo_) {
@@ -445,7 +453,7 @@ module {
         t := h +% K62 +% w62 +% (e & f) ^ (^ e & g) +% rot(e, 06) ^ rot(e, 11) ^ rot(e, 25); h := g; g := f; f := e; e := d +% t; d := c; c := b; b := a; a := t +% (b & c) ^ (b & d) ^ (c & d) +% rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
         t := h +% K63 +% w63 +% (e & f) ^ (^ e & g) +% rot(e, 06) ^ rot(e, 11) ^ rot(e, 25); h := g; g := f; f := e; e := d +% t; d := c; c := b; b := a; a := t +% (b & c) ^ (b & d) ^ (c & d) +% rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
       };
-/*
+      /*
       for (i in compression_rounds.keys()) {
         let ch = (e & f) ^ (^ e & g);
         let maj = (a & b) ^ (a & c) ^ (b & c);
