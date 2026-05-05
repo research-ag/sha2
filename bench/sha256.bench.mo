@@ -11,8 +11,8 @@ module {
     let schema : Bench.Schema = {
       name = "Sha256 Benchmark";
       description = "Hash various message lengths from different types of input. Blocks are 64 bytes.";
-      rows = [ "fromBlob", "fromArray", "fromIter" ];
-      cols = [ "0", "1k blocks", "1M bytes" ];
+      rows = ["fromBlob", "fromArray", "fromIter"];
+      cols = ["0", "1k blocks", "1M bytes"];
     };
     let (nRows, nCols) = (schema.rows.size(), schema.cols.size());
 
