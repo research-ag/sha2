@@ -40,14 +40,14 @@ For updates, help, questions, feedback and other requests related to this packag
 
 You need `mops` installed. In your project directory run:
 
-```
+```bash
 mops init
 mops add sha2
 ```
 
 In the Motoko source file import the package as:
 
-```
+```motoko
 import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
 ```
@@ -99,13 +99,13 @@ mops test
 
 Run
 
-```
+```bash
 mops bench
 ```
 
 or
 
-```
+```bash
 mops bench --replica pocket-ic
 ```
 
