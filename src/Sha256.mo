@@ -150,26 +150,24 @@ module {
       i_block := 0;
       high := true;
       // prettier-ignore
-      do {
-        if (algo_ == #sha224) {
-          s0h := 0xc105; s0l := 0x9ed8;
-          s1h := 0x367c; s1l := 0xd507;
-          s2h := 0x3070; s2l := 0xdd17;
-          s3h := 0xf70e; s3l := 0x5939;
-          s4h := 0xffc0; s4l := 0x0b31;
-          s5h := 0x6858; s5l := 0x1511;
-          s6h := 0x64f9; s6l := 0x8fa7;
-          s7h := 0xbefa; s7l := 0x4fa4;
-        } else {
-          s0h := 0x6a09; s0l := 0xe667;
-          s1h := 0xbb67; s1l := 0xae85;
-          s2h := 0x3c6e; s2l := 0xf372;
-          s3h := 0xa54f; s3l := 0xf53a;
-          s4h := 0x510e; s4l := 0x527f;
-          s5h := 0x9b05; s5l := 0x688c;
-          s6h := 0x1f83; s6l := 0xd9ab;
-          s7h := 0x5be0; s7l := 0xcd19;
-        };
+      if (algo_ == #sha224) {
+        s0h := 0xc105; s0l := 0x9ed8;
+        s1h := 0x367c; s1l := 0xd507;
+        s2h := 0x3070; s2l := 0xdd17;
+        s3h := 0xf70e; s3l := 0x5939;
+        s4h := 0xffc0; s4l := 0x0b31;
+        s5h := 0x6858; s5l := 0x1511;
+        s6h := 0x64f9; s6l := 0x8fa7;
+        s7h := 0xbefa; s7l := 0x4fa4;
+      } else {
+        s0h := 0x6a09; s0l := 0xe667;
+        s1h := 0xbb67; s1l := 0xae85;
+        s2h := 0x3c6e; s2l := 0xf372;
+        s3h := 0xa54f; s3l := 0xf53a;
+        s4h := 0x510e; s4l := 0x527f;
+        s5h := 0x9b05; s5l := 0x688c;
+        s6h := 0x1f83; s6l := 0xd9ab;
+        s7h := 0x5be0; s7l := 0xcd19;
       };
     };
 
@@ -1266,24 +1264,23 @@ module {
       let (d28, d29) = Prim.explodeNat16(s7h);
       let (d30, d31) = Prim.explodeNat16(s7l);
 
-      // prettier-ignore
-      do {
-        return Prim.arrayToBlob(
-          if (algo_ == #sha224)
-            [ d0, d1, d2, d3, d4, d5, d6, d7,
-              d8, d9, d10, d11, d12, d13, d14, d15,
-              d16, d17, d18, d19, d20, d21, d22, d23,
-              d24, d25, d26, d27
-            ]
-          else
-            [
-              d0, d1, d2, d3, d4, d5, d6, d7,
-              d8, d9, d10, d11, d12, d13, d14, d15,
-              d16, d17, d18, d19, d20, d21, d22, d23,
-              d24, d25, d26, d27, d28, d29, d30, d31
-            ]
-          );
-      };
+      return Prim.arrayToBlob(
+        // prettier-ignore
+        if (algo_ == #sha224)
+          [
+            d0, d1, d2, d3, d4, d5, d6, d7,
+            d8, d9, d10, d11, d12, d13, d14, d15,
+            d16, d17, d18, d19, d20, d21, d22, d23,
+            d24, d25, d26, d27
+          ]
+        else
+          [
+            d0, d1, d2, d3, d4, d5, d6, d7,
+            d8, d9, d10, d11, d12, d13, d14, d15,
+            d16, d17, d18, d19, d20, d21, d22, d23,
+            d24, d25, d26, d27, d28, d29, d30, d31
+          ]
+      );
     };
   }; // class Digest
 

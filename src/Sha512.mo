@@ -1366,17 +1366,15 @@ module {
       let i_max : Nat = i + ((s - i) / 8) * 8;
       while (i < i_max) {
         // prettier-ignore
-        do {
-          msg[Nat8.toNat(i_msg)] :=
-          Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+0]))) << 56
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+1]))) << 48
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+2]))) << 40
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+3]))) << 32
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+4]))) << 24
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+5]))) << 16
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+6]))) << 8
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+7])));
-        };
+        msg[Nat8.toNat(i_msg)] :=
+        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+0]))) << 56
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+1]))) << 48
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+2]))) << 40
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+3]))) << 32
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+4]))) << 24
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+5]))) << 16
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+6]))) << 8
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(blob[i+7])));
         i += 8;
         i_msg +%= 1;
         if (i_msg == 16) {
@@ -1408,17 +1406,15 @@ module {
       let i_max : Nat = i + ((s - i) / 8) * 8;
       while (i < i_max) {
         // prettier-ignore
-        do {
-          msg[Nat8.toNat(i_msg)] :=
-          Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+0]))) << 56
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+1]))) << 48
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+2]))) << 40
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+3]))) << 32
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+4]))) << 24
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+5]))) << 16
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+6]))) << 8
-          ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+7])));
-        };
+        msg[Nat8.toNat(i_msg)] :=
+        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+0]))) << 56
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+1]))) << 48
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+2]))) << 40
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+3]))) << 32
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+4]))) << 24
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+5]))) << 16
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+6]))) << 8
+        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(arr[i+7])));
         i += 8;
         i_msg +%= 1;
         if (i_msg == 16) {
@@ -1474,27 +1470,23 @@ module {
 
       if (algo_ == #sha512_224) {
         // prettier-ignore
-        do {
-          return Prim.arrayToBlob([
-            d0, d1, d2, d3, d4, d5, d6, d7,
-            d8, d9, d10, d11, d12, d13, d14, d15,
-            d16, d17, d18, d19, d20, d21, d22, d23,
-            d24, d25, d26, d27
-          ]);
-        };
+        return Prim.arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27
+        ]);
       };
 
       if (algo_ == #sha512_256) {
         // prettier-ignore
-        do {
-          return Prim.arrayToBlob([
-            d0, d1, d2, d3, d4, d5, d6, d7,
-            d8, d9, d10, d11, d12, d13, d14, d15,
-            d16, d17, d18, d19, d20, d21, d22, d23,
-            d24, d25, d26, d27,
-            d28, d29, d30, d31
-          ]);
-        };
+        return Prim.arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27,
+          d28, d29, d30, d31
+        ]);
       };
 
       let (d32, d33, d34, d35, d36, d37, d38, d39) = Prim.explodeNat64(s4);
@@ -1502,34 +1494,30 @@ module {
 
       if (algo_ == #sha384) {
         // prettier-ignore
-        do {
-          return Prim.arrayToBlob([
-            d0, d1, d2, d3, d4, d5, d6, d7,
-            d8, d9, d10, d11, d12, d13, d14, d15,
-            d16, d17, d18, d19, d20, d21, d22, d23,
-            d24, d25, d26, d27, d28, d29, d30, d31,
-            d32, d33, d34, d35, d36, d37, d38, d39,
-            d40, d41, d42, d43, d44, d45, d46, d47
-          ]);
-        };
-      };
-
-      let (d48, d49, d50, d51, d52, d53, d54, d55) = Prim.explodeNat64(s6);
-      let (d56, d57, d58, d59, d60, d61, d62, d63) = Prim.explodeNat64(s7);
-
-      // prettier-ignore
-      do {
         return Prim.arrayToBlob([
           d0, d1, d2, d3, d4, d5, d6, d7,
           d8, d9, d10, d11, d12, d13, d14, d15,
           d16, d17, d18, d19, d20, d21, d22, d23,
           d24, d25, d26, d27, d28, d29, d30, d31,
           d32, d33, d34, d35, d36, d37, d38, d39,
-          d40, d41, d42, d43, d44, d45, d46, d47,
-          d48, d49, d50, d51, d52, d53, d54, d55,
-          d56, d57, d58, d59, d60, d61, d62, d63
+          d40, d41, d42, d43, d44, d45, d46, d47
         ]);
       };
+
+      let (d48, d49, d50, d51, d52, d53, d54, d55) = Prim.explodeNat64(s6);
+      let (d56, d57, d58, d59, d60, d61, d62, d63) = Prim.explodeNat64(s7);
+
+      // prettier-ignore
+      return Prim.arrayToBlob([
+        d0, d1, d2, d3, d4, d5, d6, d7,
+        d8, d9, d10, d11, d12, d13, d14, d15,
+        d16, d17, d18, d19, d20, d21, d22, d23,
+        d24, d25, d26, d27, d28, d29, d30, d31,
+        d32, d33, d34, d35, d36, d37, d38, d39,
+        d40, d41, d42, d43, d44, d45, d46, d47,
+        d48, d49, d50, d51, d52, d53, d54, d55,
+        d56, d57, d58, d59, d60, d61, d62, d63
+      ]);
     };
   }; // class Digest
 
