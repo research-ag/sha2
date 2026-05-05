@@ -513,7 +513,7 @@ module {
       var g = s6;
       var h = s7;
       var t = 0 : Nat64;
-      var i_max : Nat = i + ((s - i) / 128) * 128;
+      let i_max : Nat = i + ((s - i) / 128) * 128;
       while (i < i_max) {
         let a_0 = a;
         let b_0 = b;
@@ -726,7 +726,7 @@ module {
       var g = s6;
       var h = s7;
       var t = 0 : Nat64;
-      var i_max : Nat = i + ((s - i) / 128) * 128;
+      let i_max : Nat = i + ((s - i) / 128) * 128;
       while (i < i_max) {
         let a_0 = a;
         let b_0 = b;

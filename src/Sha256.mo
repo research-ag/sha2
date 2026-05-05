@@ -486,7 +486,7 @@ module {
       var g = nat16To32(s6h) << 16 | nat16To32(s6l);
       var h = nat16To32(s7h) << 16 | nat16To32(s7l);
       var t = 0 : Nat32;
-      var i_max : Nat = i + ((s - i) / 64) * 64;
+      let i_max : Nat = i + ((s - i) / 64) * 64;
       while (i < i_max) {
         let a_0 = a;
         let b_0 = b;
@@ -666,7 +666,7 @@ module {
       var g = nat16To32(s6h) << 16 | nat16To32(s6l);
       var h = nat16To32(s7h) << 16 | nat16To32(s7l);
       var t = 0 : Nat32;
-      var i_max : Nat = i + ((s - i) / 64) * 64;
+      let i_max : Nat = i + ((s - i) / 64) * 64;
       while (i < i_max) {
         let a_0 = a;
         let b_0 = b;

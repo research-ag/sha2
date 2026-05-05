@@ -6,6 +6,12 @@
 .idea/
 .DS_Store
 *.wasm
-dfx.json
 package-set.dhall
 vessel.dhall
+
+node_modules/
+.agents/
+.junie/
+.claude/
+.copilot/
+skills-lock.json

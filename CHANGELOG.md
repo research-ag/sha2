@@ -1,5 +1,17 @@
 # Sha2 changelog
 
+## [0.1.15] - 2026-05-05
+
+### Changed
+
+- Updated `core` from `2.2.0` to `2.5.0`.
+- Updated `bench-helper` from `0.0.2` to `0.0.3`.
+- Updated `[requirements] moc` from `1.3.0` to `1.6.0`.
+
+### Fixed
+
+- Fixed compiler warnings (M0244).
+
 ## 0.1.14
 
 * Use bench-helper package
