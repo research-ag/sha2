@@ -50,6 +50,7 @@ In the Motoko source file import the package as:
 ```motoko
 import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
+
 ```
 
 In your `dfx.json` make sure you have the entry:
