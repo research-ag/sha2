@@ -20,24 +20,3 @@ jobs:
 
       - name: Run mops test
         run: mops test
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Prettier Check and Format
-        run: |
-          npm install prettier prettier-plugin-motoko --no-save
-          npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
-
-      - name: Commit formatted files
-        env:
-          GITHUB_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -u
-          git diff-index --quiet HEAD || (git commit -m "chore: format code with prettier" && git pull --rebase origin "$GITHUB_HEAD_REF" && git push origin HEAD:"$GITHUB_HEAD_REF")

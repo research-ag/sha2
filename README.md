@@ -88,7 +88,7 @@ Sha512.fromBlob(#sha512_256,"")
 
 Run:
 
-```
+```bash
 git clone git@github.com:research-ag/sha2.git
 mops install
 mops test
@@ -133,6 +133,16 @@ It is also true for all different write functions (type `Blob`, `Array`, `Iter<N
 
 The round loops are unrolled.
 This was mainly motivated by reducing the heap allocations but it also reduced the instructions significantly.
+
+## Contributing
+
+### Formatting
+
+To format the code, run:
+
+```bash
+npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+```
 
 ## Copyright
 
