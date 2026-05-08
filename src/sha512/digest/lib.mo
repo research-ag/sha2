@@ -22,7 +22,7 @@ module {
       ProcessBlock.process_block_from_buffer(self.s, msg);
       self.i_msg := 0;
       self.i_block +%= 1;
-    } else { 
+    } else {
       self.i_msg := i_msg;
     };
   };
@@ -58,7 +58,7 @@ module {
     // Note: This implementation only handles messages < 2^64 bits
     let n_bits : Nat64 = ((self.i_block << 7) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
 
-    // write 1-7 padding bytes 
+    // write 1-7 padding bytes
     Byte.writeByte(self, 0x80);
     p -%= 1;
     while (p & 0x7 != 0) {
@@ -79,4 +79,4 @@ module {
     writeWord(self, n_bits);
   };
 
-}
+};

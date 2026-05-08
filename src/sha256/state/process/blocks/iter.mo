@@ -23,9 +23,10 @@ module {
     var h = nat16To32(self[14]) << 16 | nat16To32(self[15]);
     var t = 0 : Nat32;
 
-    let backup : [var Nat8] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ];
+    let backup : [var Nat8] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var pos = 0;
     ignore do ? {
+      // prettier-ignore
       label reading loop {
         let b00 = data()!; backup[0] := b00; pos := 1;
         let b01 = data()!; backup[1] := b01; pos := 2;
@@ -102,7 +103,7 @@ module {
         let f_0 = f;
         let g_0 = g;
         let h_0 = h;
-        let w00 = nat16To32(nat8To16(b00)) << 24 | nat16To32(nat8To16(b01)) << 16 | nat16To32(nat8To16(b02)) << 8 | nat16To32(nat8To16(b03));    
+        let w00 = nat16To32(nat8To16(b00)) << 24 | nat16To32(nat8To16(b01)) << 16 | nat16To32(nat8To16(b02)) << 8 | nat16To32(nat8To16(b03));
         let w01 = nat16To32(nat8To16(b04)) << 24 | nat16To32(nat8To16(b05)) << 16 | nat16To32(nat8To16(b06)) << 8 | nat16To32(nat8To16(b07));
         let w02 = nat16To32(nat8To16(b08)) << 24 | nat16To32(nat8To16(b09)) << 16 | nat16To32(nat8To16(b10)) << 8 | nat16To32(nat8To16(b11));
         let w03 = nat16To32(nat8To16(b12)) << 24 | nat16To32(nat8To16(b13)) << 16 | nat16To32(nat8To16(b14)) << 8 | nat16To32(nat8To16(b15));
@@ -245,14 +246,22 @@ module {
       };
     };
     // write state back to registers
-    self[0] := nat32To16(a >> 16); self[1] := nat32To16(a & 0xffff);
-    self[2] := nat32To16(b >> 16); self[3] := nat32To16(b & 0xffff);
-    self[4] := nat32To16(c >> 16); self[5] := nat32To16(c & 0xffff);
-    self[6] := nat32To16(d >> 16); self[7] := nat32To16(d & 0xffff);
-    self[8] := nat32To16(e >> 16); self[9] := nat32To16(e & 0xffff);
-    self[10] := nat32To16(f >> 16); self[11] := nat32To16(f & 0xffff);
-    self[12] := nat32To16(g >> 16); self[13] := nat32To16(g & 0xffff);
-    self[14] := nat32To16(h >> 16); self[15] := nat32To16(h & 0xffff);
+    self[0] := nat32To16(a >> 16);
+    self[1] := nat32To16(a & 0xffff);
+    self[2] := nat32To16(b >> 16);
+    self[3] := nat32To16(b & 0xffff);
+    self[4] := nat32To16(c >> 16);
+    self[5] := nat32To16(c & 0xffff);
+    self[6] := nat32To16(d >> 16);
+    self[7] := nat32To16(d & 0xffff);
+    self[8] := nat32To16(e >> 16);
+    self[9] := nat32To16(e & 0xffff);
+    self[10] := nat32To16(f >> 16);
+    self[11] := nat32To16(f & 0xffff);
+    self[12] := nat32To16(g >> 16);
+    self[13] := nat32To16(g & 0xffff);
+    self[14] := nat32To16(h >> 16);
+    self[15] := nat32To16(h & 0xffff);
 
     buf.i_block +%= blocks;
 
@@ -260,4 +269,4 @@ module {
     ignore buf.load_chunk(func(i) = backup[i], pos, 0);
   };
 
-}
+};

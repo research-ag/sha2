@@ -3,10 +3,10 @@
 /// Handles writing data to the digest and closing it with padding.
 /// The functions in this module orchestrate:
 /// * writing data to the digest's internal buffer
-/// * processing the internal buffer to update the digest state 
+/// * processing the internal buffer to update the digest state
 /// * processing full blocks of data directly from the input when possible
 ///
-/// Methods: 
+/// Methods:
 ///   writeBlob, writeArray, writeVarArray, writeAccessor, writeReader, writeIter,
 ///   writePadding, close
 
@@ -75,7 +75,7 @@ module {
   public func writeIter(self : Digest, data : () -> ?Nat8) {
     assert not self.closed;
     let (buf, state) = (self.buffer, self.state);
-    
+
     if (buf.i_msg > 0 or not buf.high) {
       buf.load_iter(data);
       if (buf.i_msg == 32) {
@@ -87,7 +87,7 @@ module {
 
     if (buf.i_msg > 0 or not buf.high) return;
 
-    // must have buf.i_msg == 0 and buf.high == true here 
+    // must have buf.i_msg == 0 and buf.high == true here
     // continue to try to read entire blocks at once from the iterator
 
     state.process(data, buf);

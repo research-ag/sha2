@@ -63,4 +63,4 @@ module {
   public let K61 : Nat32 = 0xa4506ceb;
   public let K62 : Nat32 = 0xbef9a3f7;
   public let K63 : Nat32 = 0xc67178f2;
-}
+};

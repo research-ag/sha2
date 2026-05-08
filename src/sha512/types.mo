@@ -10,4 +10,4 @@ module {
     s : [var Nat64];
     var closed : Bool;
   };
-}
+};

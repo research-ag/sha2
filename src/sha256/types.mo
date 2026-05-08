@@ -15,4 +15,4 @@ module {
     state : State;
     var closed : Bool;
   };
-}
+};

@@ -5,39 +5,40 @@ import Accessor "../write/accessor";
 
 module {
 
-    type Digest = {
-      // msg buffer
-      msg : [var Nat64];
-      var word : Nat64;
-      var i_msg : Nat8;
-      var i_byte : Nat8;
-      var i_block : Nat64;
-      // state variables
-      s : [var Nat64];
-    };
+  type Digest = {
+    // msg buffer
+    msg : [var Nat64];
+    var word : Nat64;
+    var i_msg : Nat8;
+    var i_byte : Nat8;
+    var i_block : Nat64;
+    // state variables
+    s : [var Nat64];
+  };
 
-    let nat32To64 = Prim.nat32ToNat64;
-    let nat16To32 = Prim.nat16ToNat32;
-    let nat8To16 = Prim.nat8ToNat16;
+  let nat32To64 = Prim.nat32ToNat64;
+  let nat16To32 = Prim.nat16ToNat32;
+  let nat8To16 = Prim.nat8ToNat16;
 
-    func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
+  func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
 
-    public func process_blocks(x : Digest, data : () -> ?Nat8) {
-      let state = x.s;
-      // load state registers
-      var a = state[0];
-      var b = state[1];
-      var c = state[2];
-      var d = state[3];
-      var e = state[4];
-      var f = state[5];
-      var g = state[6];
-      var h = state[7];
-      var t = 0 : Nat64;
+  public func process_blocks(x : Digest, data : () -> ?Nat8) {
+    let state = x.s;
+    // load state registers
+    var a = state[0];
+    var b = state[1];
+    var c = state[2];
+    var d = state[3];
+    var e = state[4];
+    var f = state[5];
+    var g = state[6];
+    var h = state[7];
+    var t = 0 : Nat64;
 
-      let backup = VarArray.repeat<Nat8>(0, 128);
-      var pos = 0;
-      ignore do ? {
+    let backup = VarArray.repeat<Nat8>(0, 128);
+    var pos = 0;
+    ignore do ? {
+      // prettier-ignore
         loop {
 
           let b000 = data()!; backup[0] := b000; pos := 1;
@@ -354,18 +355,18 @@ module {
           // counters
           x.i_block +%= 1;
         };
-      };
-      // write state back to registers
-      state[0] := a;
-      state[1] := b;
-      state[2] := c;
-      state[3] := d;
-      state[4] := e;
-      state[5] := f;
-      state[6] := g;
-      state[7] := h;
-
-      // write remaining bytes from backup to buffer
-      Accessor.write(x, func(i) = backup[i], 0, pos);
     };
-}
+    // write state back to registers
+    state[0] := a;
+    state[1] := b;
+    state[2] := c;
+    state[3] := d;
+    state[4] := e;
+    state[5] := f;
+    state[6] := g;
+    state[7] := h;
+
+    // write remaining bytes from backup to buffer
+    Accessor.write(x, func(i) = backup[i], 0, pos);
+  };
+};
