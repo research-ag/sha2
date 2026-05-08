@@ -11,6 +11,7 @@ core = "2.5.0"
 
 [dev-dependencies]
 bench-helper = "0.0.3"
+bench = "1.0.0"
 
 [requirements]
 moc = "1.6.0"
