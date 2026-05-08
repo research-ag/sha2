@@ -54,6 +54,7 @@ import Sha512 "mo:sha2/Sha512";
 ```
 
 In your `dfx.json` make sure you have the entry:
+
 ```
 "defaults": {
     "build": {
