@@ -1,23 +1,26 @@
 [![mops](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/mops/sha2)](https://mops.one/sha2)
 [![documentation](https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/documentation/sha2)](https://mops.one/sha2/docs)
-# SHA2 family 
+
+# SHA2 family
 
 Optimized implementation of all SHA2 functions
+
 ## Overview
 
 This package implements all SHA2 functions:
 
-* sha256
-* sha224
-* sha512
-* sha384
-* sha512-256
-* sha512-224
+- sha256
+- sha224
+- sha512
+- sha384
+- sha512-256
+- sha512-224
 
 The API allows to hash types `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, and `List<Nat8>`.
 
 The API provides a Digest type which accepts the message piecewise until finally computing the hash sum (digest).
 This allows hashing very large messages over multiple executions of the canister, even across canister upgrades.
+
 ### Links
 
 The package is published on [MOPS](https://mops.one/sha2) and [GitHub](https://github.com/research-ag/sha2).
@@ -27,26 +30,30 @@ The API documentation can be found [here](https://mops.one/sha2/docs/lib) on Mop
 
 For updates, help, questions, feedback and other requests related to this package join us on:
 
-* [OpenChat group](https://oc.app/2zyqk-iqaaa-aaaar-anmra-cai)
-* [Twitter](https://twitter.com/mr_research_ag)
-* [Dfinity forum](https://forum.dfinity.org/)
+- [OpenChat group](https://oc.app/2zyqk-iqaaa-aaaar-anmra-cai)
+- [Twitter](https://twitter.com/mr_research_ag)
+- [Dfinity forum](https://forum.dfinity.org/)
 
 ## Usage
+
 ### Install with mops
 
 You need `mops` installed. In your project directory run:
+
 ```
 mops init
 mops add sha2
 ```
 
 In the Motoko source file import the package as:
+
 ```
 import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
 ```
 
 In you `dfx.json` make sure you have the entry:
+
 ```
 "defaults": {
     "build": {
@@ -92,6 +99,7 @@ let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, len);
 // Hash from Iter<Nat8>
 let iter = [72, 101, 108, 108, 111].vals();
 let hash7 : Blob = Sha256.fromIter(#sha256, iter);
+
 ```
 
 To hash from `List<Nat8>` the most efficient way is to use the reader function as follows:
@@ -99,8 +107,10 @@ To hash from `List<Nat8>` the most efficient way is to use the reader function a
 ```motoko
 // Hash from List<Nat8>
 import List "mo:core/List";
+
 let list = List.fromArray<Nat8>([72, 101, 108, 108, 111]);
 let hash8 : Blob = Sha512.fromReader(#sha512, list.reader(0));
+
 ```
 
 ### 2. Streaming API with Digest engine
@@ -135,6 +145,7 @@ let finalHash : Blob = digest.sum();
 
 // Note: After calling sum(), the digest is consumed and cannot be reused
 // Attempting to write or sum again will trap
+
 ```
 
 ### 3. Cloning for intermediate hashes
@@ -150,21 +161,21 @@ let digest = Sha256.new(#sha256);
 // Hash first chunk
 digest.writeBlob("Chunk 1");
 let hash1 = digest.peekSum(); // Get hash without consuming
-Debug.print("Hash after chunk 1: " # debug_show(hash1));
+Debug.print("Hash after chunk 1: " # debug_show (hash1));
 
 // Hash second chunk
 digest.writeBlob("Chunk 2");
 let hash2 = digest.peekSum();
-Debug.print("Hash after chunk 2: " # debug_show(hash2));
+Debug.print("Hash after chunk 2: " # debug_show (hash2));
 
 // Hash third chunk
 digest.writeBlob("Chunk 3");
 let hash3 = digest.peekSum();
-Debug.print("Hash after chunk 3: " # debug_show(hash3));
+Debug.print("Hash after chunk 3: " # debug_show (hash3));
 
 // Final hash
 let finalHash = digest.sum();
-Debug.print("Final hash: " # debug_show(finalHash));
+Debug.print("Final hash: " # debug_show (finalHash));
 
 // Alternative: clone before sum if you want to keep the digest alive
 let digest2 = Sha512.new(#sha512);
@@ -175,6 +186,7 @@ let intermediateHash = clone1.sum(); // Consumes clone1, but digest2 is still us
 
 digest2.writeBlob("More data");
 let finalHash2 = digest2.sum(); // Now digest2 is consumed
+
 ```
 
 ### 4. Stable state across upgrades
@@ -251,11 +263,13 @@ actor {
     d.sum();
   };
 };
+
 ```
 
 ### Build & test
 
 Run:
+
 ```
 git clone git@github.com:research-ag/sha2.git
 mops install
@@ -267,17 +281,23 @@ mops test
 ### Mops benchmark
 
 Run
+
 ```
 mops bench
 ```
+
 or
+
 ```
 mops bench --replica pocket-ic
 ```
+
 or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
+
 ### Performance
 
 We measure performance with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a message of all the same bytes is not a reliable way to measure. It produces significantly different results.
+
 ### Memory
 
 The hash engines are designed to not make any heap allocations when consuming the message.
@@ -290,16 +310,20 @@ But the heap allocation does not increase with the message length.
 
 This is true for the Sha256 and Sha512 engines.
 It is also true for all different write functions (type `Blob`, `Array`, `Iter<Nat8>`).
+
 ## Implementation notes
 
 The round loops are unrolled.
 This was mainly motivated by reducing the heap allocations but it also reduced the instructions significantly.
+
 ## Copyright
 
 MR Research AG, 2023-2025
+
 ## Authors
 
 Main author: Timo Hanke (timohanke)
-## License 
+
+## License
 
 Apache-2.0

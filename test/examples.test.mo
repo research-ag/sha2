@@ -6,41 +6,41 @@ import { print } "mo:core/Debug";
 
 func prt(b : Blob) = print(debug_show b);
 
-prt (Sha256.fromBlob("")); // default algo #sha256
-prt (Sha256.fromBlob(#sha224, ""));
+prt(Sha256.fromBlob("")); // default algo #sha256
+prt(Sha256.fromBlob(#sha224, ""));
 
-prt (Sha512.fromBlob("")); // default algo #sha512
-prt (Sha512.fromBlob(#sha512_224, ""));
-prt (Sha512.fromBlob(#sha512_256, ""));
-prt (Sha512.fromBlob(#sha384, ""));
+prt(Sha512.fromBlob("")); // default algo #sha512
+prt(Sha512.fromBlob(#sha512_224, ""));
+prt(Sha512.fromBlob(#sha512_256, ""));
+prt(Sha512.fromBlob(#sha384, ""));
 
-prt (Sha256.fromArray([]));
-prt (Sha256.fromVarArray([var]));
-prt (Sha256.fromIter({ next = func () : ?Nat8 = null }));
-prt (Sha256.fromReader(func () : Nat8 = 0, 0));
-prt (Sha256.fromAccessor(func (i : Nat) : Nat8 = 0, 0, 0));
+prt(Sha256.fromArray([]));
+prt(Sha256.fromVarArray([var]));
+prt(Sha256.fromIter({ next = func() : ?Nat8 = null }));
+prt(Sha256.fromReader(func() : Nat8 = 0, 0));
+prt(Sha256.fromAccessor(func(i : Nat) : Nat8 = 0, 0, 0));
 
 do {
   let l = List.empty<Nat8>();
-  prt (Sha256.fromIter(List.values(l)));
-  prt (Sha256.fromReader(l.reader(0), l.size()));
+  prt(Sha256.fromIter(List.values(l)));
+  prt(Sha256.fromReader(l.reader(0), l.size()));
 };
 
 do {
   let l = List.fromArray(Blob.toArray("hello world!"));
-  prt (Sha256.fromReader(l.reader(0), 5));
-  prt (Sha256.fromReader(l.reader(0), l.size()));
-  prt (Sha256.fromReader(l.reader(6), 5));
-  prt (Sha256.fromBlob("world"));
+  prt(Sha256.fromReader(l.reader(0), 5));
+  prt(Sha256.fromReader(l.reader(0), l.size()));
+  prt(Sha256.fromReader(l.reader(6), 5));
+  prt(Sha256.fromBlob("world"));
   func at(i : Nat) : Nat8 = List.at(l, i);
-  prt (Sha256.fromAccessor(at, 6, 5));
+  prt(Sha256.fromAccessor(at, 6, 5));
 };
 /*
 do {
-  let digest = Sha256.new(); // default algo #sha256 
+  let digest = Sha256.new(); // default algo #sha256
   digest.writeBlob("hello");
   prt (digest.peekSum());
   digest.writeBlob(" world!");
   prt (digest.sum());
-}
+};
 */

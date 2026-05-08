@@ -46,7 +46,7 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   };
   do {
     let d = Sha256.new(algo);
-    d.writeAccessor(func (i) = data[i], 0, data.size());
+    d.writeAccessor(func(i) = data[i], 0, data.size());
     assert (d.peekSum() == h);
     assert (d.sum() == h);
   };
