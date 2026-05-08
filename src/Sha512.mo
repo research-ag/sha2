@@ -189,7 +189,7 @@ module {
   /// digest.writeBlob(" world");
   /// let hash = digest.sum();
   /// ```
-  public func writeBlob(self : Digest, data : Blob) : () = self.writeBlob(data);
+  public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
   /// Write a `[Nat8]` array to the digest.
   ///
@@ -199,7 +199,7 @@ module {
   /// digest.writeBlob(" world");
   /// let hash = digest.sum();
   /// ```
-  public func writeArray(self : Digest, data : [Nat8]) : () = self.writeArray(data);
+  public func writeArray(self : Digest, data : [Nat8]) : () = _Digest.writeArray(self, data);
 
   /// Write a `[var Nat8]` array to the digest.
   ///
@@ -209,7 +209,7 @@ module {
   /// digest.writeVarArray(data);
   /// let hash = digest.sum();
   /// ```
-  public func writeVarArray(self : Digest, data : [var Nat8]) : () = self.writeVarArray(data);
+  public func writeVarArray(self : Digest, data : [var Nat8]) : () = _Digest.writeVarArray(self, data);
 
   /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
@@ -224,7 +224,7 @@ module {
   /// digest.writeAccessor(accessor, 5, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeAccessor(self : Digest, at : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(at, start, len);
+  public func writeAccessor(self : Digest, at : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, at, start, len);
 
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
@@ -240,7 +240,7 @@ module {
   /// digest.writeReader(reader, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeReader(self : Digest, next : () -> Nat8, len : Nat) : () = self.writeReader(next, len);
+  public func writeReader(self : Digest, next : () -> Nat8, len : Nat) : () = _Digest.writeReader(self, next, len);
 
   /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
   ///
@@ -250,7 +250,7 @@ module {
   /// digest.writeIter(iter); // "Hello"
   /// let hash = digest.sum();
   /// ```
-  public func writeIter(self : Digest, data : Iter<Nat8>) : () = self.writeIter(data.next);
+  public func writeIter(self : Digest, data : Iter<Nat8>) : () = _Digest.writeIter(self, data.next);
 
   /// Finalize the digest and return the hash as a `Blob`.
   /// This closes the digest. It cannot be used for anything again unless it is reset with the `reset()` function.
@@ -262,7 +262,7 @@ module {
   /// let hash : Blob = digest.sum();
   /// ```
   public func sum(self : Digest) : Blob {
-    self.close();
+    _Digest.close(self);
     stateBlob(self);
   };
 
@@ -418,7 +418,7 @@ module {
   /// ```
   public func fromIter(algo : (implicit : Algorithm), iter : Iter<Nat8>) : Blob {
     let d = new(algo);
-    d.writeIter(iter.next);
+    _Digest.writeIter(d, iter.next);
     return sum(d);
   };
 

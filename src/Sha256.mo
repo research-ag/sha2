@@ -130,7 +130,7 @@ module {
   /// digest.writeBlob(" world");
   /// let hash = digest.sum();
   /// ```
-  public func writeBlob(self : Digest, data : Blob) : () = self.writeBlob(data);
+  public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
   /// Write a `[Nat8]` array to the digest.
   ///
@@ -140,7 +140,7 @@ module {
   /// digest.writeBlob(" world");
   /// let hash = digest.sum();
   /// ```
-  public func writeArray(self : Digest, data : [Nat8]) : () = self.writeArray(data);
+  public func writeArray(self : Digest, data : [Nat8]) : () = _Digest.writeArray(self, data);
 
   /// Write a `[var Nat8]` array to the digest.
   ///
@@ -150,7 +150,7 @@ module {
   /// digest.writeVarArray(data);
   /// let hash = digest.sum();
   /// ```
-  public func writeVarArray(self : Digest, data : [var Nat8]) : () = self.writeVarArray(data);
+  public func writeVarArray(self : Digest, data : [var Nat8]) : () = _Digest.writeVarArray(self, data);
 
   /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
@@ -165,7 +165,7 @@ module {
   /// digest.writeAccessor(accessor, 5, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = self.writeAccessor(data, start, len);
+  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, data, start, len);
 
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
@@ -181,7 +181,7 @@ module {
   /// digest.writeReader(reader, 6); // " world"
   /// let hash = digest.sum();
   /// ```
-  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) : () = self.writeReader(data, len);
+  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) : () = _Digest.writeReader(self, data, len);
 
   /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
   ///
@@ -191,7 +191,7 @@ module {
   /// digest.writeIter(iter); // "Hello"
   /// let hash = digest.sum();
   /// ```
-  public func writeIter(self : Digest, data : Iter<Nat8>) : () = self.writeIter(data.next);
+  public func writeIter(self : Digest, data : Iter<Nat8>) : () = _Digest.writeIter(self, data.next);
 
   // Extract the state from a Digest as a [Nat8] array
   func stateNat8(x : Digest) : [Nat8] = switch (x.algo) {
@@ -212,7 +212,7 @@ module {
   /// let hash : Blob = digest.sum();
   /// ```
   public func sum(self : Digest) : Blob {
-    self.close();
+    _Digest.close(self);
     return stateBlob(self);
   };
 
@@ -310,7 +310,7 @@ module {
   /// ```
   public func fromIter(algo : (implicit : Algorithm), data : Iter<Nat8>) : Blob {
     let digest = new(algo);
-    digest.writeIter(data.next);
+    _Digest.writeIter(digest, data.next);
     return sum(digest);
   };
 
