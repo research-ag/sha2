@@ -8,8 +8,8 @@ module {
     // for ((i, j, k, l, m) in expansion_rounds.vals()) {
     //   // (j,k,l,m) = (i+1,i+9,i+14,i+16)
     //   let (v0, v1) = (msg[j], msg[l]);
-    //   let s0 = rot(v0, 07) ^ rot(v0, 18) ^ (v0 >> 03);
-    //   let s1 = rot(v1, 17) ^ rot(v1, 19) ^ (v1 >> 10);
+    //   let s0 = rot(v0, 01) ^ rot(v0, 08) ^ (v0 >> 07);
+    //   let s1 = rot(v1, 19) ^ rot(v1, 61) ^ (v1 >> 06);
     //   msg[m] := msg[i] +% s0 +% msg[k] +% s1;
     // };
     let w00 = msg[0];
@@ -107,9 +107,9 @@ module {
     // for (i in compression_rounds.keys()) {
     //   let ch = (e & f) ^ (^ e & g);
     //   let maj = (a & b) ^ (a & c) ^ (b & c);
-    //   let sigma0 = rot(a, 02) ^ rot(a, 13) ^ rot(a, 22);
-    //   let sigma1 = rot(e, 06) ^ rot(e, 11) ^ rot(e, 25);
-    //   let t = h +% K[i] +% x.msg[i] +% ch +% sigma1;
+    //   let sigma0 = rot(a, 28) ^ rot(a, 34) ^ rot(a, 39);
+    //   let sigma1 = rot(e, 14) ^ rot(e, 18) ^ rot(e, 41);
+    //   let t = h +% K[i] +% w[i] +% ch +% sigma1;
     //   h := g;
     //   g := f;
     //   f := e;

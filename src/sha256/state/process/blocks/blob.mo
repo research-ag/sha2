@@ -11,6 +11,7 @@ module {
   public func process(self : [var Nat16], data : Blob, start : Nat) : Nat {
     let sz = data.size();
     var i = start;
+    if (i >= sz) return i;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
     var b = nat16To32(self[2]) << 16 | nat16To32(self[3]);

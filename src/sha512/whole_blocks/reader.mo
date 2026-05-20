@@ -10,6 +10,7 @@ module {
 
   public func process_blocks(state : [var Nat64], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
+    if (i >= sz) return i;
     // load state registers
     var a = state[0];
     var b = state[1];

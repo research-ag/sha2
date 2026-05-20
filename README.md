@@ -75,8 +75,8 @@ import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
 
 // Hash from Blob
-let hash1 : Blob = Sha256.fromBlob(#sha256, "Hello, World!");
-let hash2 : Blob = Sha512.fromBlob(#sha512, "Hello, World!");
+let hash1 : Blob = Sha256.fromBlob("Hello, World!");
+let hash2 : Blob = Sha512.fromBlob("Hello, World!");
 
 // Hash from Array
 let data : [Nat8] = [72, 101, 108, 108, 111];
@@ -89,7 +89,7 @@ let hash4 : Blob = Sha512.fromVarArray(#sha384, varData);
 // Hash from positional byte accessor function
 func getByte(i : Nat) : Nat8 { /* return byte at position i */ };
 let len = 100; // number of bytes to read
-let hash5 : Blob = Sha256.fromAccessor(#sha256, getByte, len);
+let hash5 : Blob = Sha256.fromAccessor(getByte, 0, len);
 
 // Hash from next-byte reader function
 var pos = 0;
@@ -99,7 +99,7 @@ let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, len);
 
 // Hash from Iter<Nat8>
 let iter = [72, 101, 108, 108, 111].vals();
-let hash7 : Blob = Sha256.fromIter(#sha256, iter);
+let hash7 : Blob = Sha256.fromIter(iter);
 
 ```
 
@@ -110,7 +110,7 @@ To hash from `List<Nat8>` the most efficient way is to use the reader function a
 import List "mo:core/List";
 
 let list = List.fromArray<Nat8>([72, 101, 108, 108, 111]);
-let hash8 : Blob = Sha512.fromReader(#sha512, list.reader(0));
+let hash8 : Blob = Sha512.fromReader(list.reader(0), List.size(list));
 
 ```
 
@@ -134,12 +134,12 @@ digest.writeVarArray(varData);
 
 // Write from positional function
 func getChunk(i : Nat) : Nat8 { /* return byte at position i */ };
-digest.writePositional(getChunk, 10);
+digest.writeAccessor(getChunk, 0, 10);
 
-// Write from iterator
+// Write from reader function
 var index = 0;
 func nextChunk() : Nat8 { index += 1; /* return next byte */ };
-digest.writeNext(nextChunk, 5);
+digest.writeReader(nextChunk, 5);
 
 // Finalize and get the hash
 let finalHash : Blob = digest.sum();
@@ -155,9 +155,10 @@ Use `clone()` and `peekSum()` to get intermediate hashes without losing your pro
 
 ```motoko
 import Sha256 "mo:sha2/Sha256";
+import Sha512 "mo:sha2/Sha512";
 import Debug "mo:core/Debug";
 
-let digest = Sha256.new(#sha256);
+let digest = Sha256.new();
 
 // Hash first chunk
 digest.writeBlob("Chunk 1");
@@ -179,7 +180,7 @@ let finalHash = digest.sum();
 Debug.print("Final hash: " # debug_show (finalHash));
 
 // Alternative: clone before sum if you want to keep the digest alive
-let digest2 = Sha512.new(#sha512);
+let digest2 = Sha512.new();
 digest2.writeBlob("Some data");
 
 let clone1 = digest2.clone();
@@ -203,7 +204,7 @@ actor {
 
   // Initialize on first call
   public func initDigest() : async () {
-    let d = Sha256.new(#sha256);
+    let d = Sha256.new();
     digestState := ?d.share();
   };
 
@@ -257,7 +258,7 @@ actor {
 
   // Example: Hash a large file in chunks across multiple calls
   public func hashLargeFile(chunks : [Blob]) : async Blob {
-    let d = Sha256.new(#sha256);
+    let d = Sha256.new();
     for (chunk in chunks.vals()) {
       d.writeBlob(chunk);
     };
