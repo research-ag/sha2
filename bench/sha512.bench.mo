@@ -77,13 +77,7 @@ module {
             func() = ignore Sha512.fromReader(next, source.size());
           };
           case (5) {
-            var itemsLeft = source.size();
-            let iter = {
-              next = func() : ?Nat8 = if (itemsLeft == 0) { null } else {
-                itemsLeft -= 1;
-                ?0x5f;
-              };
-            };
+            let iter = source.values();
             func() = ignore Sha512.fromIter(iter);
           };
           case (6) {

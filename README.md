@@ -87,15 +87,15 @@ let varData : [var Nat8] = [var 72, 101, 108, 108, 111];
 let hash4 : Blob = Sha512.fromVarArray(#sha384, varData);
 
 // Hash from positional byte accessor function
-func getByte(i : Nat) : Nat8 { /* return byte at position i */ };
-let len = 100; // number of bytes to read
-let hash5 : Blob = Sha256.fromAccessor(getByte, 0, len);
+func getByte(i : Nat) : Nat8 { 0; /* return byte at position i */ };
+let accessorLen = 100; // number of bytes to read
+let hash5 : Blob = Sha256.fromAccessor(getByte, 0, accessorLen);
 
 // Hash from next-byte reader function
 var pos = 0;
-func nextByte() : Nat8 { pos += 1; /* return next byte */ };
-let len = 100; // number of bytes to read
-let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, len);
+func nextByte() : Nat8 { pos += 1; 0; /* return next byte */ };
+let readerLen = 100; // number of bytes to read
+let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, readerLen);
 
 // Hash from Iter<Nat8>
 let iter = [72, 101, 108, 108, 111].vals();
@@ -133,12 +133,12 @@ let varData : [var Nat8] = [var 32, 116, 104, 105, 114, 100]; // " third"
 digest.writeVarArray(varData);
 
 // Write from positional function
-func getChunk(i : Nat) : Nat8 { /* return byte at position i */ };
+func getChunk(i : Nat) : Nat8 { 0; /* return byte at position i */ };
 digest.writeAccessor(getChunk, 0, 10);
 
 // Write from reader function
 var index = 0;
-func nextChunk() : Nat8 { index += 1; /* return next byte */ };
+func nextChunk() : Nat8 { index += 1; 0; /* return next byte */ };
 digest.writeReader(nextChunk, 5);
 
 // Finalize and get the hash

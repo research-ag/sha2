@@ -337,14 +337,14 @@ let digests512 : [[Nat8]] = [
   [28, 210, 101, 155, 3, 30, 138, 39, 159, 136, 136, 236, 150, 167, 157, 91, 245, 112, 24, 156, 48, 27, 239, 146, 112, 53, 136, 21, 88, 125, 128, 173, 149, 181, 155, 46, 112, 127, 91, 247, 97, 155, 46, 183, 249, 159, 170, 175, 58, 24, 205, 169, 214, 42, 56, 70, 60, 126, 138, 47, 218, 218, 138, 88],
 ];
 
-for (l in range(0, 81)) {
+for (l in range(0, digests512.size())) {
   let a = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
   compare512(a, #sha512, digests512[l]);
 };
 
 do {
   let d = Sha512.new();
-  for (l in range(0, 81)) {
+  for (l in range(0, digests512.size())) {
     assert (d.peekSum() == Blob.fromArray(digests512[l]));
     d.writeArray([0xa5]);
   };

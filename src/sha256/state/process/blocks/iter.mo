@@ -27,7 +27,7 @@ module {
     var pos = 0;
     ignore do ? {
       // prettier-ignore
-      label reading loop {
+      loop {
         let b00 = data()!; backup[0] := b00; pos := 1;
         let b01 = data()!; backup[1] := b01; pos := 2;
         let b02 = data()!; backup[2] := b02; pos := 3;
