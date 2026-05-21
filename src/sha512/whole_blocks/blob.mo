@@ -11,7 +11,6 @@ module {
   public func process_blocks(state : [var Nat64], data : Blob, start : Nat) : Nat {
     let sz = data.size();
     var i = start;
-    if (i >= sz) return i;
     // load state registers
     var a = state[0];
     var b = state[1];

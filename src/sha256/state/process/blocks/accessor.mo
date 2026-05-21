@@ -12,7 +12,6 @@ module {
   // start: start position
   public func process(self : [var Nat16], data : Nat -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
-    if (i >= sz) return i;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
     var b = nat16To32(self[2]) << 16 | nat16To32(self[3]);
