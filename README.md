@@ -75,8 +75,8 @@ import Sha256 "mo:sha2/Sha256";
 import Sha512 "mo:sha2/Sha512";
 
 // Hash from Blob
-let hash1 : Blob = Sha256.fromBlob("Hello, World!");
-let hash2 : Blob = Sha512.fromBlob("Hello, World!");
+let hash1 : Blob = Sha256.fromBlob(#sha256, "Hello, World!");
+let hash2 : Blob = Sha512.fromBlob(#sha512, "Hello, World!");
 
 // Hash from Array
 let data : [Nat8] = [72, 101, 108, 108, 111];
@@ -89,7 +89,7 @@ let hash4 : Blob = Sha512.fromVarArray(#sha384, varData);
 // Hash from positional byte accessor function
 func getByte(i : Nat) : Nat8 { 0; /* return byte at position i */ };
 let accessorLen = 100; // number of bytes to read
-let hash5 : Blob = Sha256.fromAccessor(getByte, 0, accessorLen);
+let hash5 : Blob = Sha256.fromAccessor(#sha256, getByte, 0, accessorLen);
 
 // Hash from next-byte reader function
 var pos = 0;
@@ -99,7 +99,7 @@ let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, readerLen);
 
 // Hash from Iter<Nat8>
 let iter = [72, 101, 108, 108, 111].vals();
-let hash7 : Blob = Sha256.fromIter(iter);
+let hash7 : Blob = Sha256.fromIter(#sha256, iter);
 
 ```
 
@@ -110,7 +110,7 @@ To hash from `List<Nat8>` the most efficient way is to use the reader function a
 import List "mo:core/List";
 
 let list = List.fromArray<Nat8>([72, 101, 108, 108, 111]);
-let hash8 : Blob = Sha512.fromReader(list.reader(0), List.size(list));
+let hash8 : Blob = Sha512.fromReader(#sha512, list.reader(0), List.size(list));
 
 ```
 
@@ -148,6 +148,8 @@ let finalHash : Blob = digest.sum();
 // Attempting to write or sum again will trap
 
 ```
+
+The first argument `#sha256` in the `Sha256` module functions and `#sha512` in the `Sha512` is implicit and can be skipped when writing code. For example, `Sha512.new(#sha512)` can be written as `Sha512.new()`.
 
 ### 3. Cloning for intermediate hashes
 
