@@ -2,8 +2,10 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import { type Buffer } "../types";
 
+/// SHA256 message buffer operations.
 module {
 
+  /// Create a new empty buffer.
   public func new() : Buffer = {
     msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var i_msg : Nat8 = 0;
@@ -11,11 +13,15 @@ module {
     var high : Bool = true;
     var word : Nat16 = 0;
   };
+
+  /// Reset the buffer state.
   public func reset(self : Buffer) {
     self.i_msg := 0;
     self.i_block := 0;
     self.high := true;
   };
+
+  /// Create an independent copy of the buffer.
   public func clone(self : Buffer) : Buffer = {
     msg = VarArray.clone(self.msg);
     var i_msg = self.i_msg;

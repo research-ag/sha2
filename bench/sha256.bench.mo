@@ -1,19 +1,12 @@
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import List "mo:core/List";
-import Text "mo:core/Text";
 import Random "mo:core/Random";
-import Prim "mo:prim";
-import Bench "mo:bench";
+import Bench "mo:bench-helper";
 import Sha256 "../src/Sha256";
 
 module {
-  public func init() : Bench.Bench {
-    let bench = Bench.Bench();
-
-    bench.name("Sha256");
-    bench.description("Hash various message lengths from different types of input. Blocks are 64 bytes.");
-
+  public func init() : Bench.V1 {
     let rows = [
       "fromBlob",
       "fromArray",
@@ -32,8 +25,12 @@ module {
       "1M bytes",
     ];
 
-    bench.rows(rows);
-    bench.cols(cols);
+    let schema : Bench.Schema = {
+      name = "Sha256";
+      description = "Hash various message lengths from different types of input. Blocks are 64 bytes.";
+      rows = rows;
+      cols = cols;
+    };
 
     let rng : Random.Random = Random.seed(0x5f5f5f5f5f5f5f5f);
 
@@ -46,57 +43,51 @@ module {
       Array.tabulate<Nat8>(1_000_000, func(i) = rng.nat8()),
     ];
 
-    let routines : [() -> ()] = Array.tabulate<() -> ()>(
-      rows.size() * cols.size(),
-      func(i) {
-        let row : Nat = i % rows.size();
-        let col : Nat = i / rows.size();
+    let routines : [[() -> ()]] = Array.tabulate<[() -> ()]>(
+      rows.size(),
+      func(ri) {
+        Array.tabulate<() -> ()>(
+          cols.size(),
+          func(ci) {
+            let source = rowSourceArrays[ci];
+            let blob = Blob.fromArray(source);
+            let list = List.fromArray(source);
+            let varArray = Array.toVarArray(source);
 
-        let source = rowSourceArrays[col];
-        let blob = Blob.fromArray(source);
-        let list = List.fromArray(source);
-        let varArray = Array.toVarArray(source);
-
-        switch (row) {
-          case (0) {
-            func() = ignore Sha256.fromBlob(blob);
-          };
-          case (1) {
-            func() = ignore Sha256.fromArray(source);
-          };
-          case (2) {
-            func() = ignore Sha256.fromVarArray(varArray);
-          };
-          case (3) {
-            let at = func(i : Nat) : Nat8 = source[i];
-            func() = ignore Sha256.fromAccessor(at, 0, source.size());
-          };
-          case (4) {
-            var i = 0;
-            func next() : Nat8 { let r = source[i]; i += 1; r };
-            func() = ignore Sha256.fromReader(next, source.size());
-          };
-          case (5) {
-            let iter = source.values();
-            func() = ignore Sha256.fromIter(iter);
-          };
-          case (6) {
-            let next = list.reader(0);
-            func() = ignore Sha256.fromReader(next, source.size());
-          };
-          case (_) Prim.trap("Row not implemented");
-        };
+            switch (ri) {
+              case (0) {
+                func() = ignore Sha256.fromBlob(blob);
+              };
+              case (1) {
+                func() = ignore Sha256.fromArray(source);
+              };
+              case (2) {
+                func() = ignore Sha256.fromVarArray(varArray);
+              };
+              case (3) {
+                let at = func(i : Nat) : Nat8 = source[i];
+                func() = ignore Sha256.fromAccessor(at, 0, source.size());
+              };
+              case (4) {
+                func() {
+                  var i = 0;
+                  func next() : Nat8 { let r = source[i]; i += 1; r };
+                  ignore Sha256.fromReader(next, source.size());
+                };
+              };
+              case (5) {
+                func() = ignore Sha256.fromIter(source.values());
+              };
+              case (6) {
+                func() = ignore Sha256.fromReader(list.reader(0), source.size());
+              };
+              case (_) func() {};
+            };
+          },
+        );
       },
     );
 
-    bench.runner(
-      func(row, col) {
-        let ?ri = Array.indexOf<Text>(rows, Text.equal, row) else Prim.trap("Unknown row");
-        let ?ci = Array.indexOf<Text>(cols, Text.equal, col) else Prim.trap("Unknown column");
-        routines[ci * rows.size() + ri]();
-      }
-    );
-
-    bench;
+    Bench.V1(schema, func(ri : Nat, ci : Nat) = routines[ri][ci]());
   };
 };
