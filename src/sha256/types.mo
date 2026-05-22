@@ -1,4 +1,5 @@
 /// SHA256 internal types.
+
 module {
   /// Message buffer.
   /// `msg`: block buffer (16 words of 16 bits).

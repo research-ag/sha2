@@ -1,4 +1,5 @@
 /// SHA512 internal types.
+
 module {
   /// Digest type.
   /// `msg`: message block buffer (16 words of 64 bits).

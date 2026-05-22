@@ -1,3 +1,5 @@
+/// SHA512 digest implementation.
+
 import Prim "mo:prim";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
@@ -7,7 +9,6 @@ import Write "../write";
 import ProcessBlock "../process_block";
 import Types "../types";
 
-/// SHA512 digest implementation.
 module {
 
   /// Digest type re-export.

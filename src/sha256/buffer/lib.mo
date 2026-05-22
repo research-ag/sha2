@@ -1,8 +1,9 @@
+/// SHA256 message buffer operations.
+
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import { type Buffer } "../types";
 
-/// SHA256 message buffer operations.
 module {
 
   /// Create a new empty buffer.

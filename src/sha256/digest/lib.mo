@@ -19,7 +19,6 @@ import _ProcessMsg "../state/process/blocks/iter"; // state.process_blocks
 import { type Digest } "../types";
 import { type State } "../types";
 
-/// SHA256 digest implementation.
 module {
   let natToNat32 = Prim.natToNat32;
   let nat8ToNat = Prim.nat8ToNat;
