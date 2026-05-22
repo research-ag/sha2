@@ -50,28 +50,40 @@ module {
     };
   };
 
+  /// Write a `Blob` to the digest.
+  /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) {
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_blob(data, pos);
     writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
   };
+  /// Write a `[Nat8]` array to the digest.
+  /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_array(data, pos);
     writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
   };
+  /// Write a `[var Nat8]` array to the digest.
+  /// Traps if `self` is closed.
   public func writeVarArray(self : Digest, data : [var Nat8]) {
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_vararray(data, pos);
     writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
   };
+  /// Write data from a positional accessor function.
+  /// Traps if `self` is closed.
   public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     let sz = start + len;
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_accessor(data, sz, pos);
     writeData(self, data, sz, start, process_blocks);
   };
+  /// Write data from a reader function.
+  /// Traps if `self` is closed.
   public func writeReader(self : Digest, data : () -> Nat8, len : Nat) {
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_reader(data, len, pos);
     writeData(self, func(_) = data(), len, 0, process_blocks);
   };
 
+  /// Write data from an iterator to the digest.
+  /// Traps if `self` is closed.
   public func writeIter(self : Digest, data : () -> ?Nat8) {
     assert not self.closed;
     let (buf, state) = (self.buffer, self.state);
@@ -93,6 +105,7 @@ module {
     state.process(data, buf);
   };
 
+  /// Write SHA256 padding to the digest.
   public func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
     let msg = buf.msg;
@@ -134,6 +147,8 @@ module {
     // skipping here because we won't use x anymore: buf.i_msg := 0;
   };
 
+  /// Finalize the digest by writing padding.
+  /// Traps if `self` is closed.
   public func close(self : Digest) {
     assert not self.closed;
     self.closed := true;
