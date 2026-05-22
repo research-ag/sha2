@@ -81,10 +81,10 @@ module {
               case (6) {
                 func() = ignore Sha512.fromReader(list.reader(0), source.size());
               };
-              case (_) func() { };
+              case (_) func() {};
             };
-          }
-        )
+          },
+        );
       },
     );
 

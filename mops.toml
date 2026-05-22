@@ -17,5 +17,5 @@ moc = "1.0.0"
 
 [toolchain]
 moc = "1.7.0"
-wasmtime = "45.0.0"
+wasmtime = "44.0.2"
 
