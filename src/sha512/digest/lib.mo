@@ -1,3 +1,5 @@
+/// SHA512 digest implementation.
+
 import Prim "mo:prim";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
@@ -9,6 +11,7 @@ import Types "../types";
 
 module {
 
+  /// Digest type re-export.
   public type Digest = Types.Digest;
 
   // We must be at a word boundary, i.e. i_byte must be equal to 8
@@ -27,25 +30,39 @@ module {
     };
   };
 
+  /// Write a `Blob` to the digest.
+  /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) {
     Write.blob(self, data);
   };
+  /// Write a `[Nat8]` array to the digest.
+  /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {
     Write.array(self, data);
   };
+  /// Write a `[var Nat8]` array to the digest.
+  /// Traps if `self` is closed.
   public func writeVarArray(self : Digest, data : [var Nat8]) {
     Write.varArray(self, data);
   };
+  /// Write data from a positional accessor function.
+  /// Traps if `self` is closed.
   public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     Write.accessor(self, data, start, len);
   };
+  /// Write data from a reader function.
+  /// Traps if `self` is closed.
   public func writeReader(self : Digest, data : () -> Nat8, len : Nat) {
     Write.reader(self, data, len);
   };
+  /// Write data from an iterator to the digest.
+  /// Traps if `self` is closed.
   public func writeIter(self : Digest, data : () -> ?Nat8) {
     Write.iter(self, data);
   };
 
+  /// Finalize the digest by writing padding.
+  /// Traps if `self` is closed.
   public func close(self : Digest) {
     assert not self.closed;
     self.closed := true;
