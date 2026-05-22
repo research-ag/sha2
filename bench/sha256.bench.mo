@@ -69,9 +69,9 @@ module {
                 func() = ignore Sha256.fromAccessor(at, 0, source.size());
               };
               case (4) {
+                var i = 0;
+                func next() : Nat8 { let r = source[i]; i += 1; r };
                 func() {
-                  var i = 0;
-                  func next() : Nat8 { let r = source[i]; i += 1; r };
                   ignore Sha256.fromReader(next, source.size());
                 };
               };
