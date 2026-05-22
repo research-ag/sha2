@@ -133,10 +133,7 @@ module {
   /// digest.writeBlob("Second message");
   /// let hash2 = digest.sum();
   /// ```
-  ///
-  /// Traps if `self` is closed.
   public func reset(self : Digest) {
-    assert not self.closed;
     self.i_msg := 0;
     self.i_byte := 8;
     self.i_block := 0;
@@ -239,7 +236,7 @@ module {
   ///
   /// ```motoko include=import
   /// let digest = Sha512.new();
-  /// let data = [72, 101, 108, 108, 111];
+  /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
   /// var pos = 0;
   /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
   /// digest.writeReader(reader, 5); // "Hello"
@@ -463,7 +460,7 @@ module {
   /// let hash = Sha512.fromAccessor(#sha384, accessor, 0, 5);
   /// ```
   ///
-  /// Never traps.
+  /// Does not trap unless user-provided accessor function `data` traps.
   public func fromAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let d = new(algo);
     d.writeAccessor(data, start, len);
@@ -490,7 +487,7 @@ module {
   /// let hash = Sha512.fromReader(#sha384, reader, 5);
   /// ```
   ///
-  /// Never traps.
+  /// Does not trap unless user-provided reader function `next` traps.
   public func fromReader(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
     let d = new(algo);
     d.writeReader(next, len);

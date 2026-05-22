@@ -178,7 +178,7 @@ module {
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
-  /// let data = [72, 101, 108, 108, 111];
+  /// let data = [72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
   /// var pos = 0;
   /// func reader() : Nat8 { let b = data[pos]; pos += 1; b };
   /// digest.writeReader(reader, 5); // "Hello"
@@ -353,7 +353,7 @@ module {
   /// let hash = Sha256.fromAccessor(#sha224, accessor, 0, 5);
   /// ```
   ///
-  /// Never traps.
+  /// Does not trap unless user-provided accessor function `data` traps.
   public func fromAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeAccessor(data, start, len);
@@ -380,7 +380,7 @@ module {
   /// let hash = Sha256.fromReader(#sha224, reader, 5);
   /// ```
   ///
-  /// Never traps.
+  /// Does not trap unless user-provided reader function `next` traps.
   public func fromReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeReader(data, len);
