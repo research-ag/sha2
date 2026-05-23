@@ -8,6 +8,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Run the SHA256 compression on every full 64-byte block read via repeated calls to `data`, updating the 16 half-word state `self` in place. Treats `start` as the byte-position counter and stops once `start + bytes_consumed` would exceed `sz`. Returns the index just past the last block consumed (i.e. `start + 64 * blocks`).
   public func process(self : [var Nat16], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers

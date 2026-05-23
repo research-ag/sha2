@@ -6,6 +6,7 @@ import Process "../whole_blocks/reader";
 import Byte "byte";
 
 module {
+  /// Internal SHA512 digest state used by the reader-function writer.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -17,6 +18,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write `sz` bytes obtained from `sz` calls to `data` into the SHA512 message buffer.
   public func write(x : Digest, data : () -> Nat8, sz : Nat) {
     if (sz == 0) return;
     var pos = 0;

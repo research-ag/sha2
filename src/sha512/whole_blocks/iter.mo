@@ -22,6 +22,7 @@ module {
 
   func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
 
+  /// Consume bytes from the iterator `data` in 128-byte chunks, running the SHA512 compression on each full block. Stops when `data` returns `null`; any trailing partial block is left in `x.msg` for the writer to flush.
   public func process_blocks(x : Digest, data : () -> ?Nat8) {
     let state = x.s;
     // load state registers

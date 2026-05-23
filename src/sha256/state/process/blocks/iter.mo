@@ -10,6 +10,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Consume bytes from the iterator `data` in 64-byte chunks, running the SHA256 compression on each full block and updating the 16 half-word state `self` in place. Stops when `data` returns `null`; any trailing partial block is left in `buf` for the digest finalizer to flush.
   public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer) {
     var blocks : Nat32 = 0;
     // load state registers
