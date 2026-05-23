@@ -19,7 +19,6 @@ module {
   };
 
   /// Write `len` bytes obtained by calling `data(i)` for `i` in `[start, start + len)` into the SHA512 message buffer.
-  // Write `len` bytes taken from the `start` position
   public func write(x : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     if (len == 0) return;
     var pos = start;

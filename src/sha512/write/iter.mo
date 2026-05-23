@@ -36,8 +36,6 @@ module {
   };
 
   /// Fill the current SHA512 message buffer slot from the iterator without processing the block. Stops when the buffer is full or the iterator yields `null`.
-  // Write iter to buffer until either the block is full or the end of the blob is reached
-  // The return value refers to the interval that was written in the form [start,end)
   public func write_data_to_buffer(x : Digest, data : () -> ?Nat8) {
     let msg = x.msg;
     var word = x.word;
