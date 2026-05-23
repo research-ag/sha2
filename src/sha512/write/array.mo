@@ -6,6 +6,7 @@ import Process "../whole_blocks/array";
 import Byte "byte";
 
 module {
+  /// Internal SHA512 digest state used by the `[Nat8]` writer.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -17,6 +18,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write the entire `[Nat8]` array into the SHA512 message buffer, processing full blocks as they fill up.
   public func write(x : Digest, data : [Nat8]) {
     let sz = data.size();
     if (sz == 0) return;

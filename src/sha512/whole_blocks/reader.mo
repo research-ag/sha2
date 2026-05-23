@@ -8,6 +8,7 @@ module {
   let nat16To32 = Prim.nat16ToNat32;
   let nat8To16 = Prim.nat8ToNat16;
 
+  /// Run the SHA512 compression on every full 128-byte block read via repeated calls to `data`. Treats `start` as the byte-position counter and stops once `start + bytes_consumed` would exceed `sz`. Returns the index just past the last block consumed (i.e. `start + 128 * blocks`).
   public func process_blocks(state : [var Nat64], data : () -> Nat8, sz : Nat, start : Nat) : Nat {
     var i = start;
     // load state registers

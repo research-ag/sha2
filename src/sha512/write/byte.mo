@@ -3,6 +3,7 @@ import Prim "mo:prim";
 import ProcessBlock "../process_block";
 
 module {
+  /// Internal SHA512 digest state used by the single-byte writer.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -15,6 +16,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Append a single byte to the SHA512 message buffer, processing a full block if one completes.
   public func writeByte(x : Digest, val : Nat8) : () {
     var word = x.word;
     word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));

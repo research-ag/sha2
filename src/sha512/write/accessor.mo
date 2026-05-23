@@ -6,6 +6,7 @@ import Process "../whole_blocks/accessor";
 import Byte "byte";
 
 module {
+  /// Internal SHA512 digest state used by the positional-accessor writer.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -17,6 +18,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write `len` bytes obtained by calling `data(i)` for `i` in `[start, start + len)` into the SHA512 message buffer.
   // Write `len` bytes taken from the `start` position
   public func write(x : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     if (len == 0) return;
