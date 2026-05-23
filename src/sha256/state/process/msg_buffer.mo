@@ -7,6 +7,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Run the SHA256 compression on a single 512-bit message block already loaded as 32 `Nat16` half-words in `msg`, updating the 16 half-word state `self` in place.
   public func process(self : [var Nat16], msg : [var Nat16]) : () {
     let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
     let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);

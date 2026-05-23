@@ -52,6 +52,7 @@ module {
   };
   */
 
+  /// Load bytes obtained via `at(i)` for `i` in `[start, sz)` into the SHA256 message buffer, stopping when the buffer fills (32 words) or when `i` reaches `sz`. Returns the index just past the last byte consumed.
   // Write chunk of input data to buffer until either the block is full or the end of the input data is reached
   // The return value refers to the input interval that was written in the form [start,end)
   // at: random access function for input data
@@ -98,6 +99,7 @@ module {
     return i;
   };
 
+  /// Load bytes pulled from the iterator `next` into the SHA256 message buffer, stopping when the buffer fills (32 words) or when `next` returns `null`.
   // Write chunk of data to buffer until either the block is full or the end of the data is reached
   // Data is taken from an iterator `next` function
   public func load_iter(self : Buffer, next : () -> ?Nat8) {

@@ -10,20 +10,30 @@ import fromReader "process/blocks/reader";
 import fromMsg "process/msg_buffer";
 
 module {
+  /// SHA256 internal state — 8 state words split into 16 `Nat16` half-words (even indices hold the high byte, odd indices the low byte).
   // indices 0,2,4,6,8,10,12,14 = high bytes, indices 1,3,5,7,9,11,13,15 = low bytes
   public type State = [var Nat16];
 
+  /// Overwrite the 16 half-words of `self` with the first 16 entries of `vals`.
   public func set(self : State, vals : [Nat16]) {
     for (i in Nat.range(0, 16)) self[i] := vals[i];
   };
+  /// Return an independent copy of the state array.
   public let clone = VarArray.clone;
+  /// Run the SHA256 compression on every full 64-byte block in the input `Blob` (see `process/blocks/blob`).
   public let process_blocks_from_blob = fromBlob.process;
+  /// Run the SHA256 compression on every full 64-byte block in the input `[Nat8]` (see `process/blocks/array`).
   public let process_blocks_from_array = fromArray.process;
+  /// Run the SHA256 compression on every full 64-byte block in the input `[var Nat8]` (see `process/blocks/varArray`).
   public let process_blocks_from_vararray = fromVarArray.process;
+  /// Run the SHA256 compression on every full 64-byte block read via a positional accessor (see `process/blocks/accessor`).
   public let process_blocks_from_accessor = fromAccessor.process;
+  /// Run the SHA256 compression on every full 64-byte block read via a reader function (see `process/blocks/reader`).
   public let process_blocks_from_reader = fromReader.process;
+  /// Run the SHA256 compression on a single block already loaded into the message buffer (see `process/msg_buffer`).
   public let process_block_from_msg = fromMsg.process;
 
+  /// Serialize `self` as a `[Nat8]` of the requested truncation length: `28` for SHA-224 or `32` for SHA-256.
   public func toNat8Array(self : State, len : Nat) : [Nat8] {
     let (d0, d1) = Prim.explodeNat16(self[0]);
     let (d2, d3) = Prim.explodeNat16(self[1]);
