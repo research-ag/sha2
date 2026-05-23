@@ -309,11 +309,11 @@ This can be seen in the benchmark results.
 
 By this statement we mean that the heap allocations do not depend linearly on the message length.
 There is a constant heap allocation when the hash engine (Digest instance) is created.
-There may also be a constant heap allocation every time the writeX function is called.
+There may also be a constant heap allocation every time a writer function (e.g. `writeBlob`, etc.) is called.
 But the heap allocation does not increase with the message length.
 
 This is true for the Sha256 and Sha512 engines.
-It is also true for all different write functions (type `Blob`, `Array`, `Iter<Nat8>`).
+It is also true for all different writer functions `writeBlob, writeArray, writeVarArray, writeReader, writeAccessor, writeIter`.
 
 ## Implementation notes
 
@@ -332,7 +332,7 @@ npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
 
 ## Copyright
 
-MR Research AG, 2023-2025
+MR Research AG, 2023-2026
 
 ## Authors
 
