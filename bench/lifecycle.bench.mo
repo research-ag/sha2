@@ -18,7 +18,7 @@ module {
       "merkle 2^12", // Bitcoin-style double-sha Merkle root over 4096 leaves
     ];
     let cols = [
-      "0.2.1 (local)",
+      "0.2.x (current)",
       "0.1.14",
     ];
 
