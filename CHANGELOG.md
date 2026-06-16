@@ -1,5 +1,13 @@
 # Sha2 changelog
 
+## 0.2.2
+
+- Add benchmarks (no user-facing changes)
+
+## 0.2.1
+
+- Add doc strings
+
 ## 0.2.0
 
 - Complete rewrite based on static records (no classes)
