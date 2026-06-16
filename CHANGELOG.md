@@ -1,5 +1,10 @@
 # Sha2 changelog
 
+## 0.2.3
+
+- Add `Sha256.sumDouble()` for double SHA256 (the Bitcoin hash)
+- Optimize `reset()`
+
 ## 0.2.2
 
 - Add benchmarks (no user-facing changes)
