@@ -86,10 +86,21 @@ module {
   /// ```
   public func reset(self : Digest) {
     self.buffer.reset();
+    // Write the IV half-words inline. The original `state.set([...literal...])`
+    // allocated a fresh 16-element array every reset and copied it through a
+    // `Nat.range` iterator — ~10x the cost of direct assignments, which is the
+    // whole short-message regression (reset is called twice per double-SHA).
+    let s = self.state;
     if (self.algo == #sha224) {
-      self.state.set([0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4]);
+      s[0] := 0xc105; s[1] := 0x9ed8; s[2] := 0x367c; s[3] := 0xd507;
+      s[4] := 0x3070; s[5] := 0xdd17; s[6] := 0xf70e; s[7] := 0x5939;
+      s[8] := 0xffc0; s[9] := 0x0b31; s[10] := 0x6858; s[11] := 0x1511;
+      s[12] := 0x64f9; s[13] := 0x8fa7; s[14] := 0xbefa; s[15] := 0x4fa4;
     } else {
-      self.state.set([0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19]);
+      s[0] := 0x6a09; s[1] := 0xe667; s[2] := 0xbb67; s[3] := 0xae85;
+      s[4] := 0x3c6e; s[5] := 0xf372; s[6] := 0xa54f; s[7] := 0xf53a;
+      s[8] := 0x510e; s[9] := 0x527f; s[10] := 0x9b05; s[11] := 0x688c;
+      s[12] := 0x1f83; s[13] := 0xd9ab; s[14] := 0x5be0; s[15] := 0xcd19;
     };
     self.closed := false;
   };
