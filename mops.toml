@@ -11,6 +11,7 @@ core = "2.5.0"
 
 [dev-dependencies]
 bench-helper = "0.0.3"
+sha2_0_1_14 = "https://github.com/research-ag/sha2#0.1.14"
 
 [requirements]
 moc = "1.0.0"
