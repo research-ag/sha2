@@ -4,7 +4,7 @@
 
 - Fix `Sha512.reset()` not clearing the `closed` flag (reusing a digest after `sum()` trapped)
 - Optimize `Sha512.reset()`
-- Add lifecycle benchmarks for Sha512  
+- Add lifecycle benchmarks for Sha512
 
 ## 0.2.3
 
