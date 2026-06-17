@@ -143,9 +143,15 @@ module {
       case (#sha384) 2;
       case (#sha512) 3;
     };
-    for (j in [0, 1, 2, 3, 4, 5, 6, 7].vals()) {
-      self.s[j] := ivs[i][j];
+    // Unrolled IV copy avoids allocating the `[0..7]` index array and its
+    // iterator on every reset (cf. the Sha256 reset optimization).
+    let v = ivs[i];
+    // prettier-ignore
+    do {
+      self.s[0] := v[0]; self.s[1] := v[1]; self.s[2] := v[2]; self.s[3] := v[3];
+      self.s[4] := v[4]; self.s[5] := v[5]; self.s[6] := v[6]; self.s[7] := v[7];
     };
+    self.closed := false;
   };
 
   /// Create an independent copy of the digest with the same internal state.
