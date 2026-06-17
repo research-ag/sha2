@@ -15,6 +15,7 @@ module {
       "fromReader",
       "fromIter",
       "fromList",
+      "fromWordBlob",
     ];
     let cols = [
       "0",
@@ -80,6 +81,9 @@ module {
               };
               case (6) {
                 func() = ignore Sha256.fromReader(list.reader(0), source.size());
+              };
+              case (7) {
+                func() = ignore Sha256.fromWordBlob(blob);
               };
               case (_) func() {};
             };

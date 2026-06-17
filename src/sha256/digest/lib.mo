@@ -69,6 +69,40 @@ module {
     func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_blob(data, pos);
     writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
   };
+
+  /// Closure-free fast path for `writeBlob`: copies the blob's bytes straight
+  /// into the message buffer as 16-bit words, processing full blocks as they
+  /// fill. Unlike `writeBlob` it goes through no generic accessor closures, so
+  /// it allocates nothing. The caller must be at a word boundary
+  /// (`buf.high == true`); any length is accepted, but a final odd byte is
+  /// written through the byte path, leaving the buffer off a word boundary.
+  /// Traps if `self` is closed or not at a word boundary.
+  public func writeWordBlob(x : Digest, data : Blob) {
+    assert not x.closed;
+    let (buf, state) = (x.buffer, x.state);
+    assert buf.high;
+    let sz = data.size();
+    let msg = buf.msg;
+    var i_msg = buf.i_msg;
+    var i = 0;
+    let i_max : Nat = (sz / 2) * 2;
+    while (i < i_max) {
+      msg[nat8ToNat(i_msg)] := nat8To16(data[i]) << 8 ^ nat8To16(data[i + 1]);
+      i_msg +%= 1;
+      i += 2;
+      if (i_msg == 32) {
+        state.process_block_from_msg(msg);
+        i_msg := 0;
+        buf.i_block +%= 1;
+      };
+    };
+    buf.i_msg := i_msg;
+    if (i < sz) {
+      // odd trailing byte: open a new partial (high) word
+      buf.word := nat8To16(data[i]) << 8;
+      buf.high := false;
+    };
+  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {

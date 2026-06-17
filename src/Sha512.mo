@@ -332,11 +332,15 @@ module {
       k += 1;
     };
     self.i_msg := natToNat8(n);
-    if (self.algo == #sha512_224) {
-      // 28-byte digest: 3 whole words + a 4-byte tail. The tail is the top 4
-      // bytes of s[3], which is exactly the partial `word` after 4 bytes.
-      self.word := s[3] >> 32;
-      self.i_byte := 4;
+    // `switch` (not `== #sha512_224`) because variant `==` allocates per call.
+    switch (self.algo) {
+      case (#sha512_224) {
+        // 28-byte digest: 3 whole words + a 4-byte tail. The tail is the top 4
+        // bytes of s[3], which is exactly the partial `word` after 4 bytes.
+        self.word := s[3] >> 32;
+        self.i_byte := 4;
+      };
+      case (_) {};
     };
     // Reset the state to the IV and reopen for the next hash.
     loadIV(self);
@@ -369,13 +373,17 @@ module {
       _Digest.writeWord(target, s[k]);
       k += 1;
     };
-    if (self.algo == #sha512_224) {
-      // 4-byte tail: the top 4 bytes of s[3].
-      let (t0, t1, t2, t3, _, _, _, _) = explodeNat64(s[3]);
-      _Digest.writeByte(target, t0);
-      _Digest.writeByte(target, t1);
-      _Digest.writeByte(target, t2);
-      _Digest.writeByte(target, t3);
+    // `switch` (not `== #sha512_224`) because variant `==` allocates per call.
+    switch (self.algo) {
+      case (#sha512_224) {
+        // 4-byte tail: the top 4 bytes of s[3].
+        let (t0, t1, t2, t3, _, _, _, _) = explodeNat64(s[3]);
+        _Digest.writeByte(target, t0);
+        _Digest.writeByte(target, t1);
+        _Digest.writeByte(target, t2);
+        _Digest.writeByte(target, t3);
+      };
+      case (_) {};
     };
   };
 
@@ -385,56 +393,59 @@ module {
     let (d16, d17, d18, d19, d20, d21, d22, d23) = explodeNat64(x.s[2]);
     let (d24, d25, d26, d27, d28, d29, d30, d31) = explodeNat64(x.s[3]);
 
-    if (x.algo == #sha512_224) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27
-      ]);
+    // `switch` (not `== #...`) because variant `==` allocates per call. Longer
+    // digests explode the extra state words lazily inside their cases.
+    switch (x.algo) {
+      case (#sha512_224) {
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27
+        ]);
+      };
+      case (#sha512_256) {
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27,
+          d28, d29, d30, d31
+        ]);
+      };
+      case (#sha384) {
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27, d28, d29, d30, d31,
+          d32, d33, d34, d35, d36, d37, d38, d39,
+          d40, d41, d42, d43, d44, d45, d46, d47
+        ]);
+      };
+      case (#sha512) {
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
+        let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(x.s[6]);
+        let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(x.s[7]);
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27, d28, d29, d30, d31,
+          d32, d33, d34, d35, d36, d37, d38, d39,
+          d40, d41, d42, d43, d44, d45, d46, d47,
+          d48, d49, d50, d51, d52, d53, d54, d55,
+          d56, d57, d58, d59, d60, d61, d62, d63
+        ]);
+      };
     };
-
-    if (x.algo == #sha512_256) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27,
-        d28, d29, d30, d31
-      ]);
-    };
-
-    let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
-    let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
-
-    if (x.algo == #sha384) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27, d28, d29, d30, d31,
-        d32, d33, d34, d35, d36, d37, d38, d39,
-        d40, d41, d42, d43, d44, d45, d46, d47
-      ]);
-    };
-
-    let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(x.s[6]);
-    let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(x.s[7]);
-
-    // prettier-ignore
-    return arrayToBlob([
-      d0, d1, d2, d3, d4, d5, d6, d7,
-      d8, d9, d10, d11, d12, d13, d14, d15,
-      d16, d17, d18, d19, d20, d21, d22, d23,
-      d24, d25, d26, d27, d28, d29, d30, d31,
-      d32, d33, d34, d35, d36, d37, d38, d39,
-      d40, d41, d42, d43, d44, d45, d46, d47,
-      d48, d49, d50, d51, d52, d53, d54, d55,
-      d56, d57, d58, d59, d60, d61, d62, d63
-    ]);
   };
 
   /// Get the current hash value without finalizing the digest.

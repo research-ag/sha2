@@ -55,19 +55,22 @@ module {
   /// ```
   public func new(algo : (implicit : Algorithm)) : Digest {
     let buf = Buffer.new();
-    if (algo == #sha224) {
-      {
-        algo = #sha224;
-        state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
-        buffer = buf;
-        var closed = false;
+    switch (algo) {
+      case (#sha224) {
+        {
+          algo = #sha224;
+          state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
+          buffer = buf;
+          var closed = false;
+        };
       };
-    } else {
-      {
-        algo = #sha256;
-        state = [var 0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19];
-        buffer = buf;
-        var closed = false;
+      case (_) {
+        {
+          algo = #sha256;
+          state = [var 0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19];
+          buffer = buf;
+          var closed = false;
+        };
       };
     };
   };
@@ -88,18 +91,22 @@ module {
   // Direct half-word assignment avoids allocating a literal array (the original
   // `state.set([...])` allocated a fresh 16-element array and copied it through
   // a `Nat.range` iterator — ~10x the cost, dominating short-message hashing).
+  // `switch` (not `algo == #sha224`) because variant `==` allocates per call.
   func loadIV(s : Types.State, algo : Algorithm) {
     // prettier-ignore
-    if (algo == #sha224) {
+    switch (algo) {
+      case (#sha224) {
       s[0] := 0xc105; s[1] := 0x9ed8; s[2] := 0x367c; s[3] := 0xd507;
       s[4] := 0x3070; s[5] := 0xdd17; s[6] := 0xf70e; s[7] := 0x5939;
       s[8] := 0xffc0; s[9] := 0x0b31; s[10] := 0x6858; s[11] := 0x1511;
       s[12] := 0x64f9; s[13] := 0x8fa7; s[14] := 0xbefa; s[15] := 0x4fa4;
-    } else {
+      };
+      case (_) {
       s[0] := 0x6a09; s[1] := 0xe667; s[2] := 0xbb67; s[3] := 0xae85;
       s[4] := 0x3c6e; s[5] := 0xf372; s[6] := 0xa54f; s[7] := 0xf53a;
       s[8] := 0x510e; s[9] := 0x527f; s[10] := 0x9b05; s[11] := 0x688c;
       s[12] := 0x1f83; s[13] := 0xd9ab; s[14] := 0x5be0; s[15] := 0xcd19;
+      };
     };
   };
 
@@ -144,6 +151,23 @@ module {
   ///
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
+
+  /// Closure-free fast path for `writeBlob`. Copies the blob's bytes directly
+  /// into the message buffer as 16-bit words, allocating nothing (the generic
+  /// `writeBlob` allocates accessor closures per call). The digest must be at a
+  /// 2-byte word boundary — true for a fresh digest, or after writing any even
+  /// number of bytes. Any length is accepted; a final odd byte is handled but
+  /// leaves the digest off a word boundary (so a following `writeWordBlob`
+  /// would trap).
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeWordBlob("Hello!");
+  /// let hash = digest.sum();
+  /// ```
+  ///
+  /// Traps if `self` is closed or not at a word boundary.
+  public func writeWordBlob(self : Digest, data : Blob) : () = _Digest.writeWordBlob(self, data);
 
   /// Write a `[Nat8]` array to the digest.
   ///
@@ -280,7 +304,7 @@ module {
       m[8] := s[8]; m[9] := s[9]; m[10] := s[10]; m[11] := s[11];
       m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
     };
-    buf.i_msg := if (self.algo == #sha224) 14 else 16;
+    buf.i_msg := switch (self.algo) { case (#sha224) 14; case (_) 16 };
     // Reset the state to the IV and reopen for the next hash.
     loadIV(s, self.algo);
     self.closed := false;
@@ -333,7 +357,7 @@ module {
     _Digest.close(self);
     assert target.buffer.high; // target must be at a 16-bit word boundary
     let s = self.state;
-    let n = if (self.algo == #sha224) 14 else 16;
+    let n = switch (self.algo) { case (#sha224) 14; case (_) 16 };
     var k = 0;
     while (k < n) {
       _Digest.writeWord(target, s[k]);
@@ -380,6 +404,21 @@ module {
   public func fromBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
     let digest = new(algo);
     digest.writeBlob(data);
+    return sum(digest);
+  };
+
+  /// Like `fromBlob`, but uses the closure-free `writeWordBlob` fast path.
+  /// Produces the same hash as `fromBlob`; faster and allocation-free since the
+  /// fresh digest starts at a word boundary.
+  ///
+  /// ```motoko include=import
+  /// let hash = Sha256.fromWordBlob("Hello world");
+  /// ```
+  ///
+  /// Never traps.
+  public func fromWordBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
+    let digest = new(algo);
+    writeWordBlob(digest, data);
     return sum(digest);
   };
 
