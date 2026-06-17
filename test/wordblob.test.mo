@@ -2,6 +2,7 @@ import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import Random "mo:core/Random";
 import Sha256 "../src/Sha256";
+import Sha512 "../src/Sha512";
 
 // writeWordBlob / fromWordBlob must produce the same hash as the generic
 // writeBlob / fromBlob, for any length (even and odd) and both algorithms.
@@ -25,4 +26,11 @@ for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
   ref.writeBlob(a);
   ref.writeBlob(b);
   assert (d.sum() == ref.sum());
+};
+
+for (algo in ([#sha512, #sha384, #sha512_224, #sha512_256] : [Sha512.Algorithm]).values()) {
+  for (len in ([0, 1, 7, 8, 9, 64, 111, 112, 128, 200] : [Nat]).values()) {
+    let msg = Blob.fromArray(Array.tabulate<Nat8>(len, func(_) = rng.nat8()));
+    assert (Sha512.fromWordBlob(algo, msg) == Sha512.fromBlob(algo, msg));
+  };
 };
