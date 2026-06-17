@@ -115,7 +115,12 @@ module {
     func merkleOld() : Blob = merkleStream<Sha256_old.Digest>(
       merkleHashersOld,
       func(h, b) = h.writeBlob(b),
-      func(h) : Blob { let inner = h.sum(); h.reset(); h.writeBlob(inner); h.sum() },
+      func(h) : Blob {
+        let inner = h.sum();
+        h.reset();
+        h.writeBlob(inner);
+        h.sum();
+      },
       func(h) = h.reset(),
     );
 

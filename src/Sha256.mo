@@ -89,6 +89,7 @@ module {
   // `state.set([...])` allocated a fresh 16-element array and copied it through
   // a `Nat.range` iterator — ~10x the cost, dominating short-message hashing).
   func loadIV(s : Types.State, algo : Algorithm) {
+    // prettier-ignore
     if (algo == #sha224) {
       s[0] := 0xc105; s[1] := 0x9ed8; s[2] := 0x367c; s[3] := 0xd507;
       s[4] := 0x3070; s[5] := 0xdd17; s[6] := 0xf70e; s[7] := 0x5939;
@@ -268,10 +269,13 @@ module {
     buf.reset();
     let s = self.state;
     let m = buf.msg;
-    m[0] := s[0]; m[1] := s[1]; m[2] := s[2]; m[3] := s[3];
-    m[4] := s[4]; m[5] := s[5]; m[6] := s[6]; m[7] := s[7];
-    m[8] := s[8]; m[9] := s[9]; m[10] := s[10]; m[11] := s[11];
-    m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
+    // prettier-ignore
+    do {
+      m[0] := s[0]; m[1] := s[1]; m[2] := s[2]; m[3] := s[3];
+      m[4] := s[4]; m[5] := s[5]; m[6] := s[6]; m[7] := s[7];
+      m[8] := s[8]; m[9] := s[9]; m[10] := s[10]; m[11] := s[11];
+      m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
+    };
     buf.i_msg := if (self.algo == #sha224) 14 else 16;
     // Reset the state to the IV and run the second (final) hash.
     loadIV(s, self.algo);
