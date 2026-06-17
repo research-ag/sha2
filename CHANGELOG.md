@@ -1,5 +1,10 @@
 # Sha2 changelog
 
+## 0.2.4
+
+- Fix `Sha512.reset()` not clearing the `closed` flag (reusing a digest after `sum()` trapped)
+- Optimize `Sha512.reset()`
+
 ## 0.2.3
 
 - Add `Sha256.sumDouble()` for double SHA256 (the Bitcoin hash)
