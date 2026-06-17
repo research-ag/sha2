@@ -13,7 +13,7 @@
 /// ```
 
 import { type Iter } "mo:core/Types";
-import { arrayToBlob; explodeNat64 } "mo:prim";
+import { arrayToBlob; explodeNat64; natToNat8 } "mo:prim";
 import VarArray "mo:core/VarArray";
 import _Digest "sha512/digest";
 import Types "sha512/types";
@@ -133,24 +133,29 @@ module {
   /// digest.writeBlob("Second message");
   /// let hash2 = digest.sum();
   /// ```
-  public func reset(self : Digest) {
-    self.i_msg := 0;
-    self.i_byte := 8;
-    self.i_block := 0;
+  // Load the algorithm's initial hash value (IV) into the state.
+  // Unrolled copy avoids allocating the `[0..7]` index array and its iterator
+  // on every reset (cf. the Sha256 reset optimization).
+  func loadIV(self : Digest) {
     let i = switch (self.algo) {
       case (#sha512_224) 0;
       case (#sha512_256) 1;
       case (#sha384) 2;
       case (#sha512) 3;
     };
-    // Unrolled IV copy avoids allocating the `[0..7]` index array and its
-    // iterator on every reset (cf. the Sha256 reset optimization).
     let v = ivs[i];
     // prettier-ignore
     do {
       self.s[0] := v[0]; self.s[1] := v[1]; self.s[2] := v[2]; self.s[3] := v[3];
       self.s[4] := v[4]; self.s[5] := v[5]; self.s[6] := v[6]; self.s[7] := v[7];
     };
+  };
+
+  public func reset(self : Digest) {
+    self.i_msg := 0;
+    self.i_byte := 8;
+    self.i_block := 0;
+    loadIV(self);
     self.closed := false;
   };
 
@@ -279,6 +284,99 @@ module {
   public func sum(self : Digest) : Blob {
     _Digest.close(self);
     stateBlob(self);
+  };
+
+  // Number of whole 64-bit words in the digest (the remaining bytes, if any,
+  // form a tail handled separately). sha512-224 is 28 bytes = 3 words + 4.
+  func digestWords(algo : Algorithm) : Nat = switch (algo) {
+    case (#sha512_224) 3;
+    case (#sha512_256) 4;
+    case (#sha384) 6;
+    case (#sha512) 8;
+  };
+
+  /// Finalize the digest and fold the resulting hash back in as the new
+  /// message, leaving the digest open to keep hashing. The state is reset to
+  /// the initial value and the just-computed digest becomes the buffered
+  /// message, so a following `sum()` computes `sum(sum(message))`. Allocation
+  /// free — the state words are copied straight into the message buffer.
+  ///
+  /// Repeating `foldSum()` (N-1) times before a final `sum()` yields the
+  /// N-fold SHA512.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello world");
+  /// digest.foldSum();
+  /// let doubleHash : Blob = digest.sum();
+  /// ```
+  ///
+  /// Traps if `self` is already closed.
+  public func foldSum(self : Digest) {
+    // First finalize: `self.s` now holds the digest.
+    _Digest.close(self);
+    // Reload the digest as the message for the next hash. State and message
+    // words share the same big-endian Nat64 packing, so a direct word copy
+    // places the digest bytes in order. The digest is at most 8 words (< the
+    // 16-word block), so the copy never triggers block processing.
+    self.i_msg := 0;
+    self.i_byte := 8;
+    self.i_block := 0;
+    self.word := 0;
+    let s = self.s;
+    let m = self.msg;
+    let n = digestWords(self.algo);
+    var k = 0;
+    while (k < n) {
+      m[k] := s[k];
+      k += 1;
+    };
+    self.i_msg := natToNat8(n);
+    if (self.algo == #sha512_224) {
+      // 28-byte digest: 3 whole words + a 4-byte tail. The tail is the top 4
+      // bytes of s[3], which is exactly the partial `word` after 4 bytes.
+      self.word := s[3] >> 32;
+      self.i_byte := 4;
+    };
+    // Reset the state to the IV and reopen for the next hash.
+    loadIV(self);
+    self.closed := false;
+  };
+
+  /// Finalize `self` and write the resulting hash directly into `target`'s
+  /// message buffer, as if those digest bytes had been written to `target`.
+  /// No intermediate `Blob` is allocated — the state words are copied straight
+  /// across. `self` is left closed; `target` keeps accumulating.
+  ///
+  /// This is the building block for allocation-free Merkle trees: each parent
+  /// hasher receives its two children via `pushSum`.
+  ///
+  /// `target` must be at a word boundary (a multiple of 8 bytes written so far;
+  /// the SHA512 word is 8 bytes). The full-width digests (sha512, sha384,
+  /// sha512-256) are word-aligned, so a chain of `pushSum`s stays aligned;
+  /// sha512-224's 28-byte digest leaves `target` mid-word, so a second
+  /// `pushSum` into the same target traps (which rules out sha512-224 Merkle
+  /// trees, but a single `pushSum` is fine).
+  ///
+  /// Traps if `self` is closed, or if `target` is not at a word boundary.
+  public func pushSum(self : Digest, target : Digest) {
+    _Digest.close(self);
+    assert (target.i_byte == 8); // target must be at a 64-bit word boundary
+    let s = self.s;
+    let n = digestWords(self.algo);
+    var k = 0;
+    while (k < n) {
+      _Digest.writeWord(target, s[k]);
+      k += 1;
+    };
+    if (self.algo == #sha512_224) {
+      // 4-byte tail: the top 4 bytes of s[3].
+      let (t0, t1, t2, t3, _, _, _, _) = explodeNat64(s[3]);
+      _Digest.writeByte(target, t0);
+      _Digest.writeByte(target, t1);
+      _Digest.writeByte(target, t2);
+      _Digest.writeByte(target, t3);
+    };
   };
 
   func stateBlob(x : Digest) : Blob {

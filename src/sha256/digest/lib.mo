@@ -26,6 +26,19 @@ module {
   let nat32To64 = Prim.nat32ToNat64;
   let intToNat64Wrap = Prim.intToNat64Wrap;
 
+  /// Append one 16-bit message word, processing a full block if one completes.
+  /// The caller must be at a word boundary (`buf.high == true`).
+  public func writeWord(x : Digest, val : Nat16) {
+    let (buf, state) = (x.buffer, x.state);
+    buf.msg[nat8ToNat(buf.i_msg)] := val;
+    buf.i_msg +%= 1;
+    if (buf.i_msg == 32) {
+      state.process_block_from_msg(buf.msg);
+      buf.i_msg := 0;
+      buf.i_block +%= 1;
+    };
+  };
+
   func writeData(x : Digest, data : Nat -> Nat8, sz : Nat, start : Nat, process_blocks : Nat -> Nat) {
     assert not x.closed;
     if (sz == start) return;

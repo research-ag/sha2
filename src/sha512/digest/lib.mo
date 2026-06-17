@@ -14,8 +14,11 @@ module {
   /// Digest type re-export.
   public type Digest = Types.Digest;
 
+  /// Append a single byte, processing a full block if one completes.
+  public func writeByte(self : Digest, val : Nat8) : () = Byte.writeByte(self, val);
+
   // We must be at a word boundary, i.e. i_byte must be equal to 8
-  func writeWord(self : Digest, val : Nat64) : () {
+  public func writeWord(self : Digest, val : Nat64) : () {
     assert (self.i_byte == 8);
     let msg = self.msg;
     var i_msg = self.i_msg;

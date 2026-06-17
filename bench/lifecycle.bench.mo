@@ -24,7 +24,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 lifecycle";
-      description = "Per-operation cost of the hasher lifecycle plus two composite hashes, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). double-sha is sha256(sha256(msg)) on a 32-byte message; the current column uses the dedicated sumDouble() (copies state into the buffer, no intermediate Blob), while 0.1.14 reuses a single hasher (sum, reset, re-write, sum). merkle 2^12 is a Bitcoin-style double-sha Merkle root over 4096 32-byte leaves (4095 double-sha steps), streamed with one reused hasher per level (12 levels) — no hasher is allocated per node.";
+      description = "Per-operation cost of the hasher lifecycle plus two composite hashes, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). double-sha is sha256(sha256(msg)) on a 32-byte message; the current column uses the dedicated sumDouble() (copies state into the buffer, no intermediate Blob), while 0.1.14 reuses a single hasher (sum, reset, re-write, sum). merkle 2^12 is a Bitcoin-style double-sha Merkle root over 4096 32-byte leaves (4095 double-sha steps), one reused hasher per level (12 levels). The current column is allocation-free (foldSum + pushSum stream digests directly between hashers; only the final root Blob is allocated); 0.1.14 must allocate a Blob per node.";
       rows = rows;
       cols = cols;
     };
@@ -103,15 +103,46 @@ module {
 
     let merkleHashersLocal = Array.tabulate<Sha256.Digest>(levels, func(_) = Sha256.new());
     let merkleHashersOld = Array.tabulate<Sha256_old.Digest>(levels, func(_) = Sha256_old.Digest(#sha256));
+    let pendingLocal = VarArray.repeat<Bool>(false, levels);
 
-    // Current code finalizes each pair with the dedicated sumDouble().
-    func merkleLocal() : Blob = merkleStream<Sha256.Digest>(
-      merkleHashersLocal,
-      func(h, b) = Sha256.writeBlob(h, b),
-      func(h) = Sha256.sumDouble(h),
-      func(h) = Sha256.reset(h),
-    );
-    // 0.1.14 has no sumDouble: hash the pair, then re-hash the digest in place.
+    // Current code: allocation-free Bitcoin-style Merkle root. Each pair is
+    // combined with foldSum (inner sha, folded back in place) then pushSum
+    // (outer sha streamed straight into the parent hasher). No Blob is
+    // allocated anywhere except the final root. The binary carry is iterative
+    // (no recursion/closure), so nothing is allocated per node.
+    func merkleLocal() : Blob {
+      var root : Blob = msg32; // overwritten by the final combine
+      var i = 0;
+      while (i < leaves.size()) {
+        Sha256.writeBlob(merkleHashersLocal[0], leaves[i]);
+        Sha256.writeBlob(merkleHashersLocal[0], leaves[i + 1]);
+        var lvl = 0;
+        var carrying = true;
+        while (carrying) {
+          let h = merkleHashersLocal[lvl];
+          Sha256.foldSum(h); // inner sha
+          if (lvl + 1 == levels) {
+            root := Sha256.sum(h); // outer sha = root (the one allocation)
+            Sha256.reset(h);
+            carrying := false;
+          } else {
+            h.pushSum(merkleHashersLocal[lvl + 1]); // outer sha into the parent
+            Sha256.reset(h);
+            if (pendingLocal[lvl + 1]) {
+              pendingLocal[lvl + 1] := false;
+              lvl += 1; // sibling present -> carry up
+            } else {
+              pendingLocal[lvl + 1] := true;
+              carrying := false; // wait for the sibling
+            };
+          };
+        };
+        i += 2;
+      };
+      root;
+    };
+    // 0.1.14 has no foldSum/pushSum: stream Blobs, hashing each pair then
+    // re-hashing the digest in place (allocates a Blob per node).
     func merkleOld() : Blob = merkleStream<Sha256_old.Digest>(
       merkleHashersOld,
       func(h, b) = h.writeBlob(b),

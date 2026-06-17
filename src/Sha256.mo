@@ -241,25 +241,29 @@ module {
     return stateBlob(self);
   };
 
-  /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
-  /// return the hash as a `Blob`. This is the hash used by Bitcoin.
+  /// Finalize the digest and fold the resulting hash back in as the new
+  /// message, leaving the digest open to keep hashing. The state is reset to
+  /// the initial value and the just-computed digest becomes the buffered
+  /// message, so a following `sum()` computes `sum(sum(message))`. Allocation
+  /// free — the state words are copied straight into the message buffer, no
+  /// intermediate `Blob`.
   ///
-  /// Equivalent to hashing the message, feeding the resulting 32-byte digest
-  /// into a fresh digest, and finalizing again — but without materializing the
-  /// intermediate digest as a `Blob`: the first hash's state words are copied
-  /// straight into the message buffer for the second hash.
+  /// Repeating `foldSum()` (N-1) times before a final `sum()` yields the
+  /// N-fold SHA256. A single `foldSum()` + `sum()` is the double SHA256 used by
+  /// Bitcoin (see `sumDouble`).
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
   /// digest.writeBlob("Hello world");
-  /// let hash : Blob = digest.sumDouble();
+  /// digest.foldSum();
+  /// let doubleHash : Blob = digest.sum();
   /// ```
   ///
-  /// Like `sum()`, this closes the digest. Traps if `self` is already closed.
-  public func sumDouble(self : Digest) : Blob {
+  /// Traps if `self` is already closed.
+  public func foldSum(self : Digest) {
     // First finalize: `self.state` now holds SHA256(message) as 16 half-words.
     _Digest.close(self);
-    // Reload the digest as the message for the second hash. State and message
+    // Reload the digest as the message for the next hash. State and message
     // words share the same big-endian half-word packing, so copying
     // state[i] -> msg[i] places the digest bytes in order. The message length
     // is the digest length: 32 bytes (16 words) for sha256, 28 bytes (14 words)
@@ -277,10 +281,64 @@ module {
       m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
     };
     buf.i_msg := if (self.algo == #sha224) 14 else 16;
-    // Reset the state to the IV and run the second (final) hash.
+    // Reset the state to the IV and reopen for the next hash.
     loadIV(s, self.algo);
-    _Digest.writePadding(self);
-    return stateBlob(self);
+    self.closed := false;
+  };
+
+  /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
+  /// return the hash as a `Blob`. This is the hash used by Bitcoin.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// let hash : Blob = digest.sumDouble();
+  /// ```
+  ///
+  /// Like `sum()`, this closes the digest. Traps if `self` is already closed.
+  public func sumDouble(self : Digest) : Blob {
+    foldSum(self);
+    sum(self);
+  };
+
+  /// Finalize `self` and write the resulting hash directly into `target`'s
+  /// message buffer, as if those digest bytes had been written to `target`.
+  /// No intermediate `Blob` is allocated — the state words are copied straight
+  /// across. `self` is left closed; `target` keeps accumulating.
+  ///
+  /// This is the building block for allocation-free Merkle trees: each parent
+  /// hasher receives its two children via `pushSum` (combine with `foldSum`
+  /// first for a double-SHA / Bitcoin-style tree).
+  ///
+  /// `target` must be at a word boundary, i.e. a whole number of bytes that is
+  /// a multiple of 2 must have been written to it so far (the SHA256 word is 2
+  /// bytes). Both digest sizes (32 and 28 bytes) are word-aligned, so a chain
+  /// of `pushSum`s into the same target stays aligned.
+  ///
+  /// ```motoko include=import
+  /// let left = Sha256.fromBlob("L");
+  /// let right = Sha256.fromBlob("R");
+  /// let a = Sha256.new();
+  /// a.writeBlob(left);
+  /// let b = Sha256.new();
+  /// b.writeBlob(right);
+  /// let parent = Sha256.new();
+  /// a.pushSum(parent); // parent's buffer now holds SHA256("L")
+  /// b.pushSum(parent); // followed by SHA256("R")
+  /// let parentHash = parent.sum();
+  /// ```
+  ///
+  /// Traps if `self` is closed, or if `target` is not at a word boundary.
+  public func pushSum(self : Digest, target : Digest) {
+    _Digest.close(self);
+    assert target.buffer.high; // target must be at a 16-bit word boundary
+    let s = self.state;
+    let n = if (self.algo == #sha224) 14 else 16;
+    var k = 0;
+    while (k < n) {
+      _Digest.writeWord(target, s[k]);
+      k += 1;
+    };
   };
 
   /// Get the current hash value without finalizing the digest.

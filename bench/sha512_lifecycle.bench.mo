@@ -23,7 +23,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha512 lifecycle";
-      description = "Per-operation cost of the Sha512 hasher lifecycle, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). merkle 2^12 is a single-sha Merkle root over 4096 64-byte leaves (4095 sha512 steps), streamed with one reused hasher per level (12 levels) — no hasher is allocated per node.";
+      description = "Per-operation cost of the Sha512 hasher lifecycle, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). merkle 2^12 is a single-sha Merkle root over 4096 64-byte leaves (4095 sha512 steps), one reused hasher per level (12 levels). The current column is allocation-free (pushSum streams digests directly between hashers; only the final root Blob is allocated); 0.1.14 must allocate a Blob per node.";
       rows = rows;
       cols = cols;
     };
@@ -97,13 +97,43 @@ module {
 
     let merkleHashersLocal = Array.tabulate<Sha512.Digest>(levels, func(_) = Sha512.new());
     let merkleHashersOld = Array.tabulate<Sha512_old.Digest>(levels, func(_) = Sha512_old.Digest(#sha512));
+    let pendingLocal = VarArray.repeat<Bool>(false, levels);
 
-    func merkleLocal() : Blob = merkleStream<Sha512.Digest>(
-      merkleHashersLocal,
-      func(h, b) = Sha512.writeBlob(h, b),
-      func(h) = Sha512.sum(h),
-      func(h) = Sha512.reset(h),
-    );
+    // Current code: allocation-free single-sha Merkle root. Each pair is hashed
+    // and the digest streamed straight into the parent hasher with pushSum (no
+    // intermediate Blob). Only the final root Blob is allocated. The binary
+    // carry is iterative, so nothing is allocated per node.
+    func merkleLocal() : Blob {
+      var root : Blob = ""; // overwritten by the final combine
+      var i = 0;
+      while (i < leaves.size()) {
+        Sha512.writeBlob(merkleHashersLocal[0], leaves[i]);
+        Sha512.writeBlob(merkleHashersLocal[0], leaves[i + 1]);
+        var lvl = 0;
+        var carrying = true;
+        while (carrying) {
+          let h = merkleHashersLocal[lvl];
+          if (lvl + 1 == levels) {
+            root := Sha512.sum(h); // single sha = root (the one allocation)
+            Sha512.reset(h);
+            carrying := false;
+          } else {
+            h.pushSum(merkleHashersLocal[lvl + 1]); // sha of the pair, into the parent
+            Sha512.reset(h);
+            if (pendingLocal[lvl + 1]) {
+              pendingLocal[lvl + 1] := false;
+              lvl += 1; // sibling present -> carry up
+            } else {
+              pendingLocal[lvl + 1] := true;
+              carrying := false; // wait for the sibling
+            };
+          };
+        };
+        i += 2;
+      };
+      root;
+    };
+    // 0.1.14 has no pushSum: stream Blobs, allocating a digest per node.
     func merkleOld() : Blob = merkleStream<Sha512_old.Digest>(
       merkleHashersOld,
       func(h, b) = h.writeBlob(b),
