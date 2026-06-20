@@ -6,6 +6,7 @@
 - Add `pushSum()` (Sha256, Sha512) for allocation-free Merkle trees — stream a digest into another hasher without an intermediate `Blob`
 - Make `writeBlob()` allocation-free (drop the per-call accessor closures)
 - Reduce per-call allocations across the API (use `switch` instead of variant `==`)
+- Add `examples/` (allocation-free Merkle tree, N-fold hashing)
 
 ## 0.2.4
 
