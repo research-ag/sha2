@@ -1,5 +1,12 @@
 # Sha2 changelog
 
+## 0.2.5
+
+- Add `foldSum()` (Sha256, Sha512) for N-fold / chained hashing — finalize and fold the digest back as the next message
+- Add `pushSum()` (Sha256, Sha512) for allocation-free Merkle trees — stream a digest into another hasher without an intermediate `Blob`
+- Make `writeBlob()` allocation-free (drop the per-call accessor closures)
+- Reduce per-call allocations across the API (use `switch` instead of variant `==`)
+
 ## 0.2.4
 
 - Fix `Sha512.reset()` not clearing the `closed` flag (reusing a digest after `sum()` trapped)
