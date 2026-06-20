@@ -95,6 +95,48 @@ module {
     return i;
   };
 
+  /// Like `load_chunk`, but reads directly from a `Blob` instead of through an
+  /// accessor function — avoids allocating a closure on every call.
+  public func load_chunk_blob(self : Buffer, data : Blob, sz : Nat, start : Nat) : (end : Nat) {
+    if (start >= sz) return start;
+    var i = start;
+    let msg = self.msg;
+    var i_msg = self.i_msg;
+    if (not self.high) {
+      msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(data[i]);
+      i_msg +%= 1;
+      self.high := true;
+      i += 1;
+      if (i_msg == 32) {
+        self.i_msg := i_msg;
+        return i;
+      };
+    };
+    let i_max : Nat = i + ((sz - i) / 2) * 2;
+    while (i < i_max) {
+      msg[nat8ToNat(i_msg)] := nat8To16(data[i]) << 8 ^ nat8To16(data[i + 1]);
+      i_msg +%= 1;
+      i += 2;
+      if (i_msg == 32) {
+        self.i_msg := i_msg;
+        return i;
+      };
+    };
+    while (i < sz) {
+      if (self.high) {
+        self.word := nat8To16(data[i]) << 8;
+        self.high := false;
+      } else {
+        msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(data[i]);
+        i_msg +%= 1;
+        self.high := true;
+      };
+      i += 1;
+    };
+    self.i_msg := i_msg;
+    return i;
+  };
+
   /// Load bytes pulled from the iterator `next` into the SHA256 message buffer, stopping when the buffer fills (32 words) or when `next` returns `null`.
   public func load_iter(self : Buffer, next : () -> ?Nat8) {
     let msg = self.msg;

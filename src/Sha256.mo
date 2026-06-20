@@ -152,23 +152,6 @@ module {
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
-  /// Closure-free fast path for `writeBlob`. Copies the blob's bytes directly
-  /// into the message buffer as 16-bit words, allocating nothing (the generic
-  /// `writeBlob` allocates accessor closures per call). The digest must be at a
-  /// 2-byte word boundary — true for a fresh digest, or after writing any even
-  /// number of bytes. Any length is accepted; a final odd byte is handled but
-  /// leaves the digest off a word boundary (so a following `writeWordBlob`
-  /// would trap).
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha256.new();
-  /// digest.writeWordBlob("Hello!");
-  /// let hash = digest.sum();
-  /// ```
-  ///
-  /// Traps if `self` is closed or not at a word boundary.
-  public func writeWordBlob(self : Digest, data : Blob) : () = _Digest.writeWordBlob(self, data);
-
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko include=import
@@ -404,21 +387,6 @@ module {
   public func fromBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
     let digest = new(algo);
     digest.writeBlob(data);
-    return sum(digest);
-  };
-
-  /// Like `fromBlob`, but uses the closure-free `writeWordBlob` fast path.
-  /// Produces the same hash as `fromBlob`; faster and allocation-free since the
-  /// fresh digest starts at a word boundary.
-  ///
-  /// ```motoko include=import
-  /// let hash = Sha256.fromWordBlob("Hello world");
-  /// ```
-  ///
-  /// Never traps.
-  public func fromWordBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
-    let digest = new(algo);
-    writeWordBlob(digest, data);
     return sum(digest);
   };
 

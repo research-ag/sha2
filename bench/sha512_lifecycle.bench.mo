@@ -107,10 +107,10 @@ module {
       var root : Blob = ""; // overwritten by the final combine
       var i = 0;
       while (i < leaves.size()) {
-        // writeWordBlob is the closure-free leaf write (leaves are 64 bytes,
-        // word-aligned).
-        Sha512.writeWordBlob(merkleHashersLocal[0], leaves[i]);
-        Sha512.writeWordBlob(merkleHashersLocal[0], leaves[i + 1]);
+        // leaves are 64 bytes (< one 128-byte block) so writeBlob skips
+        // process_blocks and just packs them — no wasted state write-back.
+        Sha512.writeBlob(merkleHashersLocal[0], leaves[i]);
+        Sha512.writeBlob(merkleHashersLocal[0], leaves[i + 1]);
         var lvl = 0;
         var carrying = true;
         while (carrying) {

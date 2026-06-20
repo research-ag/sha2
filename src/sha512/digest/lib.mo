@@ -1,6 +1,5 @@
 /// SHA512 digest implementation.
 
-import Prim "mo:prim";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
 
@@ -39,46 +38,6 @@ module {
     Write.blob(self, data);
   };
 
-  /// Closure-free fast path for `writeBlob`: copies the blob's bytes straight
-  /// into the message buffer as 64-bit words, processing full blocks as they
-  /// fill. The caller must be at a word boundary (`i_byte == 8`); any length is
-  /// accepted, but a trailing run of < 8 bytes goes through the byte path,
-  /// leaving the buffer off a word boundary. Traps if `self` is closed or not
-  /// at a word boundary.
-  public func writeWordBlob(x : Digest, data : Blob) {
-    assert not x.closed;
-    assert (x.i_byte == 8);
-    let sz = data.size();
-    let msg = x.msg;
-    var i_msg = x.i_msg;
-    var i = 0;
-    let i_max : Nat = (sz / 8) * 8;
-    while (i < i_max) {
-      // prettier-ignore
-      msg[Nat8.toNat(i_msg)] :=
-        Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i]))) << 56
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+1]))) << 48
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+2]))) << 40
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+3]))) << 32
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+4]))) << 24
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+5]))) << 16
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+6]))) << 8
-        ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+7])));
-      i_msg +%= 1;
-      i += 8;
-      if (i_msg == 16) {
-        ProcessBlock.process_block_from_buffer(x.s, msg);
-        i_msg := 0;
-        x.i_block +%= 1;
-      };
-    };
-    x.i_msg := i_msg;
-    // trailing bytes (< 8) through the normal byte path
-    while (i < sz) {
-      Byte.writeByte(x, data[i]);
-      i += 1;
-    };
-  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {

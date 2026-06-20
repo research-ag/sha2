@@ -114,10 +114,10 @@ module {
       var root : Blob = msg32; // overwritten by the final combine
       var i = 0;
       while (i < leaves.size()) {
-        // writeWordBlob is the closure-free leaf write (leaves are 32 bytes,
+        // writeBlob takes the closure-free word path here (leaves are 32 bytes,
         // word-aligned) — keeps the whole Merkle allocation-free bar the root.
-        Sha256.writeWordBlob(merkleHashersLocal[0], leaves[i]);
-        Sha256.writeWordBlob(merkleHashersLocal[0], leaves[i + 1]);
+        Sha256.writeBlob(merkleHashersLocal[0], leaves[i]);
+        Sha256.writeBlob(merkleHashersLocal[0], leaves[i + 1]);
         var lvl = 0;
         var carrying = true;
         while (carrying) {

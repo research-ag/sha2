@@ -199,21 +199,6 @@ module {
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
-  /// Closure-free fast path for `writeBlob`. Copies the blob's bytes directly
-  /// into the message buffer as 64-bit words. The digest must be at an 8-byte
-  /// word boundary — true for a fresh digest, or after writing any multiple of
-  /// 8 bytes. Any length is accepted; a trailing run of < 8 bytes is handled
-  /// but leaves the digest off a word boundary.
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha512.new();
-  /// digest.writeWordBlob("Hello world");
-  /// let hash = digest.sum();
-  /// ```
-  ///
-  /// Traps if `self` is closed or not at a word boundary.
-  public func writeWordBlob(self : Digest, data : Blob) : () = _Digest.writeWordBlob(self, data);
-
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko include=import
@@ -502,16 +487,6 @@ module {
   public func fromBlob(algo : (implicit : Algorithm), b : Blob) : Blob {
     let d = new(algo);
     d.writeBlob(b);
-    return sum(d);
-  };
-
-  /// Like `fromBlob`, but uses the closure-free `writeWordBlob` fast path.
-  /// Produces the same hash as `fromBlob`.
-  ///
-  /// Never traps.
-  public func fromWordBlob(algo : (implicit : Algorithm), b : Blob) : Blob {
-    let d = new(algo);
-    writeWordBlob(d, b);
     return sum(d);
   };
 

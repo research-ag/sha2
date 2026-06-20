@@ -65,43 +65,35 @@ module {
 
   /// Write a `Blob` to the digest.
   /// Traps if `self` is closed.
+  ///
+  /// Specialized for `Blob` and inlined — it reads the blob directly via
+  /// `load_chunk_blob` / `process_blocks_from_blob` rather than through the
+  /// generic `writeData`'s accessor/processor closures, so it allocates
+  /// nothing. Handles any alignment and length: fills the partial block, runs
+  /// whole blocks directly from the blob, then packs the tail (fast for short
+  /// and long inputs alike).
   public func writeBlob(self : Digest, data : Blob) {
-    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_blob(data, pos);
-    writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
-  };
-
-  /// Closure-free fast path for `writeBlob`: copies the blob's bytes straight
-  /// into the message buffer as 16-bit words, processing full blocks as they
-  /// fill. Unlike `writeBlob` it goes through no generic accessor closures, so
-  /// it allocates nothing. The caller must be at a word boundary
-  /// (`buf.high == true`); any length is accepted, but a final odd byte is
-  /// written through the byte path, leaving the buffer off a word boundary.
-  /// Traps if `self` is closed or not at a word boundary.
-  public func writeWordBlob(x : Digest, data : Blob) {
-    assert not x.closed;
-    let (buf, state) = (x.buffer, x.state);
-    assert buf.high;
+    assert not self.closed;
     let sz = data.size();
-    let msg = buf.msg;
-    var i_msg = buf.i_msg;
-    var i = 0;
-    let i_max : Nat = (sz / 2) * 2;
-    while (i < i_max) {
-      msg[nat8ToNat(i_msg)] := nat8To16(data[i]) << 8 ^ nat8To16(data[i + 1]);
-      i_msg +%= 1;
-      i += 2;
-      if (i_msg == 32) {
-        state.process_block_from_msg(msg);
-        i_msg := 0;
+    if (sz == 0) return;
+    let (buf, state) = (self.buffer, self.state);
+    var pos = 0;
+    if (buf.i_msg > 0 or not buf.high) {
+      pos := buf.load_chunk_blob(data, sz, 0);
+      if (buf.i_msg == 32) {
+        state.process_block_from_msg(buf.msg);
+        buf.i_msg := 0;
         buf.i_block +%= 1;
       };
     };
-    buf.i_msg := i_msg;
-    if (i < sz) {
-      // odd trailing byte: open a new partial (high) word
-      buf.word := nat8To16(data[i]) << 8;
-      buf.high := false;
+    // Run whole blocks directly from the blob — but only when block-aligned and
+    // at least one full block remains, so sub-block inputs skip the call.
+    if (buf.i_msg == 0 and pos + 64 <= sz) {
+      let end = state.process_blocks_from_blob(data, pos);
+      buf.i_block +%= natToNat32(end - pos) / 64;
+      pos := end;
     };
+    ignore buf.load_chunk_blob(data, sz, pos);
   };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.

@@ -26,9 +26,15 @@ module {
     if (x.i_msg > 0 or x.i_byte < 8) {
       pos := write_data_to_buffer(x, data, pos);
     };
-    let end = Process.process_blocks(x.s, data, pos);
-    x.i_block +%= Nat64.fromIntWrap(end - pos) / 128;
-    ignore write_data_to_buffer(x, data, end);
+    // Run whole blocks directly only when at least one full block remains, so a
+    // sub-block input skips process_blocks — which would otherwise write the
+    // 8-word state back (8 Nat64 boxes) for zero blocks.
+    if (pos + 128 <= sz) {
+      let end = Process.process_blocks(x.s, data, pos);
+      x.i_block +%= Nat64.fromIntWrap(end - pos) / 128;
+      pos := end;
+    };
+    ignore write_data_to_buffer(x, data, pos);
   };
 
   // Write blob to buffer until either the block is full or the end of the blob is reached
