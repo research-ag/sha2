@@ -152,6 +152,27 @@ module {
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
+  /// Write two 32-byte blobs as a single 64-byte block, read directly from the
+  /// blobs into the compression (no message buffer). Equivalent to
+  /// `writeBlob(b1); writeBlob(b2)` when the digest is at a block boundary, but
+  /// allocation-free and faster — useful for feeding fixed 32-byte pairs (e.g.
+  /// Merkle leaves). `b1` fills message words 0..7, `b2` words 8..15.
+  ///
+  /// Traps if `self` is closed, if the message buffer is not empty (the digest
+  /// is not at a block boundary), or if either blob is not 32 bytes.
+  public func writeBlobPair32(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.writeBlobPair32(self, b1, b2);
+
+  /// Write the hashes of two closed digests `a` and `b` as a single 64-byte
+  /// block, read directly from their state arrays (no message buffer). Like
+  /// `writeBlobPair32`, but the two 32-byte pieces are the digests sitting in
+  /// `a` and `b` rather than blobs — so it streams two finalized hashes into
+  /// `self` without materializing either as a `Blob`. `a` fills message words
+  /// 0..7, `b` words 8..15.
+  ///
+  /// Traps if `self` is closed, if `a` or `b` is not closed, or if `self`'s
+  /// message buffer is not empty (the digest is not at a block boundary).
+  public func writeSumPair(self : Digest, a : Digest, b : Digest) : () = _Digest.writeSumPair(self, a, b);
+
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko include=import

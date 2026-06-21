@@ -3,6 +3,8 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 import fromBlob "process/blocks/blob";
+import fromBlobPair "process/blocks/blob_pair";
+import fromStatePair "process/blocks/state_pair";
 import fromArray "process/blocks/array";
 import fromVarArray "process/blocks/varArray";
 import fromAccessor "process/blocks/accessor";
@@ -24,6 +26,10 @@ module {
   public let clone = VarArray.clone;
   /// Run the SHA256 compression on every full 64-byte block in the input `Blob` (see `process/blocks/blob`).
   public let process_blocks_from_blob = fromBlob.process;
+  /// Run the SHA256 compression on exactly one 64-byte block read from two 32-byte blobs (see `process/blocks/blob_pair`).
+  public let process_block_from_blob_pair = fromBlobPair.process;
+  /// Run the SHA256 compression on exactly one 64-byte block read from two 32-byte digest states (see `process/blocks/state_pair`).
+  public let process_block_from_state_pair = fromStatePair.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[Nat8]` (see `process/blocks/array`).
   public let process_blocks_from_array = fromArray.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[var Nat8]` (see `process/blocks/varArray`).

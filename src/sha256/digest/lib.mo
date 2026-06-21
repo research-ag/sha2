@@ -95,6 +95,33 @@ module {
     };
     ignore buf.load_chunk_blob(data, sz, pos);
   };
+  /// Write exactly two 32-byte blobs as one 64-byte block, read straight from
+  /// the blobs into the compression with no message buffer. Requires the digest
+  /// to be at a block boundary (empty buffer) and each blob to be 32 bytes.
+  /// Traps if `self` is closed, if the buffer is not empty, or if either blob
+  /// is not 32 bytes.
+  public func writeBlobPair32(self : Digest, b1 : Blob, b2 : Blob) {
+    assert not self.closed;
+    assert (b1.size() == 32 and b2.size() == 32);
+    let buf = self.buffer;
+    assert (buf.i_msg == 0 and buf.high); // must be at a block boundary
+    self.state.process_block_from_blob_pair(b1, b2);
+    buf.i_block +%= 1;
+  };
+  /// Write the 32-byte digests of two closed digests `a` and `b` as one 64-byte
+  /// block, read straight from their state arrays (no message buffer). Requires
+  /// `self` to be at a block boundary (empty buffer) and `a`/`b` to be closed.
+  /// Traps if `self` is closed, if `a` or `b` is not closed, or if `self`'s
+  /// buffer is not empty.
+  public func writeSumPair(self : Digest, a : Digest, b : Digest) {
+    assert not self.closed;
+    assert a.closed;
+    assert b.closed;
+    let buf = self.buffer;
+    assert (buf.i_msg == 0 and buf.high); // must be at a block boundary
+    self.state.process_block_from_state_pair(a.state, b.state);
+    buf.i_block +%= 1;
+  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {
