@@ -147,6 +147,16 @@ module {
   /// Write SHA256 padding to the digest.
   public func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
+    // Fast path: at a block boundary (empty buffer) the entire padding is a
+    // single block whose 16 message words are constant except the length, so
+    // skip the 32-half-word buffer fill and compress the padding block directly.
+    // Limited to messages whose bit length fits in Nat32 (< 512 MiB, i.e.
+    // i_block < 2^23); larger messages fall through to the buffer path.
+    if (buf.i_msg == 0 and buf.high and buf.i_block < 0x80_0000) {
+      let n_bits : Nat32 = buf.i_block << 9; // i_block * 64 bytes * 8
+      state.process_padding_block(n_bits);
+      return;
+    };
     let msg = buf.msg;
     var i_msg = buf.i_msg;
     // n_bits = length of message in bits
