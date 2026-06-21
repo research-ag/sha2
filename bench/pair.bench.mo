@@ -6,24 +6,24 @@ import Sha256 "../src/Sha256";
 
 module {
   public func init() : Bench.V1 {
-    // Feed one 64-byte block built from two 32-byte pieces, two ways:
-    //  - writeBlobPair32: the pieces are blobs (each 32-bit word assembled from
-    //    4 bytes).
-    //  - writeSumPair: the pieces are the digests of two closed hashers, read
-    //    straight from their state arrays (each word = two 16-bit half-words,
-    //    no byte assembly).
+    // Three ways to put one 64-byte block (two 32-byte pieces) into a hasher:
+    //  - writeBlobPair32: two 32-byte blobs, one specialized block, no buffer.
+    //  - writeSumPair:    two closed digests' states, one specialized block.
+    //  - writeBlob x2:    the general path — two writeBlob calls through the
+    //                     message buffer, which complete one block.
     let rows = [
-      "write block", // just the one-block write
-      "combine (write+close+fold)", // a full double-SHA node combine
-    ];
-    let cols = [
       "writeBlobPair32",
       "writeSumPair",
+      "writeBlob x2",
+    ];
+    let cols = [
+      "write block", // just put the block in (no finalize)
+      "write + close", // then finalize (no fold)
     ];
 
     let schema : Bench.Schema = {
       name = "Sha256 pair-block write";
-      description = "Cost of feeding one 64-byte block built from two 32-byte pieces into a hasher, comparing writeBlobPair32 (pieces read from two blobs, assembling each word from 4 bytes) against writeSumPair (pieces read from the state arrays of two closed digests, each word from two half-words — no byte assembly). Both require the target at a block boundary and run the same single-block compression directly with no message buffer. Row 'write block' is the bare write; row 'combine' is a full double-SHA node combine (write + close + fold), resetting the hasher each call. Targets are reused and stay at a block boundary, so repeated measurements are stable.";
+      description = "Three ways to feed one 64-byte block (two 32-byte pieces) into a hasher. 'writeBlobPair32' reads the two pieces from blobs and runs one specialized block directly (no message buffer). 'writeSumPair' reads them from the state arrays of two closed digests (no byte assembly, no Blob). 'writeBlob x2' is the general path: two writeBlob calls that go through the message buffer and complete exactly one block. The 'write block' column is the bare write; 'write + close' also finalizes the block (no fold). Targets are reused (reset for the close column), staying at a block boundary, so repeated measurements are stable.";
       rows = rows;
       cols = cols;
     };
@@ -31,7 +31,7 @@ module {
     let rng : Random.Random = Random.seed(0x7707_7707_7707_7707);
     func b32() : Blob = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8()));
 
-    // Two 32-byte leaf blobs for writeBlobPair32.
+    // Two 32-byte leaf blobs for writeBlobPair32 / writeBlob x2.
     let leaf1 = b32();
     let leaf2 = b32();
 
@@ -43,31 +43,45 @@ module {
     Sha256.writeBlob(dB, b32());
     Sha256.close(dB);
 
-    // One reused target hasher per cell.
-    let tBlob = Sha256.new();
-    let tSum = Sha256.new();
-    let cBlob = Sha256.new();
-    let cSum = Sha256.new();
+    // One reused target hasher per cell (write-only cells stay at a boundary;
+    // close cells reset each call).
+    let wB = Sha256.new();
+    let cB = Sha256.new();
+    let wS = Sha256.new();
+    let cS = Sha256.new();
+    let wW = Sha256.new();
+    let cW = Sha256.new();
 
     let routines : [[() -> ()]] = [
-      // write block
+      // writeBlobPair32
       [
-        func() = Sha256.writeBlobPair32(tBlob, leaf1, leaf2),
-        func() = Sha256.writeSumPair(tSum, dA, dB),
+        func() = Sha256.writeBlobPair32(wB, leaf1, leaf2),
+        func() {
+          Sha256.writeBlobPair32(cB, leaf1, leaf2);
+          Sha256.close(cB);
+          Sha256.reset(cB);
+        },
       ],
-      // combine (write + close + fold), reset for the next call
+      // writeSumPair
+      [
+        func() = Sha256.writeSumPair(wS, dA, dB),
+        func() {
+          Sha256.writeSumPair(cS, dA, dB);
+          Sha256.close(cS);
+          Sha256.reset(cS);
+        },
+      ],
+      // writeBlob x2
       [
         func() {
-          Sha256.writeBlobPair32(cBlob, leaf1, leaf2);
-          Sha256.close(cBlob);
-          Sha256.fold(cBlob);
-          Sha256.reset(cBlob);
+          Sha256.writeBlob(wW, leaf1);
+          Sha256.writeBlob(wW, leaf2);
         },
         func() {
-          Sha256.writeSumPair(cSum, dA, dB);
-          Sha256.close(cSum);
-          Sha256.fold(cSum);
-          Sha256.reset(cSum);
+          Sha256.writeBlob(cW, leaf1);
+          Sha256.writeBlob(cW, leaf2);
+          Sha256.close(cW);
+          Sha256.reset(cW);
         },
       ],
     ];
