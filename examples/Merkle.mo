@@ -5,15 +5,17 @@
 /// over N leaves allocates ~N `Blob`s. On the IC that garbage adds up fast.
 ///
 /// This example builds the same tree with ZERO per-node allocation — the only
-/// `Blob` allocated is the root you get back. It uses three tools from sha2:
+/// `Blob` allocated is the root you get back. It uses these tools from sha2:
 ///
-///   * `pushSum(target)` — finalize a hasher and write its digest straight into
-///     another hasher's message buffer, with no intermediate `Blob`.
-///   * `foldSum()`        — finalize a hasher and fold its digest back in as the
-///     next message. Doing this before the final hash turns a single SHA256
-///     into a double SHA256 — the hash Bitcoin uses. (Omit it for a single-SHA
-///     tree; see `singleShaCombine` note below.)
-///   * `reset()`          — rewind a hasher so it can be reused for the next pair.
+///   * `close()`         — finalize a hasher, leaving SHA256 of its input in the
+///     state (no `Blob`).
+///   * `fold()`          — hash the closed digest again in place (state ->
+///     SHA256(state)). `close()` + `fold()` turns a single SHA256 into the
+///     double SHA256 Bitcoin uses. (Omit the `fold()` for a single-SHA tree;
+///     see the note below.)
+///   * `pushSum(target)` — write a closed hasher's digest straight into another
+///     hasher's message buffer, with no intermediate `Blob`.
+///   * `reset()`         — rewind a hasher so it can be reused for the next pair.
 ///
 /// === What YOU must do to stay allocation-free in bulk ===
 ///
@@ -24,8 +26,9 @@
 ///      written an even number of bytes so far. Merkle leaves are typically
 ///      32-byte hashes (even), so this is automatic. An odd-length leaf still
 ///      hashes correctly but costs one tiny allocation for its trailing byte.
-///   3. Move digests between hashers with `pushSum` / `foldSum`, never `sum()`.
-///      `sum()` allocates the output `Blob`; call it exactly once, for the root.
+///   3. Combine with `close()` + `fold()` and move digests with `pushSum`, never
+///      `sum()`. Read the output with `readSum()` exactly once, for the root —
+///      that is the only allocation.
 ///
 /// === Memory: O(log N), not O(N) ===
 ///
@@ -78,14 +81,15 @@ module {
       var carrying = true;
       while (carrying) {
         let h = hashers[lvl];
-        h.foldSum(); // inner SHA256 (this is what makes the combine a double-SHA)
+        h.close(); // inner SHA256 of left ++ right
+        h.fold(); // outer SHA256 -> double-SHA node (omit for a single-SHA tree)
         if (lvl + 1 == levels) {
           // We are at the top: read the root out. THE one allocation.
-          root := h.sum(); // outer SHA256 -> root Blob
+          root := h.readSum(); // the double-SHA root Blob
           h.reset();
           carrying := false;
         } else {
-          h.pushSum(hashers[lvl + 1]); // outer SHA256, straight into the parent
+          h.pushSum(hashers[lvl + 1]); // push the closed node straight into the parent
           h.reset(); // reuse this level's hasher for its next pair
           if (pending[lvl + 1]) {
             pending[lvl + 1] := false;
@@ -104,8 +108,8 @@ module {
   // --- Variations you can make in your own tree ---
   //
   // * Single-SHA tree (e.g. RFC 6962 uses a domain-separated single SHA256):
-  //   drop the `h.foldSum()` line, and use `h.sum()` (not double) for the root.
-  //   The combine then becomes one SHA256 of `left ++ right`.
+  //   drop the `h.fold()` line. The combine is then one SHA256 of `left ++
+  //   right`, and `close()` + `readSum()` (or `pushSum`) yields the node.
   //
   // * Odd number of children at a level (Bitcoin duplicates the last node):
   //   when a level ends with an unpaired left child still `pending`, feed that

@@ -24,7 +24,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 lifecycle";
-      description = "Per-operation cost of the hasher lifecycle plus two composite hashes, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). double-sha is sha256(sha256(msg)) on a 32-byte message; the current column uses the dedicated sumDouble() (copies state into the buffer, no intermediate Blob), while 0.1.14 reuses a single hasher (sum, reset, re-write, sum). merkle 2^12 is a Bitcoin-style double-sha Merkle root over 4096 32-byte leaves (4095 double-sha steps), one reused hasher per level (12 levels). The current column is allocation-free (foldSum + pushSum stream digests directly between hashers; only the final root Blob is allocated); 0.1.14 must allocate a Blob per node.";
+      description = "Per-operation cost of the hasher lifecycle plus two composite hashes, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a partial block written to it. 0.1.14 has no public finalize-without-allocation, so its close() cell is a no-op (N/A). double-sha is sha256(sha256(msg)) on a 32-byte message; the current column uses the dedicated sumDouble() (copies state into the buffer, no intermediate Blob), while 0.1.14 reuses a single hasher (sum, reset, re-write, sum). merkle 2^12 is a Bitcoin-style double-sha Merkle root over 4096 32-byte leaves (4095 double-sha steps), one reused hasher per level (12 levels). The current column is allocation-free (close + fold combine each pair and pushSum streams the closed node directly into the parent; only the final root Blob is allocated); 0.1.14 must allocate a Blob per node.";
       rows = rows;
       cols = cols;
     };
@@ -106,10 +106,10 @@ module {
     let pendingLocal = VarArray.repeat<Bool>(false, levels);
 
     // Current code: allocation-free Bitcoin-style Merkle root. Each pair is
-    // combined with foldSum (inner sha, folded back in place) then pushSum
-    // (outer sha streamed straight into the parent hasher). No Blob is
-    // allocated anywhere except the final root. The binary carry is iterative
-    // (no recursion/closure), so nothing is allocated per node.
+    // combined with close (inner sha) + fold (outer sha, in place), then the
+    // closed node is streamed straight into the parent hasher with pushSum. No
+    // Blob is allocated anywhere except the final root. The binary carry is
+    // iterative (no recursion/closure), so nothing is allocated per node.
     func merkleLocal() : Blob {
       var root : Blob = msg32; // overwritten by the final combine
       var i = 0;
@@ -122,13 +122,14 @@ module {
         var carrying = true;
         while (carrying) {
           let h = merkleHashersLocal[lvl];
-          Sha256.foldSum(h); // inner sha
+          Sha256.close(h); // inner sha
+          Sha256.fold(h); // outer sha (double) in place
           if (lvl + 1 == levels) {
-            root := Sha256.sum(h); // outer sha = root (the one allocation)
+            root := Sha256.readSum(h); // double-sha root (the one allocation)
             Sha256.reset(h);
             carrying := false;
           } else {
-            h.pushSum(merkleHashersLocal[lvl + 1]); // outer sha into the parent
+            h.pushSum(merkleHashersLocal[lvl + 1]); // push the closed node to the parent
             Sha256.reset(h);
             if (pendingLocal[lvl + 1]) {
               pendingLocal[lvl + 1] := false;
@@ -143,7 +144,7 @@ module {
       };
       root;
     };
-    // 0.1.14 has no foldSum/pushSum: stream Blobs, hashing each pair then
+    // 0.1.14 has no fold/pushSum: stream Blobs, hashing each pair then
     // re-hashing the digest in place (allocates a Blob per node).
     func merkleOld() : Blob = merkleStream<Sha256_old.Digest>(
       merkleHashersOld,

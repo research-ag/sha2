@@ -9,6 +9,7 @@ import fromAccessor "process/blocks/accessor";
 import fromReader "process/blocks/reader";
 import fromMsg "process/msg_buffer";
 import fromPadding "process/padding";
+import fromFold "process/fold";
 
 module {
   /// SHA256 internal state — 8 state words split into 16 `Nat16` half-words (even indices hold the high byte, odd indices the low byte).
@@ -35,6 +36,8 @@ module {
   public let process_block_from_msg = fromMsg.process;
   /// Run the SHA256 compression on the all-constant final padding block for a block-aligned message, encoding only the bit length (see `process/padding`).
   public let process_padding_block = fromPadding.process;
+  /// Hash the 32-byte digest held in the state as a fresh message in one specialized block, overwriting the state with `SHA256(state)` (see `process/fold`).
+  public let process_fold_block = fromFold.process;
 
   /// Serialize `self` as a `[Nat8]` of the requested truncation length: `28` for SHA-224 or `32` for SHA-256.
   public func toNat8Array(self : State, len : Nat) : [Nat8] {

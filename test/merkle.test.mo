@@ -5,7 +5,7 @@ import Random "mo:core/Random";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
-// Validate that the allocation-free Merkle carry (foldSum/pushSum streaming
+// Validate that the allocation-free Merkle carry (close/fold/pushSum streaming
 // digests between per-level hashers) produces the same root as a naive
 // reference that materializes every intermediate digest as a Blob.
 
@@ -40,9 +40,14 @@ func carryRoot256(leaves : [Blob], levels : Nat) : Blob {
     var carrying = true;
     while (carrying) {
       let h = hashers[lvl];
-      h.foldSum();
-      if (lvl + 1 == levels) { root := h.sum(); h.reset(); carrying := false } else {
-        h.pushSum(hashers[lvl + 1]);
+      h.close(); // inner SHA256 of the pair
+      h.fold(); // outer SHA256 -> double-SHA node
+      if (lvl + 1 == levels) {
+        root := h.readSum();
+        h.reset();
+        carrying := false;
+      } else {
+        h.pushSum(hashers[lvl + 1]); // push the already-closed node into the parent
         h.reset();
         if (pending[lvl + 1]) { pending[lvl + 1] := false; lvl += 1 } else {
           pending[lvl + 1] := true;

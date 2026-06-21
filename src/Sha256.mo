@@ -248,49 +248,58 @@ module {
     return stateBlob(self);
   };
 
-  /// Finalize the digest and fold the resulting hash back in as the new
-  /// message, leaving the digest open to keep hashing. The state is reset to
-  /// the initial value and the just-computed digest becomes the buffered
-  /// message, so a following `sum()` computes `sum(sum(message))`. Allocation
-  /// free — the state words are copied straight into the message buffer, no
-  /// intermediate `Blob`.
-  ///
-  /// Repeating `foldSum()` (N-1) times before a final `sum()` yields the
-  /// N-fold SHA256. A single `foldSum()` + `sum()` is the double SHA256 used by
-  /// Bitcoin (see `sumDouble`).
+  /// Finalize the digest by writing padding, without returning the hash. After
+  /// `close()` the digest is closed; read the hash with `readSum()` (any number
+  /// of times) or hash it again with `fold()`.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
   /// digest.writeBlob("Hello world");
-  /// digest.foldSum();
-  /// let doubleHash : Blob = digest.sum();
+  /// digest.close();
+  /// let hash : Blob = digest.readSum();
   /// ```
   ///
   /// Traps if `self` is already closed.
-  public func foldSum(self : Digest) {
-    // First finalize: `self.state` now holds SHA256(message) as 16 half-words.
-    _Digest.close(self);
-    // Reload the digest as the message for the next hash. State and message
-    // words share the same big-endian half-word packing, so copying
-    // state[i] -> msg[i] places the digest bytes in order. The message length
-    // is the digest length: 32 bytes (16 words) for sha256, 28 bytes (14 words)
-    // for sha224 — for sha224 the copied words 14..15 are simply overwritten by
-    // the padding, so the unconditional 16-word copy stays correct.
-    let buf = self.buffer;
-    buf.reset();
-    let s = self.state;
-    let m = buf.msg;
-    // prettier-ignore
-    do {
-      m[0] := s[0]; m[1] := s[1]; m[2] := s[2]; m[3] := s[3];
-      m[4] := s[4]; m[5] := s[5]; m[6] := s[6]; m[7] := s[7];
-      m[8] := s[8]; m[9] := s[9]; m[10] := s[10]; m[11] := s[11];
-      m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
-    };
-    buf.i_msg := switch (self.algo) { case (#sha224) 14; case (_) 16 };
-    // Reset the state to the IV and reopen for the next hash.
-    loadIV(s, self.algo);
-    self.closed := false;
+  public func close(self : Digest) : () = _Digest.close(self);
+
+  /// Read the hash of a closed digest. Idempotent: unlike `sum()` it does not
+  /// finalize, so it can be called repeatedly after `close()`, `sum()`, or
+  /// `fold()`.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// let once : Blob = digest.sum();
+  /// let again : Blob = digest.readSum(); // == once
+  /// ```
+  ///
+  /// Traps if `self` is not closed.
+  public func readSum(self : Digest) : Blob {
+    assert self.closed;
+    stateBlob(self);
+  };
+
+  /// Hash a closed digest's own hash, in place: replace the state with
+  /// `SHA256(state)`, leaving the digest closed. This is the building block for
+  /// N-fold and double SHA256: after `close()`, calling `fold()` (N-1) times
+  /// yields the N-fold hash, and a single `fold()` gives the double SHA256 used
+  /// by Bitcoin (see `sumDouble`). Allocation-free — the digest is hashed
+  /// straight from the state in one specialized block, no intermediate `Blob`.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// digest.close();
+  /// digest.fold();
+  /// let doubleHash : Blob = digest.readSum();
+  /// ```
+  ///
+  /// Traps if `self` is not closed, or if `self` is a sha224 digest (sha224
+  /// folding is not yet supported).
+  public func fold(self : Digest) {
+    assert self.closed;
+    assert (switch (self.algo) { case (#sha256) true; case (#sha224) false });
+    State.process_fold_block(self.state);
   };
 
   /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
@@ -302,20 +311,23 @@ module {
   /// let hash : Blob = digest.sumDouble();
   /// ```
   ///
-  /// Like `sum()`, this closes the digest. Traps if `self` is already closed.
+  /// Closes the digest. Traps if `self` is already closed, or if `self` is a
+  /// sha224 digest (folding is sha256-only for now).
   public func sumDouble(self : Digest) : Blob {
-    foldSum(self);
-    sum(self);
+    _Digest.close(self);
+    fold(self);
+    readSum(self);
   };
 
-  /// Finalize `self` and write the resulting hash directly into `target`'s
-  /// message buffer, as if those digest bytes had been written to `target`.
-  /// No intermediate `Blob` is allocated — the state words are copied straight
-  /// across. `self` is left closed; `target` keeps accumulating.
+  /// Finalize `self` if it is not already closed, then write its hash directly
+  /// into `target`'s message buffer, as if those digest bytes had been written
+  /// to `target`. No intermediate `Blob` is allocated — the state words are
+  /// copied straight across. `self` is left closed; `target` keeps accumulating.
   ///
   /// This is the building block for allocation-free Merkle trees: each parent
-  /// hasher receives its two children via `pushSum` (combine with `foldSum`
-  /// first for a double-SHA / Bitcoin-style tree).
+  /// hasher receives its two children via `pushSum`. For a double-SHA /
+  /// Bitcoin-style tree, `close()` then `fold()` the child first, then
+  /// `pushSum` the already-closed digest.
   ///
   /// `target` must be at a word boundary, i.e. a whole number of bytes that is
   /// a multiple of 2 must have been written to it so far (this implementation
@@ -336,10 +348,9 @@ module {
   /// let parentHash = parent.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, if `target` is closed, or if `target` is not
-  /// at a word boundary.
+  /// Traps if `target` is closed, or if `target` is not at a word boundary.
   public func pushSum(self : Digest, target : Digest) {
-    _Digest.close(self);
+    if (not self.closed) _Digest.close(self);
     assert not target.closed; // target must still be accepting input
     assert target.buffer.high; // target must be at a 16-bit word boundary
     let s = self.state;

@@ -4,16 +4,21 @@
 /// on, N times:  H^N(msg) = H(H(...H(msg))).  N = 2 is the double SHA used by
 /// Bitcoin (also available directly as `sumDouble`).
 ///
-/// The key tool is `foldSum()`: it finalizes the current message and folds the
-/// resulting digest back in as the NEXT message — without ever producing a
-/// `Blob`. So a clean N-fold is:
+/// The tools are `close()` and `fold()`:
+///   * `close()` finalizes the message, leaving the digest H1 in the state.
+///   * `fold()` hashes the digest currently in the state (state -> SHA256(state))
+///     in one specialized block, without ever producing a `Blob`.
+///   * `readSum()` reads the finalized state out as a `Blob` (idempotent).
+///
+/// So a clean N-fold is:
 ///
 ///     digest.writeBlob(msg);
-///     digest.foldSum();   // repeat (N - 1) times
-///     digest.sum();       // the Nth (final) hash -> the result Blob
+///     digest.close();     // H1 = SHA256(msg)
+///     digest.fold();      // repeat (N - 1) times: H2, H3, ... HN
+///     digest.readSum();   // read HN -> the result Blob
 ///
-/// Only that final `sum()` allocates (the digest you return). Every fold in
-/// between is allocation-free.
+/// Only `readSum()` allocates (the digest you return). `close()` and every
+/// `fold()` are allocation-free.
 ///
 /// === Allocation-free for BULK hashing ===
 ///
@@ -24,11 +29,14 @@
 ///   2. `reset()` it before each message — this rewinds it for reuse instead of
 ///      allocating a new one.
 ///   3. Feed input with `writeBlob` (allocation-free for word-aligned data).
-///   4. Use `foldSum()` for the intermediate rounds and `sum()` only for the
-///      final digest of each message.
+///   4. `close()` once, then `fold()` for the remaining rounds, and `readSum()`
+///      to read each message's final digest.
 ///
 /// The only unavoidable allocations are the output digests themselves (one
 /// `Blob` per message — the result you asked for). See `nfoldBatch` below.
+///
+/// Note: `fold()` is sha256-only (its fast block is size-specific), so these
+/// examples use the default `#sha256` algorithm.
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";
@@ -42,12 +50,13 @@ module {
     assert n >= 1;
     let h = Sha256.new();
     h.writeBlob(message);
+    h.close(); // H1 = SHA256(message)
     var k = 1;
     while (k < n) {
-      h.foldSum(); // an inner round; runs (n - 1) times
+      h.fold(); // an inner round; runs (n - 1) times
       k += 1;
     };
-    h.sum(); // the final round -> the result Blob
+    h.readSum(); // read the final hash -> the result Blob
   };
 
   /// N-fold-hash a whole batch of messages while reusing a single hasher, so
@@ -62,12 +71,13 @@ module {
       func(j) {
         h.reset(); // rewind for the next message — no `Sha256.new()` per item
         h.writeBlob(messages[j]);
+        h.close();
         var k = 1;
         while (k < n) {
-          h.foldSum();
+          h.fold();
           k += 1;
         };
-        h.sum();
+        h.readSum();
       },
     );
   };

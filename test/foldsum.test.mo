@@ -7,30 +7,54 @@ import Sha512 "../src/Sha512";
 let rng = Random.seed(0xf0d5);
 func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = rng.nat8()));
 
+// --- Sha256 close/fold (sha256 only; fold traps on sha224) ---
+for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
+  let msg = bytes(len);
+
+  // close + fold once + readSum == double hash (== sumDouble).
+  let d = Sha256.new();
+  d.writeBlob(msg);
+  d.close();
+  d.fold();
+  let double = d.readSum();
+  assert (double == Sha256.fromBlob(Sha256.fromBlob(msg)));
+  assert (d.readSum() == double); // readSum is idempotent
+
+  let d2 = Sha256.new();
+  d2.writeBlob(msg);
+  assert (d2.sumDouble() == double);
+
+  // close + fold twice + readSum == triple hash.
+  let e = Sha256.new();
+  e.writeBlob(msg);
+  e.close();
+  e.fold();
+  e.fold();
+  let triple = e.readSum();
+  assert (triple == Sha256.fromBlob(Sha256.fromBlob(Sha256.fromBlob(msg))));
+
+  // readSum after sum() returns the same hash.
+  let f = Sha256.new();
+  f.writeBlob(msg);
+  let once = f.sum();
+  assert (f.readSum() == once);
+};
+
+// pushSum on an already-closed (and folded) digest pushes that state, no
+// re-close. parent then holds the double-SHA bytes.
+do {
+  let g = Sha256.new();
+  g.writeBlob(bytes(40));
+  g.close();
+  g.fold();
+  let node = g.readSum();
+  let parent = Sha256.new();
+  g.pushSum(parent);
+  assert (parent.sum() == Sha256.fromBlob(node));
+};
+
+// --- Sha256 pushSum: works for both algorithms ---
 for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
-  for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
-    let msg = bytes(len);
-
-    // foldSum once + sum == double hash (== sumDouble).
-    let d = Sha256.new(algo);
-    d.writeBlob(msg);
-    d.foldSum();
-    let double = d.sum();
-    assert (double == Sha256.fromBlob(algo, Sha256.fromBlob(algo, msg)));
-
-    let d2 = Sha256.new(algo);
-    d2.writeBlob(msg);
-    assert (d2.sumDouble() == double);
-
-    // foldSum twice + sum == triple hash.
-    let e = Sha256.new(algo);
-    e.writeBlob(msg);
-    e.foldSum();
-    e.foldSum();
-    let triple = e.sum();
-    assert (triple == Sha256.fromBlob(algo, Sha256.fromBlob(algo, Sha256.fromBlob(algo, msg))));
-  };
-
   // pushSum: writing a digest into a target equals writing those digest bytes.
   let msgL = bytes(20);
   let msgR = bytes(48);
