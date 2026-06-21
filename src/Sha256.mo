@@ -318,9 +318,10 @@ module {
   /// first for a double-SHA / Bitcoin-style tree).
   ///
   /// `target` must be at a word boundary, i.e. a whole number of bytes that is
-  /// a multiple of 2 must have been written to it so far (the SHA256 word is 2
-  /// bytes). Both digest sizes (32 and 28 bytes) are word-aligned, so a chain
-  /// of `pushSum`s into the same target stays aligned.
+  /// a multiple of 2 must have been written to it so far (this implementation
+  /// stores the state in 2-byte half-words). Both digest sizes (32 and 28
+  /// bytes) are word-aligned, so a chain of `pushSum`s into the same target
+  /// stays aligned.
   ///
   /// ```motoko include=import
   /// let left = Sha256.fromBlob("L");
@@ -335,9 +336,11 @@ module {
   /// let parentHash = parent.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, or if `target` is not at a word boundary.
+  /// Traps if `self` is closed, if `target` is closed, or if `target` is not
+  /// at a word boundary.
   public func pushSum(self : Digest, target : Digest) {
     _Digest.close(self);
+    assert not target.closed; // target must still be accepting input
     assert target.buffer.high; // target must be at a 16-bit word boundary
     let s = self.state;
     let n = switch (self.algo) { case (#sha224) 14; case (_) 16 };

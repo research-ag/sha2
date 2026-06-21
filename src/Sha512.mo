@@ -121,18 +121,6 @@ module {
     };
   };
 
-  /// Reset the digest state to start a new hash computation.
-  /// After reset, the digest can be reused to hash new data.
-  /// This works even if the digest was previously finalized (is closed).
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha512.new();
-  /// digest.writeBlob("First message");
-  /// let hash1 = digest.sum();
-  /// digest.reset();
-  /// digest.writeBlob("Second message");
-  /// let hash2 = digest.sum();
-  /// ```
   // Load the algorithm's initial hash value (IV) into the state.
   // Unrolled copy avoids allocating the `[0..7]` index array and its iterator
   // on every reset (cf. the Sha256 reset optimization).
@@ -151,6 +139,18 @@ module {
     };
   };
 
+  /// Reset the digest state to start a new hash computation.
+  /// After reset, the digest can be reused to hash new data.
+  /// This works even if the digest was previously finalized (is closed).
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("First message");
+  /// let hash1 = digest.sum();
+  /// digest.reset();
+  /// digest.writeBlob("Second message");
+  /// let hash2 = digest.sum();
+  /// ```
   public func reset(self : Digest) {
     self.i_msg := 0;
     self.i_byte := 8;
@@ -362,9 +362,11 @@ module {
   /// `pushSum` into the same target traps (which rules out sha512-224 Merkle
   /// trees, but a single `pushSum` is fine).
   ///
-  /// Traps if `self` is closed, or if `target` is not at a word boundary.
+  /// Traps if `self` is closed, if `target` is closed, or if `target` is not
+  /// at a word boundary.
   public func pushSum(self : Digest, target : Digest) {
     _Digest.close(self);
+    assert not target.closed; // target must still be accepting input
     assert (target.i_byte == 8); // target must be at a 64-bit word boundary
     let s = self.s;
     let n = digestWords(self.algo);
