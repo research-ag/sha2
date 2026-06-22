@@ -19,23 +19,30 @@
 /// immediately reusable — there is no `reset` anywhere in the hot path, and no
 /// `Blob` is produced for any internal node.
 ///
+/// === The algorithm: a Merkle-mountain-range peak stack ===
+///
+/// Walk the leaves left to right, two at a time, keeping a STACK of "peaks" —
+/// completed subtrees that are still waiting for a right sibling. `hasher[j]`
+/// holds the j-th peak and `level[j]` its tree level; `i` is the stack height.
+///
+///   1. Push each leaf pair as a node: `merkleLeaves` + `fold` into `hasher[i]`,
+///      a level-1 node.
+///   2. While the new peak has the SAME level as the peak below it, merge the
+///      two (`merkleMerge` writes into the lower one, which rises a level) and
+///      pop — exactly like carrying in binary addition.
+///
+/// A balanced tree of N leaves needs only ⌈log2 N⌉ hashers, and the single
+/// remaining peak at the end is the root. No recursion, no free-list.
+///
 /// === What YOU must do to stay allocation-free ===
 ///
 ///   1. Allocate the hashers ONCE, up front, and `close()` them so they start
-///      in the closed state the combine primitives require. Reuse them via a
-///      free-list; never call `Sha256.new()` per node.
+///      in the closed state the combine primitives require. Never call
+///      `Sha256.new()` per node.
 ///   2. Leaves must be 32-byte blobs (Merkle leaves are hashes, so this is the
 ///      normal case). Combine leaf pairs with `merkleLeaves` + `fold`.
 ///   3. Combine internal nodes with `merkleMerge` and read the output with
 ///      `readSum()` exactly once, for the root — that is the only allocation.
-///
-/// === Memory: O(log N) hashers ===
-///
-/// Evaluate the tree post-order (depth first): finish the left subtree (hold
-/// its result in a hasher), finish the right subtree (hold its result), then
-/// `merkleMerge` them — the merge writes into the left child and frees the
-/// right. A balanced tree of N leaves needs only ⌈log2 N⌉ hashers, tracked by a
-/// small free-list (`freeIx` + `top`).
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";
@@ -63,39 +70,31 @@ module {
     if (levels == 0) return leaves[0];
 
     // A pool of `levels` hashers, started CLOSED (merkleLeaves/merkleMerge both
-    // require a closed hasher) and reused via a free-list: `freeIx[0 .. top-1]`
-    // hold the indices of the currently-free hashers. `levels` = log2(n) is
-    // enough for the whole post-order traversal.
-    let pool = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
-    let freeIx = VarArray.tabulate<Nat>(levels, func(i) = i);
-    let top = [var levels];
+    // require a closed hasher). `hasher[0 .. i-1]` is the peak stack and
+    // `level[j]` the level of `hasher[j]`.
+    let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
+    let level = VarArray.repeat<Nat>(0, levels);
 
-    // The root ends up in the hasher returned by the top-level eval. readSum is
-    // the single allocation (the root Blob).
-    Sha256.readSum(pool[eval(leaves, pool, freeIx, top, 0, n)]);
-  };
-
-  // Evaluate the subtree over `leaves[lo .. hi)` (a power-of-two count >= 2) and
-  // return the pool index of the hasher holding its closed double-SHA digest.
-  // Defined at module level (not a closure) so the traversal allocates nothing.
-  func eval(leaves : [Blob], pool : [Sha256.Digest], freeIx : [var Nat], top : [var Nat], lo : Nat, hi : Nat) : Nat {
-    if (hi - lo == 2) {
-      // leaf pair -> one double-SHA leaf node
-      top[0] -= 1;
-      let i = freeIx[top[0]]; // take a free (closed) hasher
-      let h = pool[i];
-      h.merkleLeaves(leaves[lo], leaves[lo + 1]); // inner SHA256(l0 ++ l1)
-      h.fold(); // outer SHA256 -> double-SHA
-      i;
-    } else {
-      let mid = lo + (hi - lo) / 2;
-      let l = eval(leaves, pool, freeIx, top, lo, mid); // left subtree (held)
-      let r = eval(leaves, pool, freeIx, top, mid, hi); // right subtree (held)
-      pool[l].merkleMerge(pool[r]); // l := double-SHA(l ++ r); r consumed
-      freeIx[top[0]] := r; // free r
-      top[0] += 1;
-      l;
+    var i = 0; // stack height
+    var p = 0; // next leaf
+    while (p < n) {
+      // Push a leaf node: SHA256(l0 ++ l1) then fold -> double-SHA, a level-1 peak.
+      hasher[i].merkleLeaves(leaves[p], leaves[p + 1]);
+      hasher[i].fold();
+      level[i] := 1;
+      // Carry: while the top peak matches the level of the one below it, merge.
+      while (i > 0 and level[i - 1] == level[i]) {
+        hasher[i - 1].merkleMerge(hasher[i]); // lower peak := double-SHA(lower ++ top)
+        level[i - 1] += 1; // it rose a level
+        i -= 1; // pop the top
+      };
+      i += 1;
+      p += 2;
     };
+
+    // For a power-of-two tree the stack collapses to a single peak: the root.
+    // readSum is the one and only allocation.
+    Sha256.readSum(hasher[0]);
   };
 
   // --- Variations you can make in your own tree ---

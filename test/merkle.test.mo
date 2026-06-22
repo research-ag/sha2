@@ -6,7 +6,7 @@ import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
 // Validate that the allocation-free Merkle trees (Sha256 double-sha via the
-// merkleLeaves/merkleMerge DFS; Sha512 single-sha via the pushSum carry)
+// merkleLeaves/merkleMerge peak stack; Sha512 single-sha via the pushSum carry)
 // produce the same root as a naive reference that materializes every
 // intermediate digest as a Blob.
 
@@ -29,39 +29,34 @@ func refRoot256(leaves : [Blob]) : Blob {
   level[0];
 };
 
-// Post-order DFS over a pool of `levels` pre-closed hashers: leaves combined
-// with merkleLeaves, internal nodes with merkleMerge (in place), the right
-// child freed back to a free-list after each merge.
-func evalDfs256(leaves : [Blob], pool : [Sha256.Digest], freeIx : [var Nat], top : [var Nat], lo : Nat, hi : Nat) : Nat {
-  if (hi - lo == 2) {
-    top[0] -= 1;
-    let i = freeIx[top[0]];
-    let h = pool[i];
-    h.merkleLeaves(leaves[lo], leaves[lo + 1]);
-    h.fold();
-    i;
-  } else {
-    let mid = lo + (hi - lo) / 2;
-    let l = evalDfs256(leaves, pool, freeIx, top, lo, mid);
-    let r = evalDfs256(leaves, pool, freeIx, top, mid, hi);
-    pool[l].merkleMerge(pool[r]);
-    freeIx[top[0]] := r;
-    top[0] += 1;
-    l;
+// Iterative Merkle-mountain-range over a pool of `levels` pre-closed hashers:
+// push each leaf node (merkleLeaves + fold) onto a peak stack and merge in
+// place with merkleMerge while the top two peaks share a level.
+func mmrRoot256(leaves : [Blob], levels : Nat) : Blob {
+  let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
+  let level = VarArray.repeat<Nat>(0, levels);
+  let n = leaves.size();
+  var i = 0;
+  var p = 0;
+  while (p < n) {
+    hasher[i].merkleLeaves(leaves[p], leaves[p + 1]);
+    hasher[i].fold();
+    level[i] := 1;
+    while (i > 0 and level[i - 1] == level[i]) {
+      hasher[i - 1].merkleMerge(hasher[i]);
+      level[i - 1] += 1;
+      i -= 1;
+    };
+    i += 1;
+    p += 2;
   };
-};
-
-func dfsRoot256(leaves : [Blob], levels : Nat) : Blob {
-  let pool = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
-  let freeIx = VarArray.tabulate<Nat>(levels, func(i) = i);
-  let top = [var levels];
-  Sha256.readSum(pool[evalDfs256(leaves, pool, freeIx, top, 0, leaves.size())]);
+  Sha256.readSum(hasher[0]);
 };
 
 for (k in ([1, 2, 3, 6] : [Nat]).values()) {
   let count = 2 ** k;
   let leaves = Array.tabulate<Blob>(count, func(_) = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8())));
-  assert (dfsRoot256(leaves, k) == refRoot256(leaves));
+  assert (mmrRoot256(leaves, k) == refRoot256(leaves));
 };
 
 // --- single-sha tree over 2^k 64-byte leaves (Sha512) ---
