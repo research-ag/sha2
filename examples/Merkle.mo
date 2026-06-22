@@ -1,35 +1,39 @@
-/// Example: an allocation-free Bitcoin-style Merkle tree with `mo:sha2`.
+/// Example: an allocation-free Merkle tree with `mo:sha2`.
 ///
 /// A Merkle tree hashes pairs of nodes up to a single root. Done the obvious
 /// way, every internal node produces an intermediate digest `Blob`, so a tree
 /// over N leaves allocates ~N `Blob`s. On the IC that garbage adds up fast.
 ///
 /// This example builds the same tree with ZERO per-node allocation — the only
-/// `Blob` allocated is the root you get back. It uses two combine primitives:
+/// `Blob` allocated is the root you get back. It uses two combine primitives,
+/// each of which is a SINGLE SHA256 that leaves its result in place:
 ///
-///   * `merkleLeaves(h, l0, l1)` — hash two 32-byte leaf blobs into `h` as
-///     `SHA256(l0 ++ l1)`, straight from the IV, in one self-contained call (no
-///     `reset`/`close`). Follow with `fold(h)` for the double SHA256 Bitcoin
-///     uses.
-///   * `merkleMerge(a, b)`       — combine two finished child digests in place:
-///     `a` becomes the double SHA256 of `a ++ b` and `b` is consumed. `a`
-///     "moves up a level."
+///   * `combineLeaves(h, l0, l1)` — `h := SHA256(l0 ++ l1)` for two 32-byte leaf
+///     blobs, straight from the IV.
+///   * `combineNodes(a, b)`       — `a := SHA256(a ++ b)` for two finished child
+///     digests, in place; `b` is consumed. `a` "moves up a level."
 ///
 /// Both REQUIRE a closed hasher and leave it closed, so a finished hasher is
-/// immediately reusable — there is no `reset` anywhere in the hot path, and no
-/// `Blob` is produced for any internal node.
+/// immediately reusable — no `reset` anywhere, no `Blob` for any internal node.
+///
+/// === Single-SHA vs double-SHA trees ===
+///
+/// `combineLeaves`/`combineNodes` are one SHA256 per node. That is exactly an
+/// RFC-6962-style single-SHA tree. For a Bitcoin-style DOUBLE-SHA tree, call
+/// `fold(h)` after each combine — `fold` re-hashes the node's own digest, so
+/// `combine… + fold` = `SHA256(SHA256(…))`. This example does the double-SHA
+/// Bitcoin tree; to get a single-SHA tree, just delete the two `fold` lines.
 ///
 /// === The algorithm: a Merkle-mountain-range peak stack ===
 ///
 /// Walk the leaves left to right, two at a time, keeping a STACK of "peaks" —
-/// completed subtrees that are still waiting for a right sibling. `hasher[j]`
-/// holds the j-th peak and `level[j]` its tree level; `i` is the stack height.
+/// completed subtrees still waiting for a right sibling. `hasher[j]` holds the
+/// j-th peak and `level[j]` its tree level; `i` is the stack height.
 ///
-///   1. Push each leaf pair as a node: `merkleLeaves` + `fold` into `hasher[i]`,
-///      a level-1 node.
+///   1. Push each leaf pair as a node (`combineLeaves` + `fold`), a level-1 peak.
 ///   2. While the new peak has the SAME level as the peak below it, merge the
-///      two (`merkleMerge` writes into the lower one, which rises a level) and
-///      pop — exactly like carrying in binary addition.
+///      two (`combineNodes` + `fold` into the lower peak) and pop — exactly like
+///      carrying in binary addition.
 ///
 /// A balanced tree of N leaves needs only ⌈log2 N⌉ hashers, and the single
 /// remaining peak at the end is the root. No recursion, no free-list.
@@ -37,12 +41,12 @@
 /// === What YOU must do to stay allocation-free ===
 ///
 ///   1. Allocate the hashers ONCE, up front, and `close()` them so they start
-///      in the closed state the combine primitives require. Never call
-///      `Sha256.new()` per node.
+///      in the closed state the combine primitives require. Never `Sha256.new()`
+///      per node.
 ///   2. Leaves must be 32-byte blobs (Merkle leaves are hashes, so this is the
-///      normal case). Combine leaf pairs with `merkleLeaves` + `fold`.
-///   3. Combine internal nodes with `merkleMerge` and read the output with
-///      `readSum()` exactly once, for the root — that is the only allocation.
+///      normal case).
+///   3. Read the output with `readSum()` exactly once, for the root — that is
+///      the only allocation.
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";
@@ -69,7 +73,7 @@ module {
     // (leaves are already hashes), so there is nothing to combine.
     if (levels == 0) return leaves[0];
 
-    // A pool of `levels` hashers, started CLOSED (merkleLeaves/merkleMerge both
+    // A pool of `levels` hashers, started CLOSED (combineLeaves/combineNodes both
     // require a closed hasher). `hasher[0 .. i-1]` is the peak stack and
     // `level[j]` the level of `hasher[j]`.
     let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
@@ -78,13 +82,14 @@ module {
     var i = 0; // stack height
     var p = 0; // next leaf
     while (p < n) {
-      // Push a leaf node: SHA256(l0 ++ l1) then fold -> double-SHA, a level-1 peak.
-      hasher[i].merkleLeaves(leaves[p], leaves[p + 1]);
-      hasher[i].fold();
+      // Push a leaf node. The `fold` makes it double-SHA; drop it for single-SHA.
+      hasher[i].combineLeaves(leaves[p], leaves[p + 1]); // SHA256(l0 ++ l1)
+      hasher[i].fold(); // -> double-SHA
       level[i] := 1;
       // Carry: while the top peak matches the level of the one below it, merge.
       while (i > 0 and level[i - 1] == level[i]) {
-        hasher[i - 1].merkleMerge(hasher[i]); // lower peak := double-SHA(lower ++ top)
+        hasher[i - 1].combineNodes(hasher[i]); // lower := SHA256(lower ++ top)
+        hasher[i - 1].fold(); // -> double-SHA (drop for single-SHA)
         level[i - 1] += 1; // it rose a level
         i -= 1; // pop the top
       };
@@ -99,12 +104,10 @@ module {
 
   // --- Variations you can make in your own tree ---
   //
+  // * Single-SHA tree (e.g. RFC 6962): delete the two `fold` lines — every node
+  //   is then one SHA256 of `left ++ right`.
+  //
   // * Odd number of children at a level (Bitcoin duplicates the last node):
   //   combine the unpaired node with itself. The code above requires a
   //   power-of-two leaf count to keep the example focused.
-  //
-  // * Single-SHA tree (e.g. RFC 6962): `merkleMerge`/`merkleLeaves`+`fold` are
-  //   double-SHA. For a single SHA per node, use `merkleLeaves(h, l0, l1)` then
-  //   `readSum(h)` at the leaves; internal nodes would need a single-SHA combine
-  //   (not provided here).
 };

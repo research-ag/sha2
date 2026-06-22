@@ -152,28 +152,28 @@ module {
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
-  /// Combine two closed digests in place: replace `self`'s digest with the
-  /// Bitcoin-style double SHA256 of `self.digest ++ other.digest`, so `self`
-  /// moves "up one level" in a Merkle tree while `other` is consumed (read-only;
-  /// the caller frees it). Self-contained — no `reset`/`close`/`fold` needed,
-  /// no message buffer, no intermediate `Blob`; `self` stays closed. Reads both
-  /// 32-byte digests straight into one block from the IV, then pads and folds.
-  /// Pairs with `merkleLeaves` to build a double-SHA Merkle tree in O(log n)
-  /// hashers (see `examples/Merkle.mo`).
+  /// Combine two closed digests in place: replace `self`'s digest with
+  /// `SHA256(self.digest ++ other.digest)`, so `self` moves "up one level" in a
+  /// Merkle tree while `other` is consumed (read-only; the caller frees it).
+  /// This is a single SHA256: for a double-SHA tree (e.g. Bitcoin) call `fold`
+  /// after; for a single-SHA tree (e.g. RFC 6962) don't. Self-contained — no
+  /// `reset`/`close` needed, no message buffer, no intermediate `Blob`; `self`
+  /// stays closed. The internal-node counterpart of `combineLeaves` (together
+  /// they build a Merkle tree in O(log n) hashers — see `examples/Merkle.mo`).
   ///
   /// Traps if `self` or `other` is not closed.
-  public func merkleMerge(self : Digest, other : Digest) : () = _Digest.merkleMerge(self, other);
+  public func combineNodes(self : Digest, other : Digest) : () = _Digest.combineNodes(self, other);
 
   /// Hash two 32-byte blobs into `self` as `SHA256(b1 ++ b2)`, from a length-0
-  /// start. Self-contained — requires `self` already closed, starts from the IV
-  /// (no `reset`), and runs the data block plus a hard-coded padding block in
-  /// one call, leaving `self` closed. The leaf-combine counterpart of
-  /// `merkleMerge`: `merkleLeaves(h, l0, l1)` then `fold(h)` builds a double-SHA
-  /// Merkle leaf node with no `reset`/`close`. `b1` fills message words 0..7,
-  /// `b2` words 8..15.
+  /// start — a single SHA256, leaving the result in `self` (closed). The leaf
+  /// counterpart of `combineNodes`; for a double-SHA tree follow with `fold`,
+  /// for a single-SHA tree don't. Self-contained — requires `self` already
+  /// closed, starts from the IV (no `reset`), runs the data block plus a
+  /// hard-coded padding block in one call. `b1` fills message words 0..7, `b2`
+  /// words 8..15.
   ///
   /// Traps if `self` is not closed, or if either blob is not 32 bytes.
-  public func merkleLeaves(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.merkleLeaves(self, b1, b2);
+  public func combineLeaves(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.combineLeaves(self, b1, b2);
 
   /// Write a `[Nat8]` array to the digest.
   ///

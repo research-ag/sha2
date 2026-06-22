@@ -6,7 +6,7 @@ import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
 // Validate that the allocation-free Merkle trees (Sha256 double-sha via the
-// merkleLeaves/merkleMerge peak stack; Sha512 single-sha via the pushSum carry)
+// combineLeaves/combineNodes peak stack; Sha512 single-sha via the pushSum carry)
 // produce the same root as a naive reference that materializes every
 // intermediate digest as a Blob.
 
@@ -30,8 +30,8 @@ func refRoot256(leaves : [Blob]) : Blob {
 };
 
 // Iterative Merkle-mountain-range over a pool of `levels` pre-closed hashers:
-// push each leaf node (merkleLeaves + fold) onto a peak stack and merge in
-// place with merkleMerge while the top two peaks share a level.
+// push each leaf node (combineLeaves + fold) onto a peak stack and merge in
+// place with combineNodes + fold while the top two peaks share a level.
 func mmrRoot256(leaves : [Blob], levels : Nat) : Blob {
   let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
   let level = VarArray.repeat<Nat>(0, levels);
@@ -39,11 +39,12 @@ func mmrRoot256(leaves : [Blob], levels : Nat) : Blob {
   var i = 0;
   var p = 0;
   while (p < n) {
-    hasher[i].merkleLeaves(leaves[p], leaves[p + 1]);
+    hasher[i].combineLeaves(leaves[p], leaves[p + 1]);
     hasher[i].fold();
     level[i] := 1;
     while (i > 0 and level[i - 1] == level[i]) {
-      hasher[i - 1].merkleMerge(hasher[i]);
+      hasher[i - 1].combineNodes(hasher[i]);
+      hasher[i - 1].fold(); // -> double-SHA
       level[i - 1] += 1;
       i -= 1;
     };

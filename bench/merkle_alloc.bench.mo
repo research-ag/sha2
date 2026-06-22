@@ -13,11 +13,12 @@ module {
     var i = 0;
     var p = 0;
     while (p < n) {
-      hasher[i].merkleLeaves(leaves[p], leaves[p + 1]);
+      hasher[i].combineLeaves(leaves[p], leaves[p + 1]);
       hasher[i].fold();
       level[i] := 1;
       while (i > 0 and level[i - 1] == level[i]) {
-        hasher[i - 1].merkleMerge(hasher[i]);
+        hasher[i - 1].combineNodes(hasher[i]);
+        hasher[i - 1].fold(); // -> double-SHA
         level[i - 1] += 1;
         i -= 1;
       };
@@ -27,7 +28,7 @@ module {
   };
 
   public func init() : Bench.V1 {
-    // Is the Merkle build itself (the peak-stack loop, merkleLeaves, merkleMerge,
+    // Is the Merkle build itself (the peak-stack loop, combineLeaves, combineNodes,
     // fold) allocation-free? Run the SAME pool over R computations per
     // measurement and watch the garbage. 'build + readSum' produces one root
     // Blob per computation (so its garbage should scale with R); 'build only'
@@ -43,7 +44,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle allocation probe";
-      description = "Run R = 1 / 10 / 100 double-SHA Merkle-tree builds (2^8 leaves) per measurement, all on the same reused pool of hashers. 'build + readSum' reads the root Blob out each time, so its garbage should grow ~linearly with R. 'build only (no readSum)' runs the full peak-stack loop — merkleLeaves, merkleMerge, fold — but never calls readSum, so it allocates no Blob; if the loop itself allocates nothing, its garbage must stay flat as R grows. A flat 'build only' column is proof that the hasher stack and the loop cause no per-node / per-level / per-computation allocation.";
+      description = "Run R = 1 / 10 / 100 double-SHA Merkle-tree builds (2^8 leaves) per measurement, all on the same reused pool of hashers. 'build + readSum' reads the root Blob out each time, so its garbage should grow ~linearly with R. 'build only (no readSum)' runs the full peak-stack loop — combineLeaves, combineNodes, fold — but never calls readSum, so it allocates no Blob; if the loop itself allocates nothing, its garbage must stay flat as R grows. A flat 'build only' column is proof that the hasher stack and the loop cause no per-node / per-level / per-computation allocation.";
       rows = rows;
       cols = cols;
     };
