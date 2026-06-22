@@ -2,11 +2,14 @@
 
 ## 0.2.5
 
-- Add `foldSum()` (Sha256, Sha512) for N-fold / chained hashing — finalize and fold the digest back as the next message
-- Add `pushSum()` (Sha256, Sha512) for allocation-free Merkle trees — stream a digest into another hasher without an intermediate `Blob`
+- **Breaking:** remove `peekSum()` (Sha256, Sha512). To re-read a closed digest use `readSum()`; for an intermediate hash of an open digest use `clone().sum()`.
+- Add `close()` and `readSum()` (Sha256, Sha512) — finalize a digest without returning a `Blob`, then read the closed digest idempotently (any number of times)
+- Add `fold()` (Sha256) — fold a finished digest back in as the next message, for N-fold hashing and double-SHA chains (`combine… + fold`)
+- Add `combineLeaves()` and `combineNodes()` (Sha256) — single-SHA256 primitives for allocation-free Merkle trees: hash two 32-byte leaves, or combine two child digests in place, with no intermediate `Blob`
+- Optimize `close()` with a block-boundary fast path that compresses the all-constant padding block directly for block-aligned messages
 - Make `writeBlob()` allocation-free (drop the per-call accessor closures)
 - Reduce per-call allocations across the API (use `switch` instead of variant `==`)
-- Add `examples/` (allocation-free Merkle tree, N-fold hashing)
+- Add `examples/` — an allocation-free Bitcoin-style Merkle tree (any leaf count) and N-fold hashing, with tests including real-block Merkle-root vectors
 
 ## 0.2.4
 

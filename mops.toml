@@ -16,5 +16,5 @@ bench-helper = "0.0.3"
 moc = "1.0.0"
 
 [toolchain]
-moc = "1.9.0"
-wasmtime = "44.0.2"
+moc = "1.10.0"
+wasmtime = "44.0.3"
