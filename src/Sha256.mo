@@ -344,27 +344,6 @@ module {
     readSum(self);
   };
 
-  /// Get the current hash value without finalizing the digest.
-  /// This internally clones the digest, finalizes the clone, and returns the hash.
-  /// The purpose is to allow obtaining intermediate hash values without closing the original digest.
-  ///
-  /// Additionally, `peekSum()` can be called on an already finalized digest.
-  /// It simply returns the final hash in that case.
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha256.new();
-  /// digest.writeBlob("Hello");
-  /// let intermediate = digest.peekSum();
-  /// digest.writeBlob(" world");
-  /// let final = digest.sum();
-  /// let sameFinal = digest.peekSum();
-  /// ```
-  ///
-  /// Never traps.
-  public func peekSum(self : Digest) : Blob {
-    if (self.closed) stateBlob(self) else sum(clone(self));
-  };
-
   /// Directly calculate the SHA2 hash digest from a `Blob`.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.

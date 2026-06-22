@@ -39,7 +39,7 @@ do {
 do {
   let digest = Sha256.new(); // default algo #sha256
   digest.writeBlob("hello");
-  prt (digest.peekSum());
+  prt (digest.clone().sum());
   digest.writeBlob(" world!");
   prt (digest.sum());
 };

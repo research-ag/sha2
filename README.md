@@ -153,45 +153,39 @@ The first argument `#sha256` in the `Sha256` module functions and `#sha512` in t
 
 ### 3. Cloning for intermediate hashes
 
-Use `clone()` and `peekSum()` to get intermediate hashes without losing your progress:
+To get an intermediate hash without consuming the digest, `clone()` it and
+finalize the clone — your original keeps accumulating:
 
 ```motoko
 import Sha256 "mo:sha2/Sha256";
-import Sha512 "mo:sha2/Sha512";
 import Debug "mo:core/Debug";
 
 let digest = Sha256.new();
 
 // Hash first chunk
 digest.writeBlob("Chunk 1");
-let hash1 = digest.peekSum(); // Get hash without consuming
+let hash1 = digest.clone().sum(); // intermediate hash; `digest` stays open
 Debug.print("Hash after chunk 1: " # debug_show (hash1));
 
 // Hash second chunk
 digest.writeBlob("Chunk 2");
-let hash2 = digest.peekSum();
+let hash2 = digest.clone().sum();
 Debug.print("Hash after chunk 2: " # debug_show (hash2));
 
 // Hash third chunk
 digest.writeBlob("Chunk 3");
-let hash3 = digest.peekSum();
+let hash3 = digest.clone().sum();
 Debug.print("Hash after chunk 3: " # debug_show (hash3));
 
-// Final hash
+// Final hash (consumes `digest`)
 let finalHash = digest.sum();
 Debug.print("Final hash: " # debug_show (finalHash));
-
-// Alternative: clone before sum if you want to keep the digest alive
-let digest2 = Sha512.new();
-digest2.writeBlob("Some data");
-
-let clone1 = digest2.clone();
-let intermediateHash = clone1.sum(); // Consumes clone1, but digest2 is still usable
-
-digest2.writeBlob("More data");
-let finalHash2 = digest2.sum(); // Now digest2 is consumed
-
 ```
+
+Each `clone().sum()` allocates a copy of the digest plus the result `Blob`, so
+reach for it only when you genuinely need a mid-stream snapshot. If you instead
+want to read the hash of an already-finalized digest more than once, use
+`readSum()` — it re-reads the closed state without re-finalizing.
 
 ### 4. Stable state across upgrades
 
@@ -228,7 +222,7 @@ actor {
       case null { null };
       case (?state) {
         let d = Sha256.unshare(state);
-        ?d.peekSum();
+        ?d.clone().sum();
       };
     };
   };
