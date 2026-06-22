@@ -3,7 +3,6 @@ import Array "mo:core/Array";
 import Random "mo:core/Random";
 import Bench "mo:bench-helper";
 import Sha512 "../src/Sha512";
-import Sha512_old "mo:sha2_0_1_14/Sha512"; // pinned 0.1.14 for comparison
 
 module {
   public func init() : Bench.V1 {
@@ -14,14 +13,11 @@ module {
       "close() partial", // finalize without returning, mid-block
       "close() @block", // finalize at a block boundary (fast path)
     ];
-    let cols = [
-      "0.2.x (current)",
-      "0.1.14",
-    ];
+    let cols = ["Sha512"];
 
     let schema : Bench.Schema = {
       name = "Sha512 lifecycle";
-      description = "Per-operation cost of the Sha512 hasher lifecycle, local code vs. pinned 0.1.14. The hasher in reset()/sum()/close() rows already exists and has had a block written to it. close() finalizes without returning a Blob (0.1.14 has no such entry point, so its cells are N/A). 'close() partial' has a sub-block 80-byte message, so the padding goes through the buffer; 'close() @block' has a 128-byte (one full block) message, so close() takes the block-boundary fast path that compresses the all-constant padding block directly, skipping the buffer fill.";
+      description = "Per-operation cost of the Sha512 hasher lifecycle. The hasher in reset()/sum()/close() rows already exists and has had a block written to it. close() finalizes without returning a Blob; 'close() partial' has a sub-block 80-byte message, so the padding goes through the buffer, while 'close() @block' has a 128-byte (one full block) message, so close() takes the block-boundary fast path that compresses the all-constant padding block directly, skipping the buffer fill.";
       rows = rows;
       cols = cols;
     };
@@ -44,37 +40,17 @@ module {
     let closeBlockLocal = Sha512.new();
     Sha512.writeBlob(closeBlockLocal, block);
 
-    let resetOld = Sha512_old.Digest(#sha512);
-    resetOld.writeBlob(input);
-    let sumOld = Sha512_old.Digest(#sha512);
-    sumOld.writeBlob(input);
-
     let routines : [[() -> ()]] = [
       // new()
-      [
-        func() = ignore Sha512.new(),
-        func() = ignore Sha512_old.Digest(#sha512),
-      ],
+      [func() = ignore Sha512.new()],
       // reset()
-      [
-        func() = Sha512.reset(resetLocal),
-        func() = resetOld.reset(),
-      ],
+      [func() = Sha512.reset(resetLocal)],
       // sum()
-      [
-        func() = ignore Sha512.sum(sumLocal),
-        func() = ignore sumOld.sum(),
-      ],
+      [func() = ignore Sha512.sum(sumLocal)],
       // close() partial: sub-block message, padding via the buffer
-      [
-        func() = Sha512.close(closeLocal),
-        func() {}, // N/A: 0.1.14 has no public finalize-without-allocation
-      ],
+      [func() = Sha512.close(closeLocal)],
       // close() @block: block-aligned message, padding via the fast path
-      [
-        func() = Sha512.close(closeBlockLocal),
-        func() {}, // N/A
-      ],
+      [func() = Sha512.close(closeBlockLocal)],
     ];
 
     Bench.V1(schema, func(ri : Nat, ci : Nat) = routines[ri][ci]());
