@@ -156,7 +156,9 @@ module {
   /// `SHA256(self.digest ++ other.digest)`, so `self` moves "up one level" in a
   /// Merkle tree while `other` is consumed (read-only; the caller frees it).
   /// This is a single SHA256: for a double-SHA tree (e.g. Bitcoin) call `fold`
-  /// after; for a single-SHA tree (e.g. RFC 6962) don't. Self-contained — no
+  /// after; for a single-SHA tree (each node `SHA256(left ++ right)`) don't.
+  /// (This is plain concatenation — NOT RFC 6962, which prepends a 0x01
+  /// domain-separation byte and so hashes 65 bytes.) Self-contained — no
   /// `reset`/`close` needed, no message buffer, no intermediate `Blob`; `self`
   /// stays closed. The internal-node counterpart of `combineLeaves` (together
   /// they build a Merkle tree in O(log n) hashers — see `examples/Merkle.mo`).

@@ -18,11 +18,17 @@
 ///
 /// === Single-SHA vs double-SHA trees ===
 ///
-/// `combineLeaves`/`combineNodes` are one SHA256 per node. That is exactly an
-/// RFC-6962-style single-SHA tree. For a Bitcoin-style DOUBLE-SHA tree, call
-/// `fold(h)` after each combine — `fold` re-hashes the node's own digest, so
-/// `combine… + fold` = `SHA256(SHA256(…))`. This example does the double-SHA
-/// Bitcoin tree; to get a single-SHA tree, just delete the two `fold` lines.
+/// `combineLeaves`/`combineNodes` are one SHA256 per node, each computing
+/// `SHA256(left ++ right)` — a plain single-SHA Merkle tree. For a Bitcoin-style
+/// DOUBLE-SHA tree, call `fold(h)` after each combine — `fold` re-hashes the
+/// node's own digest, so `combine… + fold` = `SHA256(SHA256(…))`. This example
+/// does the double-SHA Bitcoin tree; for the plain single-SHA tree, delete the
+/// two `fold` lines.
+///
+/// Note: this is NOT RFC 6962. That tree prepends a domain-separation byte
+/// (`0x00` to leaf data, `0x01` to internal nodes), so an internal node hashes
+/// 65 bytes — `SHA256(0x01 || left || right)` — which these fixed 64-byte
+/// combiners can't produce.
 ///
 /// === The algorithm: a Merkle-mountain-range peak stack ===
 ///
@@ -104,8 +110,8 @@ module {
 
   // --- Variations you can make in your own tree ---
   //
-  // * Single-SHA tree (e.g. RFC 6962): delete the two `fold` lines — every node
-  //   is then one SHA256 of `left ++ right`.
+  // * Plain single-SHA tree: delete the two `fold` lines — every node is then
+  //   one `SHA256(left ++ right)`. (Not RFC 6962 — see the header.)
   //
   // * Odd number of children at a level (Bitcoin duplicates the last node):
   //   combine the unpaired node with itself. The code above requires a

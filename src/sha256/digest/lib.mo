@@ -86,7 +86,8 @@ module {
   /// `SHA256(self.digest ++ other.digest)` — a single SHA256 of the two 32-byte
   /// digests, leaving the result in `self` (closed). `other` is read-only. The
   /// internal-node counterpart of `combineLeaves`. For a double-SHA tree (e.g.
-  /// Bitcoin) call `fold` after; for a single-SHA tree (e.g. RFC 6962) don't.
+  /// Bitcoin) call `fold` after; for a single-SHA tree (each node
+  /// `SHA256(left ++ right)`, plain concatenation, not RFC 6962) don't.
   /// Self-contained — reads both states straight into one block from the IV,
   /// then pads; no message buffer, no `Blob`.
   /// Traps if `self` or `other` is not closed.
