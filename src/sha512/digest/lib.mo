@@ -6,6 +6,7 @@ import Nat64 "mo:core/Nat64";
 import Byte "../write/byte";
 import Write "../write";
 import ProcessBlock "../process_block";
+import Padding "../padding";
 import Types "../types";
 
 module {
@@ -69,6 +70,15 @@ module {
   public func close(self : Digest) {
     assert not self.closed;
     self.closed := true;
+    // Fast path: at a block boundary (empty buffer — no buffered words and no
+    // partial word) the entire padding is a single block whose 16 message words
+    // are constant except the length, so compress it directly and skip the
+    // 16-word buffer fill (which would also box every Nat64 written).
+    if (self.i_msg == 0 and self.i_byte == 8) {
+      let n_bits : Nat64 = (self.i_block << 7) << 3; // i_block * 128 bytes * 8
+      Padding.process(self.s, n_bits);
+      return;
+    };
     // calculate padding
     // t = bytes in the last incomplete block (0-127)
     let t : Nat8 = (self.i_msg << 3) +% 8 -% self.i_byte;

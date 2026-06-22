@@ -40,56 +40,27 @@ for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
   assert (f.readSum() == once);
 };
 
-// Same checks for every Sha512 variant, including the sha512-224 tail.
+// Sha512 has close/readSum for symmetry with Sha256, but no fold/combine
+// primitives (single-/double-SHA512 Merkle trees aren't supported — see
+// Sha512.mo). Check close/readSum for every variant, including lengths that
+// straddle the 128-byte block boundary and the extra-padding-block threshold.
 for (algo in ([#sha512, #sha384, #sha512_224, #sha512_256] : [Sha512.Algorithm]).values()) {
-  for (len in ([0, 1, 100, 111, 112, 128, 200] : [Nat]).values()) {
+  for (len in ([0, 1, 100, 111, 112, 128, 200, 256] : [Nat]).values()) {
     let msg = bytes(len);
 
+    // close + readSum == fromBlob, and readSum is idempotent.
     let d = Sha512.new(algo);
     d.writeBlob(msg);
-    d.foldSum();
-    let double = d.sum();
-    assert (double == Sha512.fromBlob(algo, Sha512.fromBlob(algo, msg)));
+    d.close();
+    let once = d.readSum();
+    assert (once == Sha512.fromBlob(algo, msg));
+    assert (d.readSum() == once);
 
+    // readSum after sum() returns the same hash.
     let e = Sha512.new(algo);
     e.writeBlob(msg);
-    e.foldSum();
-    e.foldSum();
-    let triple = e.sum();
-    assert (triple == Sha512.fromBlob(algo, Sha512.fromBlob(algo, Sha512.fromBlob(algo, msg))));
-  };
-
-  // pushSum: a single push equals writing those digest bytes. (Two pushes only
-  // for the word-aligned variants; sha512-224 would trap on the second.)
-  let msgL = bytes(20);
-  let msgR = bytes(48);
-  let dL = Sha512.fromBlob(algo, msgL);
-
-  if (algo != #sha512_224) {
-    let dR = Sha512.fromBlob(algo, msgR);
-    let ref = Sha512.new(algo);
-    ref.writeBlob(dL);
-    ref.writeBlob(dR);
-    let expected = ref.sum();
-
-    let a = Sha512.new(algo);
-    a.writeBlob(msgL);
-    let b = Sha512.new(algo);
-    b.writeBlob(msgR);
-    let parent = Sha512.new(algo);
-    a.pushSum(parent);
-    b.pushSum(parent);
-    assert (parent.sum() == expected);
-  } else {
-    // Single push of a 28-byte digest, then finalize.
-    let ref = Sha512.new(algo);
-    ref.writeBlob(dL);
-    let expected = ref.sum();
-
-    let a = Sha512.new(algo);
-    a.writeBlob(msgL);
-    let parent = Sha512.new(algo);
-    a.pushSum(parent);
-    assert (parent.sum() == expected);
+    let s = e.sum();
+    assert (e.readSum() == s);
+    assert (s == once);
   };
 };
