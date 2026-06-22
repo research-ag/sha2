@@ -40,42 +40,6 @@ for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
   assert (f.readSum() == once);
 };
 
-// pushSum on an already-closed (and folded) digest pushes that state, no
-// re-close. parent then holds the double-SHA bytes.
-do {
-  let g = Sha256.new();
-  g.writeBlob(bytes(40));
-  g.close();
-  g.fold();
-  let node = g.readSum();
-  let parent = Sha256.new();
-  g.pushSum(parent);
-  assert (parent.sum() == Sha256.fromBlob(node));
-};
-
-// --- Sha256 pushSum: works for both algorithms ---
-for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
-  // pushSum: writing a digest into a target equals writing those digest bytes.
-  let msgL = bytes(20);
-  let msgR = bytes(48);
-  let dL = Sha256.fromBlob(algo, msgL);
-  let dR = Sha256.fromBlob(algo, msgR);
-
-  let ref = Sha256.new(algo);
-  ref.writeBlob(dL);
-  ref.writeBlob(dR);
-  let expected = ref.sum();
-
-  let a = Sha256.new(algo);
-  a.writeBlob(msgL);
-  let b = Sha256.new(algo);
-  b.writeBlob(msgR);
-  let parent = Sha256.new(algo);
-  a.pushSum(parent);
-  b.pushSum(parent);
-  assert (parent.sum() == expected);
-};
-
 // Same checks for every Sha512 variant, including the sha512-224 tail.
 for (algo in ([#sha512, #sha384, #sha512_224, #sha512_256] : [Sha512.Algorithm]).values()) {
   for (len in ([0, 1, 100, 111, 112, 128, 200] : [Nat]).values()) {

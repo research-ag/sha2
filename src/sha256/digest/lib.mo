@@ -26,19 +26,6 @@ module {
   let nat32To64 = Prim.nat32ToNat64;
   let intToNat64Wrap = Prim.intToNat64Wrap;
 
-  /// Append one 16-bit message word, processing a full block if one completes.
-  /// The caller must be at a word boundary (`buf.high == true`).
-  public func writeWord(x : Digest, val : Nat16) {
-    let (buf, state) = (x.buffer, x.state);
-    buf.msg[nat8ToNat(buf.i_msg)] := val;
-    buf.i_msg +%= 1;
-    if (buf.i_msg == 32) {
-      state.process_block_from_msg(buf.msg);
-      buf.i_msg := 0;
-      buf.i_block +%= 1;
-    };
-  };
-
   func writeData(x : Digest, data : Nat -> Nat8, sz : Nat, start : Nat, process_blocks : Nat -> Nat) {
     assert not x.closed;
     if (sz == start) return;
@@ -95,33 +82,6 @@ module {
     };
     ignore buf.load_chunk_blob(data, sz, pos);
   };
-  /// Write exactly two 32-byte blobs as one 64-byte block, read straight from
-  /// the blobs into the compression with no message buffer. Requires the digest
-  /// to be at a block boundary (empty buffer) and each blob to be 32 bytes.
-  /// Traps if `self` is closed, if the buffer is not empty, or if either blob
-  /// is not 32 bytes.
-  public func writeBlobPair32(self : Digest, b1 : Blob, b2 : Blob) {
-    assert not self.closed;
-    assert (b1.size() == 32 and b2.size() == 32);
-    let buf = self.buffer;
-    assert (buf.i_msg == 0 and buf.high); // must be at a block boundary
-    self.state.process_block_from_blob_pair(b1, b2);
-    buf.i_block +%= 1;
-  };
-  /// Write the 32-byte digests of two closed digests `a` and `b` as one 64-byte
-  /// block, read straight from their state arrays (no message buffer). Requires
-  /// `self` to be at a block boundary (empty buffer) and `a`/`b` to be closed.
-  /// Traps if `self` is closed, if `a` or `b` is not closed, or if `self`'s
-  /// buffer is not empty.
-  public func writeSumPair(self : Digest, a : Digest, b : Digest) {
-    assert not self.closed;
-    assert a.closed;
-    assert b.closed;
-    let buf = self.buffer;
-    assert (buf.i_msg == 0 and buf.high); // must be at a block boundary
-    self.state.process_block_from_state_pair(a.state, b.state);
-    buf.i_block +%= 1;
-  };
   /// Combine the digests of two closed digests in place: replace `self`'s digest
   /// with the Bitcoin-style double SHA256 of `self.digest ++ other.digest`,
   /// `self` moving "up one level". `other` is read-only (the caller frees it).
@@ -137,12 +97,11 @@ module {
     s.process_fold_block(); // outer SHA256 -> double-SHA digest
   };
   /// Hash two 32-byte blobs `b1 ++ b2` (one 64-byte message) into `self` from a
-  /// length-0 start, overwriting `self` with `SHA256(b1 ++ b2)`. Like
-  /// `writeBlobPair32` but self-contained: requires `self` already closed,
-  /// starts the compression from the IV (no `reset`/`loadIV`), runs the data
-  /// block plus a hard-coded padding block (512-bit message). `self` stays
-  /// closed. The leaf-combine counterpart of `merkleMerge`; follow with `fold`
-  /// for a double-SHA leaf node.
+  /// length-0 start, overwriting `self` with `SHA256(b1 ++ b2)`. Self-contained:
+  /// requires `self` already closed, starts the compression from the IV (no
+  /// `reset`/`loadIV`), runs the data block plus a hard-coded padding block
+  /// (512-bit message). `self` stays closed. The leaf-combine counterpart of
+  /// `merkleMerge`; follow with `fold` for a double-SHA leaf node.
   /// Traps if `self` is not closed, or if either blob is not 32 bytes.
   public func merkleLeaves(self : Digest, b1 : Blob, b2 : Blob) {
     assert self.closed;

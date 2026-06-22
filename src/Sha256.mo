@@ -152,44 +152,25 @@ module {
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
 
-  /// Write two 32-byte blobs as a single 64-byte block, read directly from the
-  /// blobs into the compression (no message buffer). Equivalent to
-  /// `writeBlob(b1); writeBlob(b2)` when the digest is at a block boundary, but
-  /// allocation-free and faster — useful for feeding fixed 32-byte pairs (e.g.
-  /// Merkle leaves). `b1` fills message words 0..7, `b2` words 8..15.
-  ///
-  /// Traps if `self` is closed, if the message buffer is not empty (the digest
-  /// is not at a block boundary), or if either blob is not 32 bytes.
-  public func writeBlobPair32(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.writeBlobPair32(self, b1, b2);
-
-  /// Write the hashes of two closed digests `a` and `b` as a single 64-byte
-  /// block, read directly from their state arrays (no message buffer). Like
-  /// `writeBlobPair32`, but the two 32-byte pieces are the digests sitting in
-  /// `a` and `b` rather than blobs — so it streams two finalized hashes into
-  /// `self` without materializing either as a `Blob`. `a` fills message words
-  /// 0..7, `b` words 8..15.
-  ///
-  /// Traps if `self` is closed, if `a` or `b` is not closed, or if `self`'s
-  /// message buffer is not empty (the digest is not at a block boundary).
-  public func writeSumPair(self : Digest, a : Digest, b : Digest) : () = _Digest.writeSumPair(self, a, b);
-
   /// Combine two closed digests in place: replace `self`'s digest with the
   /// Bitcoin-style double SHA256 of `self.digest ++ other.digest`, so `self`
   /// moves "up one level" in a Merkle tree while `other` is consumed (read-only;
   /// the caller frees it). Self-contained — no `reset`/`close`/`fold` needed,
-  /// no message buffer, no intermediate `Blob`; `self` stays closed. This lets
-  /// a Merkle tree be built with one fewer hasher than `writeSumPair` (the
-  /// combine reuses `self`'s slot instead of a fresh target).
+  /// no message buffer, no intermediate `Blob`; `self` stays closed. Reads both
+  /// 32-byte digests straight into one block from the IV, then pads and folds.
+  /// Pairs with `merkleLeaves` to build a double-SHA Merkle tree in O(log n)
+  /// hashers (see `examples/Merkle.mo`).
   ///
   /// Traps if `self` or `other` is not closed.
   public func merkleMerge(self : Digest, other : Digest) : () = _Digest.merkleMerge(self, other);
 
   /// Hash two 32-byte blobs into `self` as `SHA256(b1 ++ b2)`, from a length-0
-  /// start. Like `writeBlobPair32` but self-contained — requires `self` already
-  /// closed, starts from the IV (no `reset`), and runs the data block plus a
-  /// hard-coded padding block in one call, leaving `self` closed. The
-  /// leaf-combine counterpart of `merkleMerge`: `merkleLeaves(h, l0, l1)` then
-  /// `fold(h)` builds a double-SHA Merkle leaf node with no `reset`/`close`.
+  /// start. Self-contained — requires `self` already closed, starts from the IV
+  /// (no `reset`), and runs the data block plus a hard-coded padding block in
+  /// one call, leaving `self` closed. The leaf-combine counterpart of
+  /// `merkleMerge`: `merkleLeaves(h, l0, l1)` then `fold(h)` builds a double-SHA
+  /// Merkle leaf node with no `reset`/`close`. `b1` fills message words 0..7,
+  /// `b2` words 8..15.
   ///
   /// Traps if `self` is not closed, or if either blob is not 32 bytes.
   public func merkleLeaves(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.merkleLeaves(self, b1, b2);
@@ -359,49 +340,6 @@ module {
     _Digest.close(self);
     fold(self);
     readSum(self);
-  };
-
-  /// Finalize `self` if it is not already closed, then write its hash directly
-  /// into `target`'s message buffer, as if those digest bytes had been written
-  /// to `target`. No intermediate `Blob` is allocated — the state words are
-  /// copied straight across. `self` is left closed; `target` keeps accumulating.
-  ///
-  /// This is the building block for allocation-free Merkle trees: each parent
-  /// hasher receives its two children via `pushSum`. For a double-SHA /
-  /// Bitcoin-style tree, `close()` then `fold()` the child first, then
-  /// `pushSum` the already-closed digest.
-  ///
-  /// `target` must be at a word boundary, i.e. a whole number of bytes that is
-  /// a multiple of 2 must have been written to it so far (this implementation
-  /// stores the state in 2-byte half-words). Both digest sizes (32 and 28
-  /// bytes) are word-aligned, so a chain of `pushSum`s into the same target
-  /// stays aligned.
-  ///
-  /// ```motoko include=import
-  /// let left = Sha256.fromBlob("L");
-  /// let right = Sha256.fromBlob("R");
-  /// let a = Sha256.new();
-  /// a.writeBlob(left);
-  /// let b = Sha256.new();
-  /// b.writeBlob(right);
-  /// let parent = Sha256.new();
-  /// a.pushSum(parent); // parent's buffer now holds SHA256("L")
-  /// b.pushSum(parent); // followed by SHA256("R")
-  /// let parentHash = parent.sum();
-  /// ```
-  ///
-  /// Traps if `target` is closed, or if `target` is not at a word boundary.
-  public func pushSum(self : Digest, target : Digest) {
-    if (not self.closed) _Digest.close(self);
-    assert not target.closed; // target must still be accepting input
-    assert target.buffer.high; // target must be at a 16-bit word boundary
-    let s = self.state;
-    let n = switch (self.algo) { case (#sha224) 14; case (_) 16 };
-    var k = 0;
-    while (k < n) {
-      _Digest.writeWord(target, s[k]);
-      k += 1;
-    };
   };
 
   /// Get the current hash value without finalizing the digest.

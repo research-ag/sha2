@@ -5,37 +5,37 @@
 /// over N leaves allocates ~N `Blob`s. On the IC that garbage adds up fast.
 ///
 /// This example builds the same tree with ZERO per-node allocation — the only
-/// `Blob` allocated is the root you get back. It uses these tools from sha2:
+/// `Blob` allocated is the root you get back. It uses two combine primitives:
 ///
-///   * `close()`         — finalize a hasher, leaving SHA256 of its input in the
-///     state (no `Blob`).
-///   * `fold()`          — hash the closed digest again in place (state ->
-///     SHA256(state)). `close()` + `fold()` turns a single SHA256 into the
-///     double SHA256 Bitcoin uses. (Omit the `fold()` for a single-SHA tree;
-///     see the note below.)
-///   * `pushSum(target)` — write a closed hasher's digest straight into another
-///     hasher's message buffer, with no intermediate `Blob`.
-///   * `reset()`         — rewind a hasher so it can be reused for the next pair.
+///   * `merkleLeaves(h, l0, l1)` — hash two 32-byte leaf blobs into `h` as
+///     `SHA256(l0 ++ l1)`, straight from the IV, in one self-contained call (no
+///     `reset`/`close`). Follow with `fold(h)` for the double SHA256 Bitcoin
+///     uses.
+///   * `merkleMerge(a, b)`       — combine two finished child digests in place:
+///     `a` becomes the double SHA256 of `a ++ b` and `b` is consumed. `a`
+///     "moves up a level."
 ///
-/// === What YOU must do to stay allocation-free in bulk ===
+/// Both REQUIRE a closed hasher and leave it closed, so a finished hasher is
+/// immediately reusable — there is no `reset` anywhere in the hot path, and no
+/// `Blob` is produced for any internal node.
 ///
-///   1. Allocate the hashers ONCE, up front, and `reset()` them between uses.
-///      Never call `Sha256.new()` per node — that is the main source of garbage.
-///   2. Feed leaf bytes with `writeBlob`. It is allocation-free as long as the
-///      hasher is at a 2-byte word boundary, which holds whenever you have
-///      written an even number of bytes so far. Merkle leaves are typically
-///      32-byte hashes (even), so this is automatic. An odd-length leaf still
-///      hashes correctly but costs one tiny allocation for its trailing byte.
-///   3. Combine with `close()` + `fold()` and move digests with `pushSum`, never
-///      `sum()`. Read the output with `readSum()` exactly once, for the root —
-///      that is the only allocation.
+/// === What YOU must do to stay allocation-free ===
 ///
-/// === Memory: O(log N), not O(N) ===
+///   1. Allocate the hashers ONCE, up front, and `close()` them so they start
+///      in the closed state the combine primitives require. Reuse them via a
+///      free-list; never call `Sha256.new()` per node.
+///   2. Leaves must be 32-byte blobs (Merkle leaves are hashes, so this is the
+///      normal case). Combine leaf pairs with `merkleLeaves` + `fold`.
+///   3. Combine internal nodes with `merkleMerge` and read the output with
+///      `readSum()` exactly once, for the root — that is the only allocation.
 ///
-/// We keep just ONE hasher per tree level alive at a time (⌈log2 N⌉ of them),
-/// feed the leaves left-to-right, and carry each completed pair upward — exactly
-/// like incrementing a binary counter. A `pending` flag per level records
-/// whether a left child is waiting there for its right sibling.
+/// === Memory: O(log N) hashers ===
+///
+/// Evaluate the tree post-order (depth first): finish the left subtree (hold
+/// its result in a hasher), finish the right subtree (hold its result), then
+/// `merkleMerge` them — the merge writes into the left child and frees the
+/// right. A balanced tree of N leaves needs only ⌈log2 N⌉ hashers, tracked by a
+/// small free-list (`freeIx` + `top`).
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";
@@ -46,13 +46,13 @@ import VarArray "mo:core/VarArray";
 
 module {
   /// Bitcoin-style (double-SHA256) Merkle root of `leaves`.
-  /// `leaves.size()` must be a power of two and at least 1.
-  /// Allocates nothing per node — only the returned root `Blob`.
+  /// `leaves.size()` must be a power of two and at least 1, and each leaf must
+  /// be 32 bytes. Allocates nothing per node — only the returned root `Blob`.
   public func bitcoinMerkleRoot(leaves : [Blob]) : Blob {
     let n = leaves.size();
     assert n >= 1;
 
-    // Number of levels above the leaves = log2(n).
+    // Number of internal levels = log2(n).
     var levels = 0;
     var m = n;
     while (m > 1) { m /= 2; levels += 1 };
@@ -62,61 +62,50 @@ module {
     // (leaves are already hashes), so there is nothing to combine.
     if (levels == 0) return leaves[0];
 
-    // One reusable hasher per level, allocated ONCE. hashers[k] combines two
-    // level-k nodes into a single level-(k+1) node.
-    let hashers = Array.tabulate<Sha256.Digest>(levels, func(_) = Sha256.new());
-    // pending[k] : a left child is sitting in hashers[k] awaiting its sibling.
-    let pending = VarArray.repeat<Bool>(false, levels);
+    // A pool of `levels` hashers, started CLOSED (merkleLeaves/merkleMerge both
+    // require a closed hasher) and reused via a free-list: `freeIx[0 .. top-1]`
+    // hold the indices of the currently-free hashers. `levels` = log2(n) is
+    // enough for the whole post-order traversal.
+    let pool = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
+    let freeIx = VarArray.tabulate<Nat>(levels, func(i) = i);
+    let top = [var levels];
 
-    var root : Blob = leaves[0]; // overwritten by the final combine
-    var i = 0;
-    while (i < n) {
-      // Write a leaf pair into the level-0 hasher. Allocation-free: the leaves
-      // are word-aligned, so writeBlob takes its closure-free path.
-      hashers[0].writeBlob(leaves[i]);
-      hashers[0].writeBlob(leaves[i + 1]);
+    // The root ends up in the hasher returned by the top-level eval. readSum is
+    // the single allocation (the root Blob).
+    Sha256.readSum(pool[eval(leaves, pool, freeIx, top, 0, n)]);
+  };
 
-      // Carry the freshly completed pair up the tree.
-      var lvl = 0;
-      var carrying = true;
-      while (carrying) {
-        let h = hashers[lvl];
-        h.close(); // inner SHA256 of left ++ right
-        h.fold(); // outer SHA256 -> double-SHA node (omit for a single-SHA tree)
-        if (lvl + 1 == levels) {
-          // We are at the top: read the root out. THE one allocation.
-          root := h.readSum(); // the double-SHA root Blob
-          h.reset();
-          carrying := false;
-        } else {
-          h.pushSum(hashers[lvl + 1]); // push the closed node straight into the parent
-          h.reset(); // reuse this level's hasher for its next pair
-          if (pending[lvl + 1]) {
-            pending[lvl + 1] := false;
-            lvl += 1; // parent now has both children -> keep carrying upward
-          } else {
-            pending[lvl + 1] := true;
-            carrying := false; // parent waits for its right sibling
-          };
-        };
-      };
-      i += 2;
+  // Evaluate the subtree over `leaves[lo .. hi)` (a power-of-two count >= 2) and
+  // return the pool index of the hasher holding its closed double-SHA digest.
+  // Defined at module level (not a closure) so the traversal allocates nothing.
+  func eval(leaves : [Blob], pool : [Sha256.Digest], freeIx : [var Nat], top : [var Nat], lo : Nat, hi : Nat) : Nat {
+    if (hi - lo == 2) {
+      // leaf pair -> one double-SHA leaf node
+      top[0] -= 1;
+      let i = freeIx[top[0]]; // take a free (closed) hasher
+      let h = pool[i];
+      h.merkleLeaves(leaves[lo], leaves[lo + 1]); // inner SHA256(l0 ++ l1)
+      h.fold(); // outer SHA256 -> double-SHA
+      i;
+    } else {
+      let mid = lo + (hi - lo) / 2;
+      let l = eval(leaves, pool, freeIx, top, lo, mid); // left subtree (held)
+      let r = eval(leaves, pool, freeIx, top, mid, hi); // right subtree (held)
+      pool[l].merkleMerge(pool[r]); // l := double-SHA(l ++ r); r consumed
+      freeIx[top[0]] := r; // free r
+      top[0] += 1;
+      l;
     };
-    root;
   };
 
   // --- Variations you can make in your own tree ---
   //
-  // * Single-SHA tree (e.g. RFC 6962 uses a domain-separated single SHA256):
-  //   drop the `h.fold()` line. The combine is then one SHA256 of `left ++
-  //   right`, and `close()` + `readSum()` (or `pushSum`) yields the node.
-  //
   // * Odd number of children at a level (Bitcoin duplicates the last node):
-  //   when a level ends with an unpaired left child still `pending`, feed that
-  //   child to itself (write it twice) and combine, before moving up. The code
-  //   above requires a power-of-two leaf count to keep the example focused.
+  //   combine the unpaired node with itself. The code above requires a
+  //   power-of-two leaf count to keep the example focused.
   //
-  // * Sha512 trees: identical structure with `mo:sha2/Sha512`. Note Sha512 is
-  //   not fully allocation-free (its 64-bit state boxes on the 32-bit IC wasm),
-  //   but the same reuse pattern still avoids the per-node intermediate Blobs.
+  // * Single-SHA tree (e.g. RFC 6962): `merkleMerge`/`merkleLeaves`+`fold` are
+  //   double-SHA. For a single SHA per node, use `merkleLeaves(h, l0, l1)` then
+  //   `readSum(h)` at the leaves; internal nodes would need a single-SHA combine
+  //   (not provided here).
 };

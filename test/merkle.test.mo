@@ -5,9 +5,10 @@ import Random "mo:core/Random";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
-// Validate that the allocation-free Merkle carry (close/fold/pushSum streaming
-// digests between per-level hashers) produces the same root as a naive
-// reference that materializes every intermediate digest as a Blob.
+// Validate that the allocation-free Merkle trees (Sha256 double-sha via the
+// merkleLeaves/merkleMerge DFS; Sha512 single-sha via the pushSum carry)
+// produce the same root as a naive reference that materializes every
+// intermediate digest as a Blob.
 
 let rng = Random.seed(0x3a3a);
 
@@ -28,42 +29,39 @@ func refRoot256(leaves : [Blob]) : Blob {
   level[0];
 };
 
-func carryRoot256(leaves : [Blob], levels : Nat) : Blob {
-  let hashers = Array.tabulate<Sha256.Digest>(levels, func(_) = Sha256.new());
-  let pending = VarArray.repeat<Bool>(false, levels);
-  var root : Blob = "";
-  var i = 0;
-  while (i < leaves.size()) {
-    hashers[0].writeBlob(leaves[i]);
-    hashers[0].writeBlob(leaves[i + 1]);
-    var lvl = 0;
-    var carrying = true;
-    while (carrying) {
-      let h = hashers[lvl];
-      h.close(); // inner SHA256 of the pair
-      h.fold(); // outer SHA256 -> double-SHA node
-      if (lvl + 1 == levels) {
-        root := h.readSum();
-        h.reset();
-        carrying := false;
-      } else {
-        h.pushSum(hashers[lvl + 1]); // push the already-closed node into the parent
-        h.reset();
-        if (pending[lvl + 1]) { pending[lvl + 1] := false; lvl += 1 } else {
-          pending[lvl + 1] := true;
-          carrying := false;
-        };
-      };
-    };
-    i += 2;
+// Post-order DFS over a pool of `levels` pre-closed hashers: leaves combined
+// with merkleLeaves, internal nodes with merkleMerge (in place), the right
+// child freed back to a free-list after each merge.
+func evalDfs256(leaves : [Blob], pool : [Sha256.Digest], freeIx : [var Nat], top : [var Nat], lo : Nat, hi : Nat) : Nat {
+  if (hi - lo == 2) {
+    top[0] -= 1;
+    let i = freeIx[top[0]];
+    let h = pool[i];
+    h.merkleLeaves(leaves[lo], leaves[lo + 1]);
+    h.fold();
+    i;
+  } else {
+    let mid = lo + (hi - lo) / 2;
+    let l = evalDfs256(leaves, pool, freeIx, top, lo, mid);
+    let r = evalDfs256(leaves, pool, freeIx, top, mid, hi);
+    pool[l].merkleMerge(pool[r]);
+    freeIx[top[0]] := r;
+    top[0] += 1;
+    l;
   };
-  root;
+};
+
+func dfsRoot256(leaves : [Blob], levels : Nat) : Blob {
+  let pool = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
+  let freeIx = VarArray.tabulate<Nat>(levels, func(i) = i);
+  let top = [var levels];
+  Sha256.readSum(pool[evalDfs256(leaves, pool, freeIx, top, 0, leaves.size())]);
 };
 
 for (k in ([1, 2, 3, 6] : [Nat]).values()) {
   let count = 2 ** k;
   let leaves = Array.tabulate<Blob>(count, func(_) = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8())));
-  assert (carryRoot256(leaves, k) == refRoot256(leaves));
+  assert (dfsRoot256(leaves, k) == refRoot256(leaves));
 };
 
 // --- single-sha tree over 2^k 64-byte leaves (Sha512) ---
