@@ -3,10 +3,10 @@
 Worked examples for the allocation-free hashing API (`close`, `fold`,
 `readSum`, `merkleLeaves`, `merkleMerge`) of [`mo:sha2`](../).
 
-| file                       | what it shows                                                                                                                                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| file                       | what it shows                                                                                                                                                                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`Merkle.mo`](./Merkle.mo) | An allocation-free Bitcoin-style (double-SHA256) Merkle tree — a post-order DFS over a pool of `log2(n)` hashers, leaf pairs combined with `merkleLeaves` + `fold` and internal nodes in place with `merkleMerge`, only the root `Blob` allocated. |
-| [`NFold.mo`](./NFold.mo)   | N-fold hashing (`H^N(msg)`) with `close`/`fold`, plus a batch variant that reuses a single hasher across many messages.                                                                                |
+| [`NFold.mo`](./NFold.mo)   | N-fold hashing (`H^N(msg)`) with `close`/`fold`, plus a batch variant that reuses a single hasher across many messages.                                                                                                                            |
 
 Each file's header is a how-to: it spells out exactly what you must do to keep
 hashing allocation-free in bulk — reuse a pool of hashers, combine 32-byte leaf
