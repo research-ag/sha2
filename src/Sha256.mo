@@ -173,6 +173,17 @@ module {
   /// message buffer is not empty (the digest is not at a block boundary).
   public func writeSumPair(self : Digest, a : Digest, b : Digest) : () = _Digest.writeSumPair(self, a, b);
 
+  /// Combine two closed digests in place: replace `self`'s digest with the
+  /// Bitcoin-style double SHA256 of `self.digest ++ other.digest`, so `self`
+  /// moves "up one level" in a Merkle tree while `other` is consumed (read-only;
+  /// the caller frees it). Self-contained — no `reset`/`close`/`fold` needed,
+  /// no message buffer, no intermediate `Blob`; `self` stays closed. This lets
+  /// a Merkle tree be built with one fewer hasher than `writeSumPair` (the
+  /// combine reuses `self`'s slot instead of a fresh target).
+  ///
+  /// Traps if `self` or `other` is not closed.
+  public func merkleMerge(self : Digest, other : Digest) : () = _Digest.merkleMerge(self, other);
+
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko include=import

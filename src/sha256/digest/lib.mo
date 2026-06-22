@@ -122,6 +122,20 @@ module {
     self.state.process_block_from_state_pair(a.state, b.state);
     buf.i_block +%= 1;
   };
+  /// Combine the digests of two closed digests in place: replace `self`'s digest
+  /// with the Bitcoin-style double SHA256 of `self.digest ++ other.digest`,
+  /// `self` moving "up one level". `other` is read-only (the caller frees it).
+  /// Self-contained — reads both states straight into one block from the IV,
+  /// then pads and folds; no message buffer, no `Blob`. `self` stays closed.
+  /// Traps if `self` or `other` is not closed.
+  public func merkleMerge(self : Digest, other : Digest) {
+    assert self.closed;
+    assert other.closed;
+    let s = self.state;
+    s.process_merge_block(other.state); // inner data block (self ++ other) from IV
+    s.process_padding_block(512); // inner padding: 64-byte message = 512 bits
+    s.process_fold_block(); // outer SHA256 -> double-SHA digest
+  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {

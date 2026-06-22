@@ -5,6 +5,7 @@ import Prim "mo:prim";
 import fromBlob "process/blocks/blob";
 import fromBlobPair "process/blocks/blob_pair";
 import fromStatePair "process/blocks/state_pair";
+import fromMerge "process/blocks/merge";
 import fromArray "process/blocks/array";
 import fromVarArray "process/blocks/varArray";
 import fromAccessor "process/blocks/accessor";
@@ -30,6 +31,8 @@ module {
   public let process_block_from_blob_pair = fromBlobPair.process;
   /// Run the SHA256 compression on exactly one 64-byte block read from two 32-byte digest states (see `process/blocks/state_pair`).
   public let process_block_from_state_pair = fromStatePair.process;
+  /// Inner block of a merge: hash one block of `self`'s digest ++ `sb` from the IV, overwriting `self` (see `process/blocks/merge`).
+  public let process_merge_block = fromMerge.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[Nat8]` (see `process/blocks/array`).
   public let process_blocks_from_array = fromArray.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[var Nat8]` (see `process/blocks/varArray`).
