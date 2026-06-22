@@ -184,6 +184,16 @@ module {
   /// Traps if `self` or `other` is not closed.
   public func merkleMerge(self : Digest, other : Digest) : () = _Digest.merkleMerge(self, other);
 
+  /// Hash two 32-byte blobs into `self` as `SHA256(b1 ++ b2)`, from a length-0
+  /// start. Like `writeBlobPair32` but self-contained — requires `self` already
+  /// closed, starts from the IV (no `reset`), and runs the data block plus a
+  /// hard-coded padding block in one call, leaving `self` closed. The
+  /// leaf-combine counterpart of `merkleMerge`: `merkleLeaves(h, l0, l1)` then
+  /// `fold(h)` builds a double-SHA Merkle leaf node with no `reset`/`close`.
+  ///
+  /// Traps if `self` is not closed, or if either blob is not 32 bytes.
+  public func merkleLeaves(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.merkleLeaves(self, b1, b2);
+
   /// Write a `[Nat8]` array to the digest.
   ///
   /// ```motoko include=import

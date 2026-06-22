@@ -64,6 +64,27 @@ module {
     };
   };
 
+  // Like evalMerge, but leaf nodes use merkleLeaves (no reset/close) instead of
+  // reset + writeBlobPair32 + close. The pool hashers must start closed.
+  func evalLeaves(leaves : [Blob], pool : [Sha256.Digest], freeIx : [var Nat], top : [var Nat], lo : Nat, hi : Nat) : Nat {
+    if (hi - lo == 2) {
+      top[0] -= 1;
+      let i = freeIx[top[0]];
+      let h = pool[i];
+      Sha256.merkleLeaves(h, leaves[lo], leaves[lo + 1]); // h is closed; no reset
+      Sha256.fold(h);
+      i;
+    } else {
+      let mid = lo + (hi - lo) / 2;
+      let l = evalLeaves(leaves, pool, freeIx, top, lo, mid);
+      let r = evalLeaves(leaves, pool, freeIx, top, mid, hi);
+      Sha256.merkleMerge(pool[l], pool[r]);
+      freeIx[top[0]] := r;
+      top[0] += 1;
+      l;
+    };
+  };
+
   public func init() : Bench.V1 {
     // Bitcoin-style double-SHA Merkle root over 2^k 32-byte leaves, two ways to
     // combine internal nodes without an intermediate Blob.
@@ -72,12 +93,13 @@ module {
     let cols = [
       "writeSumPair DFS",
       "merkleMerge DFS",
+      "merkleLeaves DFS",
       "pushSum carry",
     ];
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle (double-SHA)";
-      description = "Bitcoin-style double-SHA Merkle root over 2^k 32-byte leaves, combining internal nodes three ways (leaves fed with writeBlobPair32 in all). 'writeSumPair DFS' evaluates post-order, each node combining its two finished children into a fresh target with writeSumPair + close + fold, using log2(n)+1 hashers via a free-list. 'merkleMerge DFS' is the same post-order traversal but the combine writes into the left child (merkleMerge: reads both states from the IV, pads and folds, in place), so it frees only the right child and needs one fewer hasher (log2(n)). 'pushSum carry' is the streaming binary-counter carry: one hasher per level, each node pushSum'd into the parent's message buffer, no free-list. All three are allocation-free except the root Blob and produce the identical root.";
+      description = "Bitcoin-style double-SHA Merkle root over 2^k 32-byte leaves, four ways. 'writeSumPair DFS' evaluates post-order, each node combining its two finished children into a fresh target with reset + writeSumPair + close + fold (log2(n)+1 hashers via a free-list). 'merkleMerge DFS' is the same but internal nodes combine in place with merkleMerge (reads both states from the IV, no reset), one fewer hasher (log2(n)). 'merkleLeaves DFS' additionally drops the reset at the leaves: leaf nodes use merkleLeaves (reads two blobs from the IV, no reset/close) instead of reset + writeBlobPair32 + close. 'pushSum carry' is the streaming binary-counter carry: one hasher per level, each node pushSum'd into the parent's buffer, no free-list. All four are allocation-free except the root Blob and produce the identical root.";
       rows = rows;
       cols = cols;
     };
@@ -109,6 +131,20 @@ module {
       func(ri) = VarArray.tabulate<Nat>(exps[ri], func(i) = i),
     );
     let mergeTopByRow = Array.tabulate<[var Nat]>(rows.size(), func(ri) = [var exps[ri]]);
+    // merkleLeaves scratch: same as merge, but the pool starts closed (merkleLeaves
+    // and merkleMerge both require a closed hasher).
+    let leavesPoolByRow = Array.tabulate<[Sha256.Digest]>(
+      rows.size(),
+      func(ri) = Array.tabulate<Sha256.Digest>(
+        exps[ri],
+        func(_) { let h = Sha256.new(); Sha256.close(h); h },
+      ),
+    );
+    let leavesFreeByRow = Array.tabulate<[var Nat]>(
+      rows.size(),
+      func(ri) = VarArray.tabulate<Nat>(exps[ri], func(i) = i),
+    );
+    let leavesTopByRow = Array.tabulate<[var Nat]>(rows.size(), func(ri) = [var exps[ri]]);
     // carry scratch: one hasher per level + a pending flag per level.
     let carryHashersByRow = Array.tabulate<[Sha256.Digest]>(
       rows.size(),
@@ -139,6 +175,17 @@ module {
       while (j < pool.size()) { freeIx[j] := j; j += 1 };
       top[0] := pool.size();
       Sha256.readSum(pool[evalMerge(leaves, pool, freeIx, top, 0, leaves.size())]);
+    };
+
+    func leavesRoot(ri : Nat) : Blob {
+      let pool = leavesPoolByRow[ri];
+      let freeIx = leavesFreeByRow[ri];
+      let top = leavesTopByRow[ri];
+      let leaves = leavesByRow[ri];
+      var j = 0;
+      while (j < pool.size()) { freeIx[j] := j; j += 1 };
+      top[0] := pool.size();
+      Sha256.readSum(pool[evalLeaves(leaves, pool, freeIx, top, 0, leaves.size())]);
     };
 
     func carryRoot(ri : Nat) : Blob {
@@ -183,6 +230,7 @@ module {
         [
           func() = ignore dfsRoot(ri),
           func() = ignore mergeRoot(ri),
+          func() = ignore leavesRoot(ri),
           func() = ignore carryRoot(ri),
         ];
       },

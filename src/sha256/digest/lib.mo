@@ -136,6 +136,21 @@ module {
     s.process_padding_block(512); // inner padding: 64-byte message = 512 bits
     s.process_fold_block(); // outer SHA256 -> double-SHA digest
   };
+  /// Hash two 32-byte blobs `b1 ++ b2` (one 64-byte message) into `self` from a
+  /// length-0 start, overwriting `self` with `SHA256(b1 ++ b2)`. Like
+  /// `writeBlobPair32` but self-contained: requires `self` already closed,
+  /// starts the compression from the IV (no `reset`/`loadIV`), runs the data
+  /// block plus a hard-coded padding block (512-bit message). `self` stays
+  /// closed. The leaf-combine counterpart of `merkleMerge`; follow with `fold`
+  /// for a double-SHA leaf node.
+  /// Traps if `self` is not closed, or if either blob is not 32 bytes.
+  public func merkleLeaves(self : Digest, b1 : Blob, b2 : Blob) {
+    assert self.closed;
+    assert (b1.size() == 32 and b2.size() == 32);
+    let s = self.state;
+    s.process_leaf_block(b1, b2); // data block (b1 ++ b2) from IV
+    s.process_padding_block(512); // padding: 64-byte message = 512 bits
+  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {
