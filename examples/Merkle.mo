@@ -37,12 +37,16 @@
 /// j-th peak and `level[j]` its tree level; `i` is the stack height.
 ///
 ///   1. Push each leaf pair as a node (`combineLeaves` + `fold`), a level-1 peak.
+///      An unpaired final leaf is paired with itself (Bitcoin's duplication).
 ///   2. While the new peak has the SAME level as the peak below it, merge the
 ///      two (`combineNodes` + `fold` into the lower peak) and pop — exactly like
 ///      carrying in binary addition.
+///   3. At the end, a power-of-two tree has one peak (the root). Otherwise
+///      several peaks remain at decreasing levels; collapse them Bitcoin-style
+///      by duplicating the lowest peak (`combineNodes` with itself, raising it a
+///      level) and carrying, until one peak is left.
 ///
-/// A balanced tree of N leaves needs only ⌈log2 N⌉ hashers, and the single
-/// remaining peak at the end is the root. No recursion, no free-list.
+/// A tree of N leaves needs only ⌈log2 N⌉ hashers. No recursion, no free-list.
 ///
 /// === What YOU must do to stay allocation-free ===
 ///
@@ -62,34 +66,39 @@ import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
 
 module {
-  /// Bitcoin-style (double-SHA256) Merkle root of `leaves`.
-  /// `leaves.size()` must be a power of two and at least 1, and each leaf must
-  /// be 32 bytes. Allocates nothing per node — only the returned root `Blob`.
+  /// Bitcoin-style (double-SHA256) Merkle root of `leaves`, for ANY leaf count
+  /// (>= 1). Each leaf must be 32 bytes. Allocates nothing per node — only the
+  /// returned root `Blob`.
+  ///
+  /// Bitcoin's rule for non-power-of-two trees: whenever a level has an odd
+  /// number of nodes, the LAST node is duplicated (hashed with itself). The peak
+  /// stack handles this in two places — an unpaired final leaf is paired with
+  /// itself, and at the end any lone leftover peak is duplicated and carried up.
   public func bitcoinMerkleRoot(leaves : [Blob]) : Blob {
     let n = leaves.size();
     assert n >= 1;
 
-    // Number of internal levels = log2(n).
-    var levels = 0;
-    var m = n;
-    while (m > 1) { m /= 2; levels += 1 };
-    assert (2 ** levels == n); // power-of-two requirement
+    // A single leaf: by the Bitcoin convention the root is the leaf itself.
+    if (n == 1) return leaves[0];
 
-    // A single leaf: by the Bitcoin convention the root is the leaf itself
-    // (leaves are already hashes), so there is nothing to combine.
-    if (levels == 0) return leaves[0];
-
-    // A pool of `levels` hashers, started CLOSED (combineLeaves/combineNodes both
-    // require a closed hasher). `hasher[0 .. i-1]` is the peak stack and
-    // `level[j]` the level of `hasher[j]`.
-    let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); h.close(); h });
-    let level = VarArray.repeat<Nat>(0, levels);
+    // A pool of hashers, started CLOSED (combineLeaves/combineNodes both require
+    // a closed hasher). `hasher[0 .. i-1]` is the peak stack and `level[j]` the
+    // level of `hasher[j]`. `ceil(log2 n) + 2` slots is always enough (the peak
+    // stack plus the collapse, which can push the root one extra level).
+    var cap = 0;
+    var m = 1;
+    while (m < n) { m *= 2; cap += 1 }; // cap = ceil(log2 n)
+    cap += 2;
+    let hasher = Array.tabulate<Sha256.Digest>(cap, func(_) { let h = Sha256.new(); h.close(); h });
+    let level = VarArray.repeat<Nat>(0, cap);
 
     var i = 0; // stack height
     var p = 0; // next leaf
     while (p < n) {
-      // Push a leaf node. The `fold` makes it double-SHA; drop it for single-SHA.
-      hasher[i].combineLeaves(leaves[p], leaves[p + 1]); // SHA256(l0 ++ l1)
+      // Push a leaf node. An unpaired final leaf is duplicated (Bitcoin's rule).
+      // The `fold` makes the node double-SHA; drop it for a single-SHA tree.
+      let right = if (p + 1 < n) leaves[p + 1] else leaves[p];
+      hasher[i].combineLeaves(leaves[p], right); // SHA256(l0 ++ l1)
       hasher[i].fold(); // -> double-SHA
       level[i] := 1;
       // Carry: while the top peak matches the level of the one below it, merge.
@@ -103,17 +112,35 @@ module {
       p += 2;
     };
 
-    // For a power-of-two tree the stack collapses to a single peak: the root.
+    // Collapse leftover peaks. A power-of-two tree already has one peak; for
+    // any other count the stack holds several peaks at strictly decreasing
+    // levels. Bitcoin duplicates the lone node at each odd level, which here is:
+    // duplicate the lowest peak (combine it with itself, raising it a level) and
+    // carry, repeating until a single peak — the root — remains.
+    while (i > 1) {
+      hasher[i - 1].combineNodes(hasher[i - 1]); // duplicate: SHA256(peak ++ peak)
+      hasher[i - 1].fold(); // -> double-SHA (drop for single-SHA)
+      level[i - 1] += 1;
+      while (i > 1 and level[i - 2] == level[i - 1]) {
+        hasher[i - 2].combineNodes(hasher[i - 1]);
+        hasher[i - 2].fold();
+        level[i - 2] += 1;
+        i -= 1;
+      };
+    };
+
     // readSum is the one and only allocation.
     Sha256.readSum(hasher[0]);
   };
 
   // --- Variations you can make in your own tree ---
   //
-  // * Plain single-SHA tree: delete the two `fold` lines — every node is then
-  //   one `SHA256(left ++ right)`. (Not RFC 6962 — see the header.)
+  // * Plain single-SHA tree: delete the `fold` lines — every node is then one
+  //   `SHA256(left ++ right)`. (Not RFC 6962 — see the header. And note the
+  //   last-node duplication above is specifically Bitcoin's rule; other trees
+  //   handle odd levels differently.)
   //
-  // * Odd number of children at a level (Bitcoin duplicates the last node):
-  //   combine the unpaired node with itself. The code above requires a
-  //   power-of-two leaf count to keep the example focused.
+  // * Caveat: duplicating the last node is the source of Bitcoin's CVE-2012-2459
+  //   (two distinct leaf lists can yield the same root); callers must reject
+  //   blocks with duplicate txids in that position.
 };
