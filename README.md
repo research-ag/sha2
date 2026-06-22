@@ -180,6 +180,7 @@ Debug.print("Hash after chunk 3: " # debug_show (hash3));
 // Final hash (consumes `digest`)
 let finalHash = digest.sum();
 Debug.print("Final hash: " # debug_show (finalHash));
+
 ```
 
 Each `clone().sum()` allocates a copy of the digest plus the result `Blob`, so
