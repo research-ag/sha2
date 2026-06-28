@@ -1,5 +1,6 @@
 // Verifies the examples produce the same hashes as straightforward references.
 import Merkle "../Merkle";
+import BitcoinTxMerkle "../BitcoinTxMerkle";
 import NFold "../NFold";
 import Sha256 "../../src/Sha256";
 import Array "mo:core/Array";
@@ -60,6 +61,19 @@ do {
   let b586t2 : Blob = Blob.fromArray([159, 228, 13, 90, 182, 215, 125, 175, 249, 80, 129, 254, 174, 13, 228, 184, 132, 45, 42, 128, 190, 120, 226, 97, 135, 170, 8, 139, 84, 99, 243, 107]);
   let b586root : Blob = Blob.fromArray([77, 89, 105, 192, 209, 13, 204, 230, 8, 104, 254, 228, 212, 222, 128, 186, 94, 243, 138, 186, 238, 216, 167, 93, 170, 99, 228, 140, 150, 61, 123, 25]);
   assert (Merkle.bitcoinMerkleRoot([b586t0, b586t1, b586t2]) == b586root);
+};
+
+// BitcoinTxMerkle: root over RAW (variable-length) transactions must equal the
+// vector-tested Merkle.bitcoinMerkleRoot fed the same transactions' txids
+// (txid = double SHA256 of the raw bytes). This exercises the Digest -> Hasher
+// bridge and closeDouble against the naive double hash, transitively tying the
+// raw-tx root to the mainnet block vectors checked above.
+for (count in ([1, 2, 3, 4, 5, 8, 9, 16, 17, 30] : [Nat]).values()) {
+  // Raw transactions of assorted lengths, several crossing the 64-byte block
+  // boundary, so the Digest absorb path is exercised for each leaf.
+  let txs = Array.tabulate<Blob>(count, func(j) = bytes(8 + (j * 53) % 250));
+  let txids = Array.map<Blob, Blob>(txs, func(tx) = Sha256.fromBlob(Sha256.fromBlob(tx)));
+  assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(txs) == Merkle.bitcoinMerkleRoot(txids));
 };
 
 // N-fold against manual repeated fromBlob.

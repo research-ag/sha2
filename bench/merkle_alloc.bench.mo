@@ -3,22 +3,22 @@ import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
 import Random "mo:core/Random";
 import Bench "mo:bench-helper";
-import Sha256 "../src/Sha256";
+import Hasher "../src/Hasher/Sha256";
 
 module {
   // Iterative Merkle-mountain-range build (see merkle.bench.mo). Leaves the
   // double-SHA root in hasher[0]; does NOT read it out.
-  func build(leaves : [Blob], hasher : [Sha256.Digest], level : [var Nat]) {
+  func build(leaves : [Blob], hasher : [Hasher.Hasher], level : [var Nat]) {
     let n = leaves.size();
     var i = 0;
     var p = 0;
     while (p < n) {
-      hasher[i].combineLeaves(leaves[p], leaves[p + 1]);
-      hasher[i].fold();
+      hasher[i].combineBlob32(leaves[p], leaves[p + 1]);
+      hasher[i].hashState(hasher[i]);
       level[i] := 1;
       while (i > 0 and level[i - 1] == level[i]) {
-        hasher[i - 1].combineNodes(hasher[i]);
-        hasher[i - 1].fold(); // -> double-SHA
+        hasher[i - 1].combineState(hasher[i - 1], hasher[i]);
+        hasher[i - 1].hashState(hasher[i - 1]); // -> double-SHA
         level[i - 1] += 1;
         i -= 1;
       };
@@ -28,8 +28,8 @@ module {
   };
 
   public func init() : Bench.V1 {
-    // Is the Merkle build itself (the peak-stack loop, combineLeaves, combineNodes,
-    // fold) allocation-free? Run the SAME pool over R computations per
+    // Is the Merkle build itself (the peak-stack loop, combineBlob32, combineState,
+    // hashState) allocation-free? Run the SAME pool over R computations per
     // measurement and watch the garbage. 'build + readSum' produces one root
     // Blob per computation (so its garbage should scale with R); 'build only'
     // skips readSum, so if the loop allocates nothing its garbage must stay FLAT
@@ -44,7 +44,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle allocation probe";
-      description = "Run R = 1 / 10 / 100 double-SHA Merkle-tree builds (2^8 leaves) per measurement, all on the same reused pool of hashers. 'build + readSum' reads the root Blob out each time, so its garbage should grow ~linearly with R. 'build only (no readSum)' runs the full peak-stack loop — combineLeaves, combineNodes, fold — but never calls readSum, so it allocates no Blob; if the loop itself allocates nothing, its garbage must stay flat as R grows. A flat 'build only' column is proof that the hasher stack and the loop cause no per-node / per-level / per-computation allocation.";
+      description = "Run R = 1 / 10 / 100 double-SHA Merkle-tree builds (2^8 leaves) per measurement, all on the same reused pool of hashers. 'build + readSum' reads the root Blob out each time, so its garbage should grow ~linearly with R. 'build only (no readSum)' runs the full peak-stack loop — combineBlob32, combineState, hashState — but never calls readSum, so it allocates no Blob; if the loop itself allocates nothing, its garbage must stay flat as R grows. A flat 'build only' column is proof that the hasher stack and the loop cause no per-node / per-level / per-computation allocation.";
       rows = rows;
       cols = cols;
     };
@@ -54,7 +54,7 @@ module {
     let levels = 8;
     let leaves = Array.tabulate<Blob>(n, func(_) = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8())));
     // One pool, reused across every cell and every repetition.
-    let hasher = Array.tabulate<Sha256.Digest>(levels, func(_) { let h = Sha256.new(); Sha256.close(h); h });
+    let hasher = Array.tabulate<Hasher.Hasher>(levels, func(_) { Hasher.new() });
     let level = VarArray.repeat<Nat>(0, levels);
 
     let routines : [[() -> ()]] = Array.tabulate<[() -> ()]>(
@@ -66,7 +66,7 @@ module {
             var m = 0;
             while (m < r) {
               build(leaves, hasher, level);
-              ignore Sha256.readSum(hasher[0]);
+              ignore Hasher.readSum(hasher[0]);
               m += 1;
             };
           },

@@ -9,16 +9,19 @@ module {
     let rows = [
       "new()", // create a fresh hasher
       "reset()", // reset an existing hasher
-      "sum()", // finalize and return the hash (allocates a Blob)
       "close() partial", // finalize without returning, mid-block
       "close() @block", // finalize at a block boundary (fast path)
-      "double-sha (32 B)", // sha256(sha256(msg)) on a 32-byte message
+      "readSum()", // read a closed digest's state out as a Blob
+      "sum() partial", // close() partial + readSum()
+      "sum() @block", // close() @block + readSum()
+      "sumDouble() partial", // close() partial + fold + readSum()
+      "sumDouble() @block", // close() @block + fold + readSum()
     ];
     let cols = ["Sha256"];
 
     let schema : Bench.Schema = {
       name = "Sha256 lifecycle";
-      description = "Per-operation cost of the hasher lifecycle plus a composite double hash. The hasher in reset()/sum()/close() rows already exists and has had a block written to it. close() finalizes without returning a Blob; 'close() partial' has a sub-block 40-byte message, so the padding goes through the buffer, while 'close() @block' has a 64-byte (one full block) message, so close() takes the block-boundary fast path that compresses the all-constant padding block directly, skipping the buffer fill. double-sha is sha256(sha256(msg)) on a 32-byte message via the dedicated sumDouble() (copies state into the buffer, no intermediate Blob). (Merkle-tree benchmarks live in bench/merkle.bench.mo.)";
+      description = "Per-operation cost of the hasher lifecycle. Every measured row runs exactly one operation on a PRE-BUILT hasher (already created and, where relevant, already written/closed), so no row includes a writeBlob. new()/reset() create or rewind. close() finalizes without returning a Blob: 'close() partial' has a sub-block 40-byte message so the padding goes through the buffer, while 'close() @block' has a 64-byte (one full block) message so close() takes the block-boundary fast path that compresses the all-constant padding block directly. readSum() reads a closed digest's 32-byte state out as a Blob (length-independent). sum() = close() + readSum(); sumDouble() = close() + an in-place re-hash of the 32-byte state + readSum() (sha256 only). sum() and sumDouble() are shown at both message shapes; their partial-vs-@block gap is entirely close()'s padding path (readSum and the re-hash are length-independent). (Merkle-tree and Hasher-vs-Digest benchmarks live in bench/merkle.bench.mo and bench/hasher.bench.mo.)";
       rows = rows;
       cols = cols;
     };
@@ -30,39 +33,47 @@ module {
     let input : Blob = Blob.fromArray(Array.tabulate<Nat8>(40, func(_) = rng.nat8()));
     let block : Blob = Blob.fromArray(Array.tabulate<Nat8>(64, func(_) = rng.nat8()));
 
-    // Pre-built hashers for the non-creation rows. Each cell runs exactly
-    // once per measurement, so a single finalize per hasher is safe.
+    // Pre-built hashers for the non-creation rows. Each cell runs exactly once
+    // per measurement, so a single finalize per hasher is safe. 'partial' rows
+    // get the 40-byte sub-block message, '@block' rows the 64-byte one.
     let resetLocal = Sha256.new();
     Sha256.writeBlob(resetLocal, input);
-    let sumLocal = Sha256.new();
-    Sha256.writeBlob(sumLocal, input);
     let closeLocal = Sha256.new();
     Sha256.writeBlob(closeLocal, input);
     let closeBlockLocal = Sha256.new();
     Sha256.writeBlob(closeBlockLocal, block);
-
-    // A 32-byte message for the double-sha row, reused via the same hasher.
-    let msg32 : Blob = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8()));
+    // readSum() reads a closed digest, so this one is pre-closed.
+    let readSumLocal = Sha256.new();
+    Sha256.writeBlob(readSumLocal, input);
+    Sha256.close(readSumLocal);
+    let sumLocal = Sha256.new();
+    Sha256.writeBlob(sumLocal, input);
+    let sumBlockLocal = Sha256.new();
+    Sha256.writeBlob(sumBlockLocal, block);
     let dshaLocal = Sha256.new();
+    Sha256.writeBlob(dshaLocal, input);
+    let dshaBlockLocal = Sha256.new();
+    Sha256.writeBlob(dshaBlockLocal, block);
 
     let routines : [[() -> ()]] = [
       // new()
       [func() = ignore Sha256.new()],
       // reset()
       [func() = Sha256.reset(resetLocal)],
-      // sum()
-      [func() = ignore Sha256.sum(sumLocal)],
       // close() partial: sub-block message, padding via the buffer
       [func() = Sha256.close(closeLocal)],
       // close() @block: block-aligned message, padding via the fast path
       [func() = Sha256.close(closeBlockLocal)],
-      // double-sha (32 B): sha256(sha256(msg)) via the dedicated sumDouble()
-      [
-        func() {
-          Sha256.writeBlob(dshaLocal, msg32);
-          ignore Sha256.sumDouble(dshaLocal);
-        },
-      ],
+      // readSum(): read a closed digest's 32-byte state out as a Blob
+      [func() = ignore Sha256.readSum(readSumLocal)],
+      // sum() partial: close() partial + readSum()
+      [func() = ignore Sha256.sum(sumLocal)],
+      // sum() @block: close() @block + readSum()
+      [func() = ignore Sha256.sum(sumBlockLocal)],
+      // sumDouble() partial: close() partial + re-hash + readSum()
+      [func() = ignore Sha256.sumDouble(dshaLocal)],
+      // sumDouble() @block: close() @block + re-hash + readSum()
+      [func() = ignore Sha256.sumDouble(dshaBlockLocal)],
     ];
 
     Bench.V1(schema, func(ri : Nat, ci : Nat) = routines[ri][ci]());

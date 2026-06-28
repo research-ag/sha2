@@ -7,23 +7,24 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  /// Hash the 32-byte SHA256 digest currently held in `self` as a fresh message
-  /// (`self` -> SHA256(self)), in one specialized block. The message is the 8
+  /// Hash the 32-byte SHA256 digest held in `src` as a fresh message
+  /// (`self` -> SHA256(src)), in one specialized block. The message is the 8
   /// digest words w00..w07, the 0x80 separator word w08, six zero words
   /// w09..w14, and the constant bit length 256 in w15; the compression starts
   /// from the SHA256 IV. The zero words drop out of the schedule and rounds.
-  /// Reads the old digest, then overwrites `self` with the new one in place.
-  /// SHA256 only (the layout/length are size-specific).
-  public func process(self : [var Nat16]) : () {
-    // message words 0..7 = the digest currently in the state
-    let w00 = nat16To32(self[0]) << 16 | nat16To32(self[1]);
-    let w01 = nat16To32(self[2]) << 16 | nat16To32(self[3]);
-    let w02 = nat16To32(self[4]) << 16 | nat16To32(self[5]);
-    let w03 = nat16To32(self[6]) << 16 | nat16To32(self[7]);
-    let w04 = nat16To32(self[8]) << 16 | nat16To32(self[9]);
-    let w05 = nat16To32(self[10]) << 16 | nat16To32(self[11]);
-    let w06 = nat16To32(self[12]) << 16 | nat16To32(self[13]);
-    let w07 = nat16To32(self[14]) << 16 | nat16To32(self[15]);
+  /// Reads all of `src` into locals first, then overwrites `self`, so `src` may
+  /// alias `self` (the in-place fold). SHA256 only (the layout/length are
+  /// size-specific).
+  public func process(self : [var Nat16], src : [var Nat16]) : () {
+    // message words 0..7 = the 32-byte digest held in `src`
+    let w00 = nat16To32(src[0]) << 16 | nat16To32(src[1]);
+    let w01 = nat16To32(src[2]) << 16 | nat16To32(src[3]);
+    let w02 = nat16To32(src[4]) << 16 | nat16To32(src[5]);
+    let w03 = nat16To32(src[6]) << 16 | nat16To32(src[7]);
+    let w04 = nat16To32(src[8]) << 16 | nat16To32(src[9]);
+    let w05 = nat16To32(src[10]) << 16 | nat16To32(src[11]);
+    let w06 = nat16To32(src[12]) << 16 | nat16To32(src[13]);
+    let w07 = nat16To32(src[14]) << 16 | nat16To32(src[15]);
     let w08 = 0x8000_0000 : Nat32; // 0x80 separator then zeros
     let w15 = 256 : Nat32; // bit length of a 32-byte message
 

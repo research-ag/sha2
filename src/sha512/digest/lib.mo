@@ -17,7 +17,8 @@ module {
   /// Append a single byte, processing a full block if one completes.
   public func writeByte(self : Digest, val : Nat8) : () = Byte.writeByte(self, val);
 
-  // We must be at a word boundary, i.e. i_byte must be equal to 8
+  /// Append a 64-bit word, processing a full block if one completes. Traps
+  /// unless the digest is at a word boundary (`i_byte == 8`).
   public func writeWord(self : Digest, val : Nat64) : () {
     assert (self.i_byte == 8);
     let msg = self.msg;

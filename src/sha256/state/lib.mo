@@ -26,7 +26,7 @@ module {
   public let clone = VarArray.clone;
   /// Run the SHA256 compression on every full 64-byte block in the input `Blob` (see `process/blocks/blob`).
   public let process_blocks_from_blob = fromBlob.process;
-  /// Inner block of a merge: hash one block of `self`'s digest ++ `sb` from the IV, overwriting `self` (see `process/blocks/merge`).
+  /// Inner block of a merge: hash one block of `s1 ++ s2` (two 32-byte digests) from the IV, overwriting `self`; `s1`/`s2` may alias `self` (see `process/blocks/merge`).
   public let process_merge_block = fromMerge.process;
   /// Inner block of a leaf combine: hash one block of `b1 ++ b2` (two 32-byte blobs) from the IV, overwriting `self` (see `process/blocks/leaf`).
   public let process_leaf_block = fromLeaf.process;
@@ -42,7 +42,7 @@ module {
   public let process_block_from_msg = fromMsg.process;
   /// Run the SHA256 compression on the all-constant final padding block for a block-aligned message, encoding only the bit length (see `process/padding`).
   public let process_padding_block = fromPadding.process;
-  /// Hash the 32-byte digest held in the state as a fresh message in one specialized block, overwriting the state with `SHA256(state)` (see `process/fold`).
+  /// Hash the 32-byte digest held in `src` as a fresh message in one specialized block, overwriting `self` with `SHA256(src)`; `src` may alias `self` (see `process/fold`).
   public let process_fold_block = fromFold.process;
 
   /// Serialize `self` as a `[Nat8]` of the requested truncation length: `28` for SHA-224 or `32` for SHA-256.

@@ -7,33 +7,26 @@ import Sha512 "../src/Sha512";
 let rng = Random.seed(0xf0d5);
 func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = rng.nat8()));
 
-// --- Sha256 close/fold (sha256 only; fold traps on sha224) ---
+// --- Sha256 sumDouble (sha256 only; double SHA256 traps on sha224) ---
+// (N-fold beyond double is exercised via the NFold example in
+// examples/test/verify.test.mo, which bridges a Digest into a Hasher.)
 for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
   let msg = bytes(len);
 
-  // close + fold once + readSum == double hash (== sumDouble).
+  // sumDouble == double hash, and leaves the digest closed for re-reads.
   let d = Sha256.new();
   d.writeBlob(msg);
-  d.close();
-  d.fold();
-  let double = d.readSum();
+  let double = d.sumDouble();
   assert (double == Sha256.fromBlob(Sha256.fromBlob(msg)));
-  assert (d.readSum() == double); // readSum is idempotent
+  assert (d.readSum() == double); // readSum is idempotent after sumDouble
 
-  let d2 = Sha256.new();
-  d2.writeBlob(msg);
-  assert (d2.sumDouble() == double);
+  // closeDouble is the non-returning sumDouble: same hash, read out separately.
+  let g = Sha256.new();
+  g.writeBlob(msg);
+  g.closeDouble();
+  assert (g.readSum() == double);
 
-  // close + fold twice + readSum == triple hash.
-  let e = Sha256.new();
-  e.writeBlob(msg);
-  e.close();
-  e.fold();
-  e.fold();
-  let triple = e.readSum();
-  assert (triple == Sha256.fromBlob(Sha256.fromBlob(Sha256.fromBlob(msg))));
-
-  // readSum after sum() returns the same hash.
+  // readSum after sum() returns the same single hash.
   let f = Sha256.new();
   f.writeBlob(msg);
   let once = f.sum();

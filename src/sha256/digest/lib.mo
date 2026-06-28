@@ -82,36 +82,6 @@ module {
     };
     ignore buf.load_chunk_blob(data, sz, pos);
   };
-  /// Combine two closed digests in place: replace `self`'s digest with
-  /// `SHA256(self.digest ++ other.digest)` — a single SHA256 of the two 32-byte
-  /// digests, leaving the result in `self` (closed). `other` is read-only. The
-  /// internal-node counterpart of `combineLeaves`. For a double-SHA tree (e.g.
-  /// Bitcoin) call `fold` after; for a single-SHA tree (each node
-  /// `SHA256(left ++ right)`, plain concatenation, not RFC 6962) don't.
-  /// Self-contained — reads both states straight into one block from the IV,
-  /// then pads; no message buffer, no `Blob`.
-  /// Traps if `self` or `other` is not closed.
-  public func combineNodes(self : Digest, other : Digest) {
-    assert self.closed;
-    assert other.closed;
-    let s = self.state;
-    s.process_merge_block(other.state); // data block (self ++ other) from IV
-    s.process_padding_block(512); // padding: 64-byte message = 512 bits
-  };
-  /// Hash two 32-byte blobs into `self` as `SHA256(b1 ++ b2)` — a single SHA256
-  /// of the 64-byte message, leaving the result in `self` (closed).
-  /// Self-contained: requires `self` already closed, starts from the IV (no
-  /// `reset`/`loadIV`), runs the data block plus a hard-coded padding block
-  /// (512-bit message). The leaf counterpart of `combineNodes`. For a double-SHA
-  /// tree call `fold` after; for a single-SHA tree don't.
-  /// Traps if `self` is not closed, or if either blob is not 32 bytes.
-  public func combineLeaves(self : Digest, b1 : Blob, b2 : Blob) {
-    assert self.closed;
-    assert (b1.size() == 32 and b2.size() == 32);
-    let s = self.state;
-    s.process_leaf_block(b1, b2); // data block (b1 ++ b2) from IV
-    s.process_padding_block(512); // padding: 64-byte message = 512 bits
-  };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {

@@ -75,23 +75,7 @@ module {
     };
   };
 
-  /// Reset the digest state to start a new hash computation.
-  /// After reset, the digest can be reused to hash new data.
-  /// This works even if the digest was previously finalized (is closed).
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha256.new();
-  /// digest.writeBlob("First message");
-  /// let hash1 = digest.sum();
-  /// digest.reset();
-  /// digest.writeBlob("Second message");
-  /// let hash2 = digest.sum();
-  /// ```
   // Load the algorithm's initial hash value (IV) into `state`.
-  // Direct half-word assignment avoids allocating a literal array (the original
-  // `state.set([...])` allocated a fresh 16-element array and copied it through
-  // a `Nat.range` iterator — ~10x the cost, dominating short-message hashing).
-  // `switch` (not `algo == #sha224`) because variant `==` allocates per call.
   func loadIV(s : Types.State, algo : Algorithm) {
     // prettier-ignore
     switch (algo) {
@@ -110,6 +94,18 @@ module {
     };
   };
 
+  /// Reset the digest state to start a new hash computation.
+  /// After reset, the digest can be reused to hash new data.
+  /// This works even if the digest was previously finalized (is closed).
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("First message");
+  /// let hash1 = digest.sum();
+  /// digest.reset();
+  /// digest.writeBlob("Second message");
+  /// let hash2 = digest.sum();
+  /// ```
   public func reset(self : Digest) {
     self.buffer.reset();
     loadIV(self.state, self.algo);
@@ -151,31 +147,6 @@ module {
   ///
   /// Traps if `self` is closed.
   public func writeBlob(self : Digest, data : Blob) : () = _Digest.writeBlob(self, data);
-
-  /// Combine two closed digests in place: replace `self`'s digest with
-  /// `SHA256(self.digest ++ other.digest)`, so `self` moves "up one level" in a
-  /// Merkle tree while `other` is consumed (read-only; the caller frees it).
-  /// This is a single SHA256: for a double-SHA tree (e.g. Bitcoin) call `fold`
-  /// after; for a single-SHA tree (each node `SHA256(left ++ right)`) don't.
-  /// (This is plain concatenation — NOT RFC 6962, which prepends a 0x01
-  /// domain-separation byte and so hashes 65 bytes.) Self-contained — no
-  /// `reset`/`close` needed, no message buffer, no intermediate `Blob`; `self`
-  /// stays closed. The internal-node counterpart of `combineLeaves` (together
-  /// they build a Merkle tree in O(log n) hashers — see `examples/Merkle.mo`).
-  ///
-  /// Traps if `self` or `other` is not closed.
-  public func combineNodes(self : Digest, other : Digest) : () = _Digest.combineNodes(self, other);
-
-  /// Hash two 32-byte blobs into `self` as `SHA256(b1 ++ b2)`, from a length-0
-  /// start — a single SHA256, leaving the result in `self` (closed). The leaf
-  /// counterpart of `combineNodes`; for a double-SHA tree follow with `fold`,
-  /// for a single-SHA tree don't. Self-contained — requires `self` already
-  /// closed, starts from the IV (no `reset`), runs the data block plus a
-  /// hard-coded padding block in one call. `b1` fills message words 0..7, `b2`
-  /// words 8..15.
-  ///
-  /// Traps if `self` is not closed, or if either blob is not 32 bytes.
-  public func combineLeaves(self : Digest, b1 : Blob, b2 : Blob) : () = _Digest.combineLeaves(self, b1, b2);
 
   /// Write a `[Nat8]` array to the digest.
   ///
@@ -275,7 +246,7 @@ module {
 
   /// Finalize the digest by writing padding, without returning the hash. After
   /// `close()` the digest is closed; read the hash with `readSum()` (any number
-  /// of times) or hash it again with `fold()`.
+  /// of times).
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
@@ -288,8 +259,7 @@ module {
   public func close(self : Digest) : () = _Digest.close(self);
 
   /// Read the hash of a closed digest. Idempotent: unlike `sum()` it does not
-  /// finalize, so it can be called repeatedly after `close()`, `sum()`, or
-  /// `fold()`.
+  /// finalize, so it can be called repeatedly after `close()` or `sum()`.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
@@ -304,31 +274,33 @@ module {
     stateBlob(self);
   };
 
-  /// Hash a closed digest's own hash, in place: replace the state with
-  /// `SHA256(state)`, leaving the digest closed. This is the building block for
-  /// N-fold and double SHA256: after `close()`, calling `fold()` (N-1) times
-  /// yields the N-fold hash, and a single `fold()` gives the double SHA256 used
-  /// by Bitcoin (see `sumDouble`). Allocation-free — the digest is hashed
-  /// straight from the state in one specialized block, no intermediate `Blob`.
+  /// Finalize the digest as a double SHA256 in place, WITHOUT returning the
+  /// hash: `close()` the message, then re-hash the resulting 32-byte state once
+  /// more (one specialized block, no intermediate `Blob`). Leaves the digest
+  /// closed — read it with `readSum()` any number of times. The non-returning
+  /// counterpart of `sumDouble` (which is `closeDouble()` + `readSum()`); use it
+  /// when you want the double hash but not yet — or never — a `Blob`.
+  /// Allocation-free.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
   /// digest.writeBlob("Hello world");
-  /// digest.close();
-  /// digest.fold();
-  /// let doubleHash : Blob = digest.readSum();
+  /// digest.closeDouble();
+  /// let hash : Blob = digest.readSum();
   /// ```
   ///
-  /// Traps if `self` is not closed, or if `self` is a sha224 digest (sha224
-  /// folding is not yet supported).
-  public func fold(self : Digest) {
-    assert self.closed;
+  /// Closes the digest. Traps if `self` is already closed, or if `self` is a
+  /// sha224 digest (double SHA256 is sha256-only).
+  public func closeDouble(self : Digest) {
     assert (switch (self.algo) { case (#sha256) true; case (#sha224) false });
-    State.process_fold_block(self.state);
+    _Digest.close(self);
+    State.process_fold_block(self.state, self.state);
   };
 
   /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
-  /// return the hash as a `Blob`. This is the hash used by Bitcoin.
+  /// return the hash as a `Blob`. This is the hash used by Bitcoin. Equivalent
+  /// to `closeDouble()` followed by `readSum()`, so the only allocation is the
+  /// returned `Blob`.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
@@ -336,12 +308,14 @@ module {
   /// let hash : Blob = digest.sumDouble();
   /// ```
   ///
+  /// To iterate further (N-fold hashing), bridge into a `Hasher` after `close()`
+  /// — see `examples/NFold.mo`.
+  ///
   /// Closes the digest. Traps if `self` is already closed, or if `self` is a
-  /// sha224 digest (folding is sha256-only for now).
+  /// sha224 digest (double SHA256 is sha256-only).
   public func sumDouble(self : Digest) : Blob {
-    _Digest.close(self);
-    fold(self);
-    readSum(self);
+    closeDouble(self);
+    stateBlob(self);
   };
 
   /// Directly calculate the SHA2 hash digest from a `Blob`.

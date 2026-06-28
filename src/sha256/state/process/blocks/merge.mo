@@ -7,30 +7,30 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
-  /// Inner block of a merge: hash one 64-byte block whose words 0..7 are
-  /// `self`'s own 32-byte digest and words 8..15 are `sb` (another digest),
-  /// starting the compression from the SHA256 IV, and overwrite `self` with the
-  /// result. `self`'s words are read into locals first, so writing the result
-  /// back into `self` is safe. Produces the first compression of
-  /// SHA256(self.digest ++ sb.digest); the caller adds the padding block.
-  public func process(self : [var Nat16], sb : [var Nat16]) : () {
-    // message words 0..7 from self's digest, 8..15 from sb
-    let w00 = nat16To32(self[0]) << 16 | nat16To32(self[1]);
-    let w01 = nat16To32(self[2]) << 16 | nat16To32(self[3]);
-    let w02 = nat16To32(self[4]) << 16 | nat16To32(self[5]);
-    let w03 = nat16To32(self[6]) << 16 | nat16To32(self[7]);
-    let w04 = nat16To32(self[8]) << 16 | nat16To32(self[9]);
-    let w05 = nat16To32(self[10]) << 16 | nat16To32(self[11]);
-    let w06 = nat16To32(self[12]) << 16 | nat16To32(self[13]);
-    let w07 = nat16To32(self[14]) << 16 | nat16To32(self[15]);
-    let w08 = nat16To32(sb[0]) << 16 | nat16To32(sb[1]);
-    let w09 = nat16To32(sb[2]) << 16 | nat16To32(sb[3]);
-    let w10 = nat16To32(sb[4]) << 16 | nat16To32(sb[5]);
-    let w11 = nat16To32(sb[6]) << 16 | nat16To32(sb[7]);
-    let w12 = nat16To32(sb[8]) << 16 | nat16To32(sb[9]);
-    let w13 = nat16To32(sb[10]) << 16 | nat16To32(sb[11]);
-    let w14 = nat16To32(sb[12]) << 16 | nat16To32(sb[13]);
-    let w15 = nat16To32(sb[14]) << 16 | nat16To32(sb[15]);
+  /// Inner block of a merge: hash one 64-byte block whose words 0..7 are the
+  /// 32-byte digest `s1` and words 8..15 are the 32-byte digest `s2`, starting
+  /// the compression from the SHA256 IV, and overwrite `self` with the result.
+  /// `s1` and `s2` are read into locals first, so either may alias `self`.
+  /// Produces the first compression of SHA256(s1 ++ s2); the caller adds the
+  /// padding block.
+  public func process(self : [var Nat16], s1 : [var Nat16], s2 : [var Nat16]) : () {
+    // message words 0..7 from s1, 8..15 from s2
+    let w00 = nat16To32(s1[0]) << 16 | nat16To32(s1[1]);
+    let w01 = nat16To32(s1[2]) << 16 | nat16To32(s1[3]);
+    let w02 = nat16To32(s1[4]) << 16 | nat16To32(s1[5]);
+    let w03 = nat16To32(s1[6]) << 16 | nat16To32(s1[7]);
+    let w04 = nat16To32(s1[8]) << 16 | nat16To32(s1[9]);
+    let w05 = nat16To32(s1[10]) << 16 | nat16To32(s1[11]);
+    let w06 = nat16To32(s1[12]) << 16 | nat16To32(s1[13]);
+    let w07 = nat16To32(s1[14]) << 16 | nat16To32(s1[15]);
+    let w08 = nat16To32(s2[0]) << 16 | nat16To32(s2[1]);
+    let w09 = nat16To32(s2[2]) << 16 | nat16To32(s2[3]);
+    let w10 = nat16To32(s2[4]) << 16 | nat16To32(s2[5]);
+    let w11 = nat16To32(s2[6]) << 16 | nat16To32(s2[7]);
+    let w12 = nat16To32(s2[8]) << 16 | nat16To32(s2[9]);
+    let w13 = nat16To32(s2[10]) << 16 | nat16To32(s2[11]);
+    let w14 = nat16To32(s2[12]) << 16 | nat16To32(s2[13]);
+    let w15 = nat16To32(s2[14]) << 16 | nat16To32(s2[15]);
 
     // compression registers start at the SHA256 IV
     var a = 0x6a09e667 : Nat32;
