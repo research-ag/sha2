@@ -20,3 +20,21 @@ jobs:
 
       - name: Run mops test
         run: mops test
+
+  bench:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: caffeinelabs/setup-mops@v1
+
+      # Install the pinned [toolchain] binaries (moc, wasmtime, pocket-ic).
+      # mops bench starts and stops its own pocket-ic replica.
+      - name: Init toolchain and install deps
+        run: |
+          mops toolchain init
+          mops install
+
+      - name: Run mops bench
+        run: mops bench
