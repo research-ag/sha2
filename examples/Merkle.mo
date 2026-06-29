@@ -80,8 +80,12 @@ module {
     let n = leaves.size();
     assert n >= 1;
 
-    // A single leaf: by the Bitcoin convention the root is the leaf itself.
-    if (n == 1) return leaves[0];
+    // A single leaf: by the Bitcoin convention the root is the leaf itself —
+    // still enforce the 32-byte leaf contract that combineBlob32 checks below.
+    if (n == 1) {
+      assert leaves[0].size() == 32;
+      return leaves[0];
+    };
 
     // A pool of hashers; `hasher[0 .. i-1]` is the peak stack and `level[j]` the
     // level of `hasher[j]`. `ceil(log2 n) + 2` slots is always enough (the peak

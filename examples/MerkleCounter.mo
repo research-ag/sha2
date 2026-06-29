@@ -86,7 +86,9 @@ module {
 
     // A lone leaf (n == 1) is its own root; otherwise the single peak is at l.
     switch (pending) {
-      case (?b) b;
+      // n == 1: lone leaf is the root — enforce the same 32-byte leaf contract
+      // that combineBlob32 checks on the multi-leaf path.
+      case (?b) { assert b.size() == 32; b };
       case (null) Hasher.readSum(hasher[l]);
     };
   };
