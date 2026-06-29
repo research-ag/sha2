@@ -68,4 +68,30 @@ for (_ in Nat.range(0, 200)) {
   sib.hashBlob32(b); // sib = SHA256(b)
   peak.combineState(peak, sib); // peak := SHA256(peak ++ sib)
   assert (peak.readSum() == nodeRef);
+
+  // loadBlob32 deposits bytes verbatim (no hash): round-trips through readSum.
+  h.loadBlob32(a);
+  assert (h.readSum() == a);
+
+  // loadState copies a state verbatim: it equals the source, and does NOT hash.
+  let pre = Hasher.new();
+  pre.hashBlob32(b); // pre = SHA256(b)
+  h.loadState(pre);
+  assert (h.readSum() == pre.readSum()); // h == pre, not SHA256(pre)
+  assert (h.readSum() == Sha256.fromBlob(b));
+
+  // loadState from a CLOSED Digest's state transfers the digest's hash verbatim.
+  let d = Sha256.new();
+  d.writeBlob(a);
+  d.close(); // d.state = SHA256(a)
+  h.loadState(d.state);
+  assert (h.readSum() == d.readSum());
+
+  // A loaded leaf then combined equals combining the raw blobs directly.
+  let lx = Hasher.new();
+  lx.loadBlob32(a);
+  let ly = Hasher.new();
+  ly.loadBlob32(b);
+  h.combineState(lx, ly);
+  assert (h.readSum() == sha256Concat(a, b)); // == combineBlob32(a, b)
 };

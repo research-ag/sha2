@@ -5,11 +5,11 @@
 - **Breaking:** remove `peekSum()` (Sha256, Sha512). To re-read a closed digest use `readSum()`; for an intermediate hash of an open digest use `clone().sum()`.
 - Add `close()` and `readSum()` (Sha256, Sha512) — finalize a digest without returning a `Blob`, then read the closed digest idempotently (any number of times)
 - Add `closeDouble()` (Sha256) — finalize as a double SHA256 in place without returning a `Blob` (the non-returning counterpart of `sumDouble`); read it with `readSum()`
-- Add `Hasher/Sha256` — a single-shot, allocation-free SHA-256 hash engine for short, fixed-length messages (`hashBlob32`, `hashState`, `combineBlob32`, `combineState`, `readSum`). It is the bufferless engine for allocation-free Merkle trees and hash chains: `combineBlob32`/`combineState` combine two 32-byte leaves or two child states in place, and `hashState(h, h)` folds for double-SHA
+- Add `Hasher/Sha256` — a single-shot, allocation-free SHA-256 hash engine for short, fixed-length messages (`hashBlob32`, `hashState`, `combineBlob32`, `combineState`, `loadBlob32`, `loadState`, `readSum`). It is the bufferless engine for allocation-free Merkle trees and hash chains: `combineBlob32`/`combineState` combine two 32-byte leaves or two child states in place, `hashState(h, h)` folds for double-SHA, and `loadBlob32`/`loadState` park a precomputed hash into the engine verbatim (no re-hash — the inverse of `readSum`)
 - Optimize `close()` with a block-boundary fast path that compresses the all-constant padding block directly for block-aligned messages
 - Make `writeBlob()` allocation-free (drop the per-call accessor closures)
 - Reduce per-call allocations across the API (use `switch` instead of variant `==`)
-- Add `examples/` — allocation-free Bitcoin-style Merkle trees (from 32-byte leaves and from raw variable-length transactions, any leaf count) and N-fold hashing, with tests including real-block Merkle-root vectors
+- Add `examples/` — allocation-free Bitcoin-style Merkle trees (peak-stack and binary-counter variants; from 32-byte leaves and from raw variable-length transactions) and N-fold hashing, with tests including real-block Merkle-root vectors
 
 ## 0.2.4
 

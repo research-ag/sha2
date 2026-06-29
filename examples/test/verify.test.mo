@@ -1,5 +1,6 @@
 // Verifies the examples produce the same hashes as straightforward references.
 import Merkle "../Merkle";
+import MerkleCounter "../MerkleCounter";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import NFold "../NFold";
 import Sha256 "../../src/Sha256";
@@ -61,6 +62,16 @@ do {
   let b586t2 : Blob = Blob.fromArray([159, 228, 13, 90, 182, 215, 125, 175, 249, 80, 129, 254, 174, 13, 228, 184, 132, 45, 42, 128, 190, 120, 226, 97, 135, 170, 8, 139, 84, 99, 243, 107]);
   let b586root : Blob = Blob.fromArray([77, 89, 105, 192, 209, 13, 204, 230, 8, 104, 254, 228, 212, 222, 128, 186, 94, 243, 138, 186, 238, 216, 167, 93, 170, 99, 228, 140, 150, 61, 123, 25]);
   assert (Merkle.bitcoinMerkleRoot([b586t0, b586t1, b586t2]) == b586root);
+};
+
+// MerkleCounter: the binary-counter MMR (loadBlob32 + carry-and-swap) must equal
+// the stack-based Merkle.bitcoinMerkleRoot on the same leaves, for power-of-two
+// counts (both are Bitcoin double-SHA trees; they coincide when no duplication
+// is needed).
+for (k in ([0, 1, 2, 3, 4, 5, 6] : [Nat]).values()) {
+  let count = 2 ** k;
+  let leaves = Array.tabulate<Blob>(count, func(_) = bytes(32));
+  assert (MerkleCounter.merkleRoot(leaves) == Merkle.bitcoinMerkleRoot(leaves));
 };
 
 // BitcoinTxMerkle: root over RAW (variable-length) transactions must equal the

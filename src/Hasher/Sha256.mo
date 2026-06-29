@@ -25,6 +25,11 @@
 /// locals before `self` is written), which is what makes the in-place
 /// `hashState(h, h)` fold and Merkle-style `combineState(h, h, sib)` safe.
 ///
+/// The verbs come in three families, each over a `Blob` operand or a state
+/// operand: `hash…` (one operand), `combine…` (a pair), and `load…` (copy a
+/// finished 32-byte hash in verbatim, no hashing — the inverse of `readSum`,
+/// used to park a precomputed leaf/peak or transfer one from a `Digest`).
+///
 /// ```motoko name=import
 /// import Hasher "mo:sha2/Hasher/Sha256";
 /// ```
@@ -136,6 +141,54 @@ module {
   public func combineState(self : Hasher, s1 : Hasher, s2 : Hasher) {
     self.process_merge_block(s1, s2); // data block (s1 ++ s2) from the IV
     self.process_padding_block(512); // padding: 64-byte message = 512 bits
+  };
+
+  /// Load a 32-byte hash into `self` VERBATIM — no hashing. The inverse of
+  /// `readSum`: `readSum(self)` after `loadBlob32(self, b)` returns `b`. Unlike
+  /// `hashBlob32` (which hashes its input), this just deposits the bytes as the
+  /// state, so `self` becomes a peer "peak" you can feed to `combineState`. Use
+  /// it to park a precomputed leaf/peak hash (e.g. one read back from storage)
+  /// into the engine. Allocation-free.
+  ///
+  /// ```motoko include=import
+  /// let hasher = Hasher.new();
+  /// let leafHash : Blob = "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f";
+  /// hasher.loadBlob32(leafHash); // hasher now HOLDS leafHash (it is not re-hashed)
+  /// let same : Blob = hasher.readSum(); // == leafHash
+  /// ```
+  ///
+  /// Traps if `data` is not exactly 32 bytes.
+  public func loadBlob32(self : Hasher, data : Blob) {
+    assert data.size() == 32;
+    var i = 0;
+    while (i < 16) {
+      self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);
+      i += 1;
+    };
+  };
+
+  /// Copy the 32-byte state of `src` into `self` VERBATIM — no hashing. The
+  /// state-source sibling of `loadBlob32`: it transfers a finished hash from a
+  /// `Digest` or another `Hasher` without re-hashing it. This is how a leaf lands
+  /// in a `Hasher` for a SINGLE-SHA tree (`d.close()` then `loadState(h, d.state)`;
+  /// the bridge `hashState` would add an unwanted second hash), and the general
+  /// way to move any finished digest into a `Hasher`. Allocation-free.
+  ///
+  /// `src` may be a closed `Sha256.Digest`'s `state` (the caller ensures it is
+  /// closed and SHA-256, as with the `hashState` bridge). It is read-only.
+  ///
+  /// ```motoko include=import
+  /// let hasher = Hasher.new();
+  /// let other = Hasher.new();
+  /// other.hashBlob32("\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f");
+  /// hasher.loadState(other); // hasher now holds the same hash as other
+  /// ```
+  public func loadState(self : Hasher, src : Hasher) {
+    var i = 0;
+    while (i < 16) {
+      self[i] := src[i];
+      i += 1;
+    };
   };
 
   /// Read the current 32-byte digest as a `Blob`. Non-mutating — the state is
