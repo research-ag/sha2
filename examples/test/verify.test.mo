@@ -64,7 +64,7 @@ do {
   assert (Merkle.bitcoinMerkleRoot([b586t0, b586t1, b586t2]) == b586root);
 };
 
-// MerkleCounter: the binary-counter MMR (loadBlob32 + carry-and-swap) must equal
+// MerkleCounter: the binary-counter MMR (delay + carry-and-swap) must equal
 // the stack-based Merkle.bitcoinMerkleRoot on the same leaves, for power-of-two
 // counts (both are Bitcoin double-SHA trees; they coincide when no duplication
 // is needed).
