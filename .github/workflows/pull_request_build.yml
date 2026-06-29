@@ -35,11 +35,11 @@ jobs:
       # doesn't have. The committed [toolchain] keeps pocket-ic out, so local
       # `mops bench` stays on dfx. CI only compares a PR against its base, so
       # pocket-ic 14.0.0's higher instruction counts cancel out.
-      - name: Init toolchain, pin pocket-ic, install deps
+      - name: Init toolchain, install deps, pin pocket-ic
         run: |
           mops toolchain init
-          mops toolchain use pocket-ic 14.0.0
           mops install
+          mops toolchain use pocket-ic 14.0.0
 
       # mops bench starts and stops its own replica.
       - name: Run mops bench
