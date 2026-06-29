@@ -61,6 +61,45 @@ module {
     Hasher.readSum(hasher[l]);
   };
 
+  // BINARY-COUNTER MMR with a DELAYED height-0 leaf: instead of parking every
+  // leaf via loadBlob32, hold one leaf as a pending Blob and, when its partner
+  // arrives, fuse the pair with combineBlob32 (reading both Blobs straight into
+  // the compression, like the stack) — no loadBlob32. Heights >= 1 carry as
+  // states exactly as above. Power-of-two leaf counts, n >= 2.
+  func merkleRootCounterDelayed(leaves : [Blob], hasher : [var Hasher.Hasher], occupied : [var Bool], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
+    let n = leaves.size();
+    var l = 0;
+    var pow = 1;
+    while (pow < n) { pow *= 2; l += 1 };
+    var j = 0;
+    while (j <= l) { occupied[j] := false; j += 1 };
+    var carry = carryCell[0];
+    var pending : ?Blob = null; // the height-0 peak, held as a Blob (not a slot)
+    for (leaf in leaves.values()) {
+      switch (pending) {
+        case (null) { pending := ?leaf };
+        case (?leaf0) {
+          pending := null;
+          carry.combineBlob32(leaf0, leaf); // fuse the two leaf Blobs (no loadBlob32)
+          if (double) carry.hashState(carry);
+          var k = 1; // height-1 node; carry up the state slots
+          while (occupied[k]) {
+            carry.combineState(hasher[k], carry);
+            if (double) carry.hashState(carry);
+            occupied[k] := false;
+            k += 1;
+          };
+          let tmp = hasher[k];
+          hasher[k] := carry;
+          carry := tmp;
+          occupied[k] := true;
+        };
+      };
+    };
+    carryCell[0] := carry;
+    Hasher.readSum(hasher[l]);
+  };
+
   public func init() : Bench.V1 {
     // Same Bitcoin / single-SHA Merkle root over 2^k 32-byte leaves, built two
     // ways: the STACK peak-MMR (combineBlob32 per pair + level[] bookkeeping)
@@ -71,13 +110,15 @@ module {
     let cols = [
       "stack 2-SHA",
       "counter 2-SHA",
+      "delay 2-SHA",
       "stack 1-SHA",
       "counter 1-SHA",
+      "delay 1-SHA",
     ];
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle: stack vs counter";
-      description = "Merkle root over 2^k 32-byte leaves, two algorithms x two hash modes. STACK is the peak-mountain-range with a parallel level[] array (examples/Merkle.mo): each leaf PAIR is one combineBlob32 into the free top slot, then merge-down. COUNTER is the binary-counter MMR (examples/MerkleCounter.mo): a height-indexed [var Hasher] whose occupied slots are the bits of the leaf count (no level[] array), each single LEAF parked with loadBlob32 and carried up via combineState, risen peaks moved with O(1) reference swaps through one scratch carry hasher. '2-SHA' double-hashes every node (Bitcoin: combine + hashState); '1-SHA' skips the fold. Both do the same number of compressions (n-1 combines), but the counter additionally deserializes EVERY leaf Blob into a state (loadBlob32) before combining it, whereas the stack's pairwise combineBlob32 reads the two leaf Blobs straight into the compression — so the counter runs moderately more instructions (the gap is largest in 1-SHA, where the fold doesn't dilute the per-leaf parking). That parking cost is specific to precomputed Blob leaves; leaves arriving as a Digest state (combined directly) would not pay it. Both are allocation-free except the final root Blob.";
+      description = "Merkle root over 2^k 32-byte leaves, two algorithms x two hash modes. STACK is the peak-mountain-range with a parallel level[] array (examples/Merkle.mo): each leaf PAIR is one combineBlob32 into the free top slot, then merge-down. COUNTER is the binary-counter MMR (examples/MerkleCounter.mo): a height-indexed [var Hasher] whose occupied slots are the bits of the leaf count (no level[] array), each single LEAF parked with loadBlob32 and carried up via combineState, risen peaks moved with O(1) reference swaps through one scratch carry hasher. '2-SHA' double-hashes every node (Bitcoin: combine + hashState); '1-SHA' skips the fold. 'delay' is the counter with the fix: hold the height-0 leaf as a pending Blob and fuse each pair with combineBlob32 (no loadBlob32), carrying states only at heights >= 1. All do the same number of compressions (n-1 combines); naive 'counter' additionally deserializes EVERY leaf Blob (loadBlob32) before combining, so it runs moderately more instructions (largest in 1-SHA, where the fold doesn't dilute the parking), while 'delay' eliminates that and tracks the stack closely. The parking cost is specific to precomputed Blob leaves; leaves arriving as a Digest state (combined directly) avoid it. All allocation-free except the final root Blob.";
       rows = rows;
       cols = cols;
     };
@@ -113,8 +154,10 @@ module {
         [
           func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], true),
           func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], true),
+          func() = ignore merkleRootCounterDelayed(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], true),
           func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], false),
           func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], false),
+          func() = ignore merkleRootCounterDelayed(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], false),
         ];
       },
     );

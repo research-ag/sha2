@@ -24,6 +24,15 @@
 /// the counter ends with a single peak (the root) and no leftover-peak collapse
 /// is needed. Bitcoin's odd-count duplication/collapse is shown in `Merkle.mo`;
 /// for power-of-two inputs the two algorithms produce identical roots.
+///
+/// Speed note: parking every leaf with `loadBlob32` deserializes each leaf Blob,
+/// which the stack's pairwise `combineBlob32` avoids — so over precomputed Blob
+/// leaves this clear version runs ~20-30% more instructions than `Merkle.mo`
+/// (see `bench/merkle.bench.mo`). The fix is to hold the height-0 leaf as a
+/// pending `Blob` and fuse each pair with `combineBlob32` (no `loadBlob32`); that
+/// matches the stack. State leaves (`loadState`) don't have the deserialize, so
+/// the gap there is small. The counter's draw is the layout (no `level[]`,
+/// occupancy = the count's bits, persistence/append), not raw leaf throughput.
 
 import Hasher "../src/Hasher/Sha256";
 import VarArray "mo:core/VarArray";
