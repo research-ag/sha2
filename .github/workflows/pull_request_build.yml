@@ -22,23 +22,23 @@ jobs:
         run: mops test
 
   bench:
-    # ubuntu-24.04: dfx 0.32.0 needs GLIBC_2.39, absent on ubuntu-22.04 (2.35).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - uses: caffeinelabs/setup-mops@v1
 
-      # Benchmarks run on the dfx replica (more accurate/stable than pocket-ic).
-      - name: Install dfx (benchmark replica)
-        uses: dfinity/setup-dfx@main
-
+      # Benchmarks run on pocket-ic: self-contained, robust, the supported mops
+      # bench runtime. pocket-ic is NOT pinned in [toolchain] — mops bench uses
+      # its own default version, whose counts match the dfx replica (the ~47%
+      # inflation we saw was specific to the old pinned pocket-ic 14.0.0). Local
+      # `mops bench` defaults to dfx; both now agree.
       - name: Init toolchain and install deps
         run: |
           mops toolchain init
           mops install
 
-      # mops bench starts and stops its own replica.
+      # mops bench downloads + starts/stops its own pocket-ic replica.
       - name: Run mops bench
-        run: mops bench --replica dfx
+        run: mops bench --replica pocket-ic
