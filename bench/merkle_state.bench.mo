@@ -1,6 +1,7 @@
 import Blob "mo:core/Blob";
 import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
+import Nat32 "mo:core/Nat32";
 import Random "mo:core/Random";
 import Bench "mo:bench-helper";
 import Hasher "../src/Hasher/Sha256";
@@ -8,10 +9,10 @@ import Hasher "../src/Hasher/Sha256";
 module {
   // Same stack-vs-counter comparison as merkle.bench.mo, but the leaves are
   // STATES (each a 32-byte hash already sitting in a Hasher, as if just produced
-  // by a Digest) rather than Blobs. This isolates the counter's only real cost:
-  // parking each leaf. For Blob leaves that park is loadBlob32 (a byte
-  // deserialize, ~3k instructions); for state leaves it is loadState (a 16-word
-  // COPY), so the counter's disadvantage should largely vanish.
+  // by a Digest) rather than Blobs. The counter copies only EVERY OTHER leaf:
+  // when the height-0 slot is empty it parks the incoming leaf with one
+  // loadState; when it is occupied the leaf is fed straight into the combine
+  // from the input, no copy. So n/2 loadState copies total instead of n.
 
   // STACK: a pair is combineState over the two leaf states directly (no park).
   func merkleRootStack(leaves : [Hasher.Hasher], hasher : [Hasher.Hasher], level : [var Nat], double : Bool) : Blob {
@@ -34,28 +35,36 @@ module {
     Hasher.readSum(hasher[0]);
   };
 
-  // COUNTER: park each leaf with loadState (a cheap state copy), then carry-swap.
-  func merkleRootCounter(leaves : [Hasher.Hasher], hasher : [var Hasher.Hasher], occupied : [var Bool], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
+  // COUNTER: copy only every OTHER leaf. Occupancy is bit k of the leaf count.
+  // When bit 0 is clear (height-0 empty) the leaf is parked with one loadState;
+  // when bit 0 is set the leaf goes straight into the combine from the input.
+  func merkleRootCounter(leaves : [Hasher.Hasher], hasher : [var Hasher.Hasher], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
     let n = leaves.size();
     var l = 0;
     var pow = 1;
     while (pow < n) { pow *= 2; l += 1 };
-    var j = 0;
-    while (j <= l) { occupied[j] := false; j += 1 };
+    var count : Nat32 = 0;
     var carry = carryCell[0];
     for (leaf in leaves.values()) {
-      carry.loadState(leaf); // park the leaf state (16-word copy, not a deserialize)
-      var k = 0;
-      while (occupied[k]) {
-        carry.combineState(hasher[k], carry);
+      if ((count & 1) == 0) {
+        // height-0 empty: park this leaf there (the only copy)
+        hasher[0].loadState(leaf);
+      } else {
+        // height-0 occupied: combine the leaf directly from the input (no copy)
+        carry.combineState(hasher[0], leaf);
         if (double) carry.hashState(carry);
-        occupied[k] := false;
-        k += 1;
+        var k : Nat32 = 1;
+        while (((count >> k) & 1) == 1) {
+          carry.combineState(hasher[Nat32.toNat(k)], carry);
+          if (double) carry.hashState(carry);
+          k += 1;
+        };
+        let kk = Nat32.toNat(k);
+        let tmp = hasher[kk];
+        hasher[kk] := carry;
+        carry := tmp;
       };
-      let tmp = hasher[k];
-      hasher[k] := carry;
-      carry := tmp;
-      occupied[k] := true;
+      count += 1;
     };
     carryCell[0] := carry;
     Hasher.readSum(hasher[l]);
@@ -73,7 +82,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle: stack vs counter (STATE leaves)";
-      description = "Like bench/merkle.bench.mo but over STATE leaves: each leaf is a 32-byte hash already in a Hasher (as if produced by a Digest), not a Blob. STACK combines each pair with combineState reading both leaf states directly; COUNTER parks each leaf with loadState (a 16-word copy) then carries up. Both allocation-free, both do n-1 combines. Because loadState is a cheap copy (unlike loadBlob32's byte deserialize on Blob leaves), the counter's parking overhead is small here — so the two algorithms run much closer than in the Blob-leaf benchmark, confirming that the counter's Blob-leaf penalty is the per-leaf deserialize, not the carry-and-swap bookkeeping.";
+      description = "Like bench/merkle.bench.mo but over STATE leaves: each leaf is a 32-byte hash already in a Hasher (as if produced by a Digest), not a Blob. STACK combines each pair with combineState reading both leaf states directly. COUNTER now copies only EVERY OTHER leaf: when the height-0 slot is empty it parks the leaf with one loadState; when occupied it feeds the leaf straight into combineState from the input (no copy) and carries up. So it does n/2 loadState copies, not n. Both allocation-free, both do n-1 combines. With the per-leaf copy roughly halved, the counter should track the stack closely — the residual gap being the ~n/2 state copies plus the carry-and-swap bookkeeping.";
       rows = rows;
       cols = cols;
     };
@@ -101,7 +110,6 @@ module {
       rows.size(),
       func(ri) = VarArray.tabulate<Hasher.Hasher>(exps[ri] + 1, func(_) { Hasher.new() }),
     );
-    let counterOccByRow = Array.tabulate<[var Bool]>(rows.size(), func(ri) = VarArray.repeat<Bool>(false, exps[ri] + 1));
     let counterCarryByRow = Array.tabulate<[var Hasher.Hasher]>(rows.size(), func(ri) = VarArray.tabulate<Hasher.Hasher>(1, func(_) { Hasher.new() }));
 
     let routines : [[() -> ()]] = Array.tabulate<[() -> ()]>(
@@ -109,9 +117,9 @@ module {
       func(ri) {
         [
           func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], true),
-          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], true),
+          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterCarryByRow[ri], true),
           func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], false),
-          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], false),
+          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterCarryByRow[ri], false),
         ];
       },
     );
