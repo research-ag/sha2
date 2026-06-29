@@ -22,7 +22,8 @@ jobs:
         run: mops test
 
   bench:
-    runs-on: ubuntu-22.04
+    # ubuntu-24.04: dfx 0.32.0 needs GLIBC_2.39, absent on ubuntu-22.04 (2.35).
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
