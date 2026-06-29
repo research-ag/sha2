@@ -29,12 +29,15 @@ jobs:
         uses: actions/checkout@v6
       - uses: caffeinelabs/setup-mops@v1
 
-      # Install the pinned [toolchain] binaries (moc, wasmtime, pocket-ic).
-      # mops bench starts and stops its own pocket-ic replica.
+      # Benchmarks run on the dfx replica (more accurate/stable than pocket-ic).
+      - name: Install dfx (benchmark replica)
+        uses: dfinity/setup-dfx@main
+
       - name: Init toolchain and install deps
         run: |
           mops toolchain init
           mops install
 
+      # mops bench starts and stops its own replica.
       - name: Run mops bench
-        run: mops bench
+        run: mops bench --replica dfx
