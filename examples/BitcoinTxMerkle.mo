@@ -39,6 +39,18 @@
 ///
 /// Allocation-free except the returned root `Blob`. Like `Merkle.mo` this is the
 /// Bitcoin tree (plain concatenation + last-node duplication), NOT RFC 6962.
+///
+/// === Byte order and segwit caveats ===
+///
+///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
+///     order (the raw double-SHA256 output). Block explorers and RPC interfaces
+///     DISPLAY txids and merkle roots byte-REVERSED, so to compare against a
+///     displayed hex string, reverse the 32 bytes (see the mainnet test vectors
+///     in `test/verify.test.mo`).
+///   * SEGWIT: a txid is the double SHA256 of the transaction serialized
+///     WITHOUT witness data. Feeding full segwit bytes (with marker/flag and
+///     witnesses) yields the wtxid instead. Pre-segwit and stripped
+///     serializations are fine as-is.
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";

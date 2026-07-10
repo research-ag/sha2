@@ -78,7 +78,7 @@ module {
   ///
   /// Traps if `data` is not exactly 32 bytes.
   public func hashBlob32(self : Hasher, data : Blob) {
-    assert data.size() == 32;
+    if (data.size() != 32) Prim.trap("Hasher: hashBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
     // Load the 32 message bytes into the state words (big-endian half-word
     // pairs), then hash the state in place. `process_fold_block` hashes whatever
     // 32 bytes the state holds, so this yields SHA256(data).
@@ -119,7 +119,7 @@ module {
   ///
   /// Traps if either blob is not exactly 32 bytes.
   public func combineBlob32(self : Hasher, b1 : Blob, b2 : Blob) {
-    assert b1.size() == 32 and b2.size() == 32;
+    if (b1.size() != 32 or b2.size() != 32) Prim.trap("Hasher: combineBlob32 expects two 32-byte blobs, got " # debug_show (b1.size()) # " and " # debug_show (b2.size()) # " bytes");
     self.process_leaf_block(b1, b2); // data block (b1 ++ b2) from the IV
     self.process_padding_block(512); // padding: 64-byte message = 512 bits
   };
@@ -159,7 +159,7 @@ module {
   ///
   /// Traps if `data` is not exactly 32 bytes.
   public func loadBlob32(self : Hasher, data : Blob) {
-    assert data.size() == 32;
+    if (data.size() != 32) Prim.trap("Hasher: loadBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
     var i = 0;
     while (i < 16) {
       self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);

@@ -13,7 +13,7 @@
 /// ```
 
 import { type Iter } "mo:core/Types";
-import { arrayToBlob; explodeNat64 } "mo:prim";
+import { arrayToBlob; explodeNat64; trap } "mo:prim";
 import VarArray "mo:core/VarArray";
 import _Digest "sha512/digest";
 import Types "sha512/types";
@@ -174,7 +174,7 @@ module {
   ///
   /// Traps if `self` is closed.
   public func clone(self : Digest) : Digest {
-    assert not self.closed;
+    if (self.closed) trap("Sha512: clone of closed digest");
     {
       algo = self.algo;
       msg = VarArray.clone(self.msg);
@@ -312,7 +312,7 @@ module {
   ///
   /// Traps if `self` is not closed.
   public func readSum(self : Digest) : Blob {
-    assert self.closed;
+    if (not self.closed) trap("Sha512: readSum on non-closed digest");
     stateBlob(self);
   };
 

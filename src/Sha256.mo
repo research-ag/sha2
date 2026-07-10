@@ -13,7 +13,7 @@
 /// ```
 
 import { type Iter } "mo:core/Types";
-import { arrayToBlob } "mo:prim";
+import { arrayToBlob; trap } "mo:prim";
 
 import Buffer "sha256/buffer";
 import State "sha256/state";
@@ -127,7 +127,7 @@ module {
   ///
   /// Traps if `self` is closed.
   public func clone(self : Digest) : Digest {
-    assert not self.closed;
+    if (self.closed) trap("Sha256: clone of closed digest");
     {
       algo = self.algo;
       buffer = self.buffer.clone();
@@ -270,7 +270,7 @@ module {
   ///
   /// Traps if `self` is not closed.
   public func readSum(self : Digest) : Blob {
-    assert self.closed;
+    if (not self.closed) trap("Sha256: readSum on non-closed digest");
     stateBlob(self);
   };
 
@@ -292,7 +292,10 @@ module {
   /// Closes the digest. Traps if `self` is already closed, or if `self` is a
   /// sha224 digest (double SHA256 is sha256-only).
   public func closeDouble(self : Digest) {
-    assert (switch (self.algo) { case (#sha256) true; case (#sha224) false });
+    switch (self.algo) {
+      case (#sha224) trap("Sha256: closeDouble requires #sha256");
+      case (#sha256) {};
+    };
     _Digest.close(self);
     State.process_fold_block(self.state, self.state);
   };

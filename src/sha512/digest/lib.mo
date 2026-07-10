@@ -2,6 +2,7 @@
 
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
+import Prim "mo:prim";
 
 import Byte "../write/byte";
 import Write "../write";
@@ -69,7 +70,7 @@ module {
   /// Finalize the digest by writing padding.
   /// Traps if `self` is closed.
   public func close(self : Digest) {
-    assert not self.closed;
+    if (self.closed) Prim.trap("Sha512: close of closed digest");
     self.closed := true;
     // Fast path: at a block boundary (empty buffer — no buffered words and no
     // partial word) the entire padding is a single block whose 16 message words

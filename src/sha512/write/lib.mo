@@ -1,3 +1,5 @@
+import Prim "mo:prim";
+
 import Array "./array";
 import Blob "./blob";
 import VarArray "./varArray";
@@ -21,32 +23,32 @@ module {
 
   /// Dispatch a `Blob` write to the SHA512 block processor. Traps if `x` is closed.
   public func blob(x : Digest, data : Blob) {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     Blob.write(x, data);
   };
   /// Dispatch a `[Nat8]` write to the SHA512 block processor. Traps if `x` is closed.
   public func array(x : Digest, data : [Nat8]) {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     Array.write(x, data);
   };
   /// Dispatch a `[var Nat8]` write to the SHA512 block processor. Traps if `x` is closed.
   public func varArray(x : Digest, data : [var Nat8]) {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     VarArray.write(x, data);
   };
   /// Dispatch a positional-accessor write (`len` bytes starting at `start`) to the SHA512 block processor. Traps if `x` is closed.
   public func accessor(x : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     Accessor.write(x, data, start, len);
   };
   /// Dispatch a reader-function write (`len` calls to `data`) to the SHA512 block processor. Traps if `x` is closed.
   public func reader(x : Digest, data : () -> Nat8, len : Nat) : () {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     Reader.write(x, data, len);
   };
   /// Dispatch an iterator write (consumes until the iterator returns `null`) to the SHA512 block processor. Traps if `x` is closed.
   public func iter(x : Digest, data : () -> ?Nat8) {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha512: write to closed digest");
     Iter.write(x, data);
   };
 };

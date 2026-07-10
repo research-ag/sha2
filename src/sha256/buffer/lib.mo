@@ -10,7 +10,7 @@ module {
   public func new() : Buffer = {
     msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var i_msg : Nat8 = 0;
-    var i_block : Nat32 = 0;
+    var i_block : Nat64 = 0;
     var high : Bool = true;
     var word : Nat16 = 0;
   };
