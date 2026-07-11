@@ -16,7 +16,7 @@ This package implements all SHA2 functions:
 - sha512-256
 - sha512-224
 
-The API allows to hash types `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, and `List<Nat8>` (`Text` after UTF-8 encoding, see below).
+The API allows to hash the types `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, and `List<Nat8>`, as well as bytes delivered by an accessor function `Nat -> Nat8` or a reader function `() -> Nat8` (`Text` after UTF-8 encoding, see below).
 
 The API provides a Digest type which accepts the message piecewise until finally computing the hash sum (digest).
 This allows hashing very large messages over multiple executions of the canister, even across canister upgrades.
@@ -121,7 +121,7 @@ To hash from `List<Nat8>` the most efficient way is to use the reader function a
 import List "mo:core/List";
 
 let list = List.fromArray<Nat8>([72, 101, 108, 108, 111]);
-let hash9 : Blob = Sha512.fromReader(#sha512, list.reader(0), List.size(list));
+let hash9 : Blob = Sha512.fromReader(#sha512, list.reader(0), list.size());
 
 ```
 
@@ -163,7 +163,7 @@ let finalHash : Blob = digest.sum();
 
 The first argument `#sha256` in the `Sha256` module functions and `#sha512` in the `Sha512` is implicit and can be skipped when writing code. For example, `Sha512.new(#sha512)` can be written as `Sha512.new()`.
 
-Besides `sum()` the `Sha256.Digest` offers further finalizers: `close()` finalizes without returning the hash (read it later, any number of times, with `readSum()`), and `sumDouble()`/`closeDouble()` finalize with a SECOND SHA256 pass — the double hash `SHA256(SHA256(m))` used by Bitcoin — at the cost of a single extra compression block.
+The finalization can also be split into its two halves: `sum()` is exactly `close()` followed by `readSum()`. `close()` finalizes the digest (writes the padding) without producing a `Blob`; `readSum()` reads the hash of a closed digest — idempotent, callable any number of times. Split them when you want to finalize now but read later, repeatedly, or not at all. A digest can be finalized only ONCE: a second `sum()` or `close()` (in any combination) traps, until `reset()` starts a new computation — to read the hash again, use `readSum()`. `Sha256` additionally offers the double-SHA counterparts `sumDouble()` = `closeDouble()` + `readSum()`, which finalize with a SECOND SHA256 pass — the double hash `SHA256(SHA256(m))` used by Bitcoin — at the cost of a single extra compression block.
 
 ### 3. Cloning for intermediate hashes
 
@@ -211,39 +211,28 @@ A `Digest` is a static record (no classes, no function fields), so it is a stabl
 import Sha256 "mo:sha2/Sha256";
 
 persistent actor {
-  // In a persistent actor all declarations are stable by default,
-  // and Digest is a stable type — no conversion needed.
-  var digest : ?Sha256.Digest = null;
-
-  // Start a new hash
-  public func initDigest() : async () {
-    digest := ?Sha256.new();
-  };
+  // In a persistent actor all declarations are stable by default, and
+  // Digest is a stable type — the digest state survives upgrades.
+  let digest = Sha256.new();
 
   // Write a chunk (can be called many times, across messages and upgrades)
   public func writeChunk(data : Blob) : async () {
-    let ?d = digest else return;
-    d.writeBlob(data);
+    digest.writeBlob(data);
   };
 
   // Get an intermediate hash without finalizing
-  public query func peekHash() : async ?Blob {
-    switch (digest) {
-      case (?d) ?d.clone().sum();
-      case null null;
-    };
+  public query func peekHash() : async Blob {
+    digest.clone().sum();
   };
 
   // Finalize and get the hash
-  public func finalizeHash() : async ?Blob {
-    switch (digest) {
-      case (?d) {
-        let hash = d.sum();
-        digest := null; // clear the closed digest
-        ?hash;
-      };
-      case null null;
-    };
+  public func finalizeHash() : async Blob {
+    digest.sum();
+  };
+
+  // Start a new hash computation
+  public func restart() : async () {
+    digest.reset();
   };
 };
 
@@ -261,7 +250,7 @@ import Hasher "mo:sha2/Hasher/Sha256";
 A `Digest` is a streaming engine: it has an internal message buffer, accepts any number of writes of any length, and is finalized once.
 A `Hasher` has NO buffer: it is nothing but the 256-bit state, and every operation is a complete hash — it overwrites the state with the digest of its fixed-length operands. That makes it:
 
-- allocation-free: no operation allocates; the only allocation in the whole API is the `Blob` returned by `readSum()`,
+- allocation-free: the only operation that allocates is `readSum()`, which produces the result `Blob`,
 - reusable without `reset()`: every operation starts from the IV, so a finished `Hasher` is immediately ready for the next hash,
 - cheaper than a `Digest` for its inputs: no buffer management, no per-write bookkeeping.
 
@@ -328,7 +317,7 @@ or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
 
 ### Performance
 
-We measure performance with random input messages created by the [Prng package](https://mops.one/prng). Measuring with a message of all the same bytes is not a reliable way to measure. It produces significantly different results.
+We measure performance with random input messages (seeded `mo:core/Random`). Measuring with a message of all the same bytes is not a reliable way to measure. It produces significantly different results.
 
 ### Memory
 
