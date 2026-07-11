@@ -296,7 +296,7 @@ Limitations:
 - Inputs are fixed-length only: 32-byte blobs or 256-bit states. For arbitrary-length messages use a `Digest` — or bridge the two: after `d.close()` a sha256 `Digest`'s result can be hashed straight into a `Hasher` with `h.hashState(d.state)` (adds one SHA256), with no intermediate `Blob`.
 - The `Hasher` type is a raw `[var Nat16]` of length 16; the type system does not enforce the length. Treat it as opaque and only operate on values created by `Hasher.new()`.
 
-The `examples/` directory shows the intended use cases: allocation-free Merkle trees (`Merkle.mo`, `MerkleCounter.mo`, `BitcoinTxMerkle.mo`) and iterated hashing (`NFold.mo`).
+The `examples/` directory shows the intended use cases: allocation-free Merkle trees in five variants (`MerkleStack.mo`, `MerkleCounter.mo`, `MerkleCounterState.mo`, `BitcoinMerkle.mo`, `BitcoinTxMerkle.mo`) and iterated hashing (`NFold.mo`).
 
 ### Build & test
 

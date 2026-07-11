@@ -1,56 +1,62 @@
-/// Example: a Bitcoin transaction Merkle root from RAW transactions, allocation-free.
+/// Example 5: the Bitcoin Merkle root of `BitcoinMerkle.mo`, but from RAW
+/// (variable-length) transactions instead of ready txid Blobs. Any count.
+/// Allocation-free.
 ///
-/// A Bitcoin block commits to its transactions through a Merkle root over their
-/// TXIDs. A txid is the DOUBLE SHA256 of the raw transaction bytes, and each
-/// internal node is the double SHA256 of its two children concatenated (with the
-/// last node duplicated on odd counts). `Merkle.mo` builds the tree itself from
-/// 32-byte leaves; this example adds the front half — turning variable-length
-/// raw transactions into those leaves — and is where the `Digest` -> `Hasher`
-/// bridge really pays off.
+/// A txid is the double SHA256 of the raw transaction bytes. `BitcoinMerkle.mo`
+/// takes those 32-byte txids as given; this example adds the front half —
+/// turning raw transactions into leaves — and is where the `Digest` -> `Hasher`
+/// bridge pays off.
 ///
 /// === Two engines, two roles ===
 ///
-///   * ONE `Digest` (reused) absorbs each variable-length transaction — only it
-///     has a message buffer, so only it can take an arbitrary-length input.
-///   * The `Hasher` peak stack holds the 32-byte leaves/peaks and combines them
-///     with `combineState`, allocating no `Blob` per node (see `Merkle.mo` for
-///     the peak-stack mechanics, which are identical here).
+///   * ONE `Digest` (reused, `reset` between transactions) absorbs each
+///     variable-length transaction — only it has a message buffer, so only it
+///     can take an arbitrary-length input.
+///   * The binary counter of `BitcoinMerkle.mo` holds the peaks and combines
+///     them with `combineState` + `hashState`, occupancy = the bits of the
+///     leaf count, risen peaks swapped by reference.
 ///
 /// === The leaf pair: two lifetimes, two exits ===
 ///
-/// Each txid is one double SHA256, but the two leaves of a pair have different
-/// LIFETIMES, so each uses the cheaper way out of the `Digest`:
+/// With raw transactions the pending height-0 leaf cannot be a `?Blob` — the
+/// txid exists only as the digest's STATE, and materializing it would allocate.
+/// Instead the counter's slot 0 holds it (the half-delay of
+/// `MerkleCounterState.mo`), and the two leaves of a pair take different exits
+/// out of the `Digest`:
 ///
-///   * The FIRST leaf must SURVIVE while the second is computed, so it is hashed
-///     into a `Hasher` (the peak slot) via the bridge — `close()` leaves
-///     SHA256(tx0) in the digest, and `hashState` reads it straight out while
-///     applying the second SHA:
-///         d.close();  peak.hashState(d.state)   // peak = SHA256(SHA256(tx0))
-///   * The SECOND leaf is consumed IMMEDIATELY by `combineState`, so it can stay
-///     in the digest's own state — `closeDouble()` finishes the txid in place:
-///         d.closeDouble()                       // d.state = SHA256(SHA256(tx1))
-///         peak.combineState(peak, d.state)      // SHA256(txid0 ++ txid1)
+///   * The FIRST leaf must SURVIVE while the second is computed, so the bridge
+///     produces it directly INTO slot 0 — `close()` leaves SHA256(tx) in the
+///     digest, and `hashState` applies the second SHA while writing the txid
+///     straight to its destination (capture for free, no `loadState` copy):
+///         d.close();  hasher[0].hashState(d.state)   // slot0 = SHA256(SHA256(tx))
+///   * The SECOND leaf is consumed IMMEDIATELY by `combineState`, so it can
+///     stay in the digest's own state — `closeDouble()` finishes the txid in
+///     place:
+///         d.closeDouble()                            // d.state = txid
+///         carry.combineState(hasher[0], d.state)     // SHA256(txid0 ++ txid1)
 ///
 /// Both are `close()` + one more SHA256 block — identical work — they just land
-/// the txid in different places. Because the second leaf never needs to persist,
-/// a leaf pair costs ONE scratch `Digest` and ZERO dedicated leaf hashers: the
-/// first txid goes straight into the peak slot, the second straight into the
-/// combine.
+/// the txid in different places. A leaf pair costs ONE scratch `Digest` and
+/// ZERO dedicated leaf hashers, with no state copies at all.
 ///
-/// Allocation-free except the returned root `Blob`. Like `Merkle.mo` this is the
-/// Bitcoin tree (plain concatenation + last-node duplication), NOT RFC 6962.
+/// === Finalization ===
 ///
-/// === Byte order and segwit caveats ===
+/// The Bitcoin collapse of `BitcoinMerkle.mo` — walk the bits of the count
+/// from the lowest set bit upward: the lowest component doubles once, then a
+/// SET bit pairs the accumulator with the waiting peak and a CLEAR bit pairs
+/// it with itself. Bit 0 is the parked txid in slot 0, so a lone final
+/// transaction is paired with itself from there, with no special case.
+///
+/// === Caveats (byte order, segwit, CVE) ===
 ///
 ///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
-///     order (the raw double-SHA256 output). Block explorers and RPC interfaces
-///     DISPLAY txids and merkle roots byte-REVERSED, so to compare against a
-///     displayed hex string, reverse the 32 bytes (see the mainnet test vectors
-///     in `test/verify.test.mo`).
-///   * SEGWIT: a txid is the double SHA256 of the transaction serialized
-///     WITHOUT witness data. Feeding full segwit bytes (with marker/flag and
-///     witnesses) yields the wtxid instead. Pre-segwit and stripped
-///     serializations are fine as-is.
+///     order; explorers display them byte-REVERSED (see the mainnet vectors in
+///     `test/verify.test.mo`).
+///   * SEGWIT: a txid hashes the transaction serialized WITHOUT witness data.
+///     Feeding full segwit bytes (marker/flag and witnesses) yields the wtxid
+///     instead. Pre-segwit and stripped serializations are fine as-is.
+///   * Last-node duplication is the source of CVE-2012-2459; callers must
+///     reject blocks with duplicate txids in that position.
 
 // In your own application, depend on the sha2 package and import it by name:
 //   import Sha256 "mo:sha2/Sha256";
@@ -58,82 +64,82 @@
 // These files live inside the sha2 repo, so they import the source directly.
 import Sha256 "../src/Sha256";
 import Hasher "../src/Hasher/Sha256";
-import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
+import Nat32 "mo:core/Nat32";
 
 module {
   /// Bitcoin Merkle root over the RAW transactions `txs` (each an
-  /// arbitrary-length `Blob`), for any count >= 1. Allocates nothing per
-  /// transaction or node — only the returned root `Blob`.
+  /// arbitrary-length `Blob`), for ANY count (>= 1). Equals
+  /// `BitcoinMerkle.bitcoinMerkleRoot` over the transactions' txids.
+  /// Allocates nothing per transaction or node — only the returned root `Blob`.
   public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
     let n = txs.size();
     assert n >= 1;
+    // Height L = ceil(log2 n); slots 0..L can hold peaks (slot 0 = parked txid).
+    var l = 0;
+    var pow = 1;
+    while (pow < n) { pow *= 2; l += 1 };
 
+    let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
+    var carry = Hasher.new();
+    var count : Nat32 = 0;
     // One scratch Digest absorbs every transaction (reset between them).
     let d = Sha256.new();
 
-    // A single transaction: the root is its txid = double SHA256(tx).
-    if (n == 1) {
-      d.writeBlob(txs[0]);
-      return d.sumDouble();
-    };
-
-    // Peak stack of Hashers (see Merkle.mo). ceil(log2 n) + 2 slots is enough.
-    var cap = 0;
-    var m = 1;
-    while (m < n) { m *= 2; cap += 1 };
-    cap += 2;
-    let hasher = Array.tabulate<Hasher.Hasher>(cap, func(_) { Hasher.new() });
-    let level = VarArray.repeat<Nat>(0, cap);
-
-    var i = 0; // stack height
-    var p = 0; // next transaction
-    while (p < n) {
-      // --- Leaf pair -> a level-1 node in hasher[i] ---
-      // First leaf: bridge its txid into the peak slot (it must persist).
-      d.reset();
-      d.writeBlob(txs[p]);
-      d.close();
-      hasher[i].hashState(d.state); // hasher[i] = txid_p
-      if (p + 1 < n) {
-        // Second leaf: its txid lives only for the combine, so leave it in
-        // d.state and feed it straight in.
-        d.reset();
-        d.writeBlob(txs[p + 1]);
-        d.closeDouble(); // d.state = txid_{p+1}
-        hasher[i].combineState(hasher[i], d.state); // SHA256(txid_p ++ txid_{p+1})
+    // Step 1: the binary counter, leaves produced through the bridge.
+    for (tx in txs.values()) {
+      if (count > 0) d.reset();
+      d.writeBlob(tx);
+      if ((count & 1) == 0) {
+        // Height 0 empty: produce the txid directly INTO slot 0 (free capture).
+        d.close();
+        hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
       } else {
-        // Odd leaf out: Bitcoin duplicates the last txid (hash it with itself).
-        hasher[i].combineState(hasher[i], hasher[i]);
+        // Height 0 occupied: finish the txid in the digest and consume it.
+        d.closeDouble(); // d.state := txid
+        carry.combineState(hasher[0], d.state);
+        carry.hashState(carry); // -> double SHA
+        var k : Nat32 = 1;
+        while (((count >> k) & 1) == 1) {
+          carry.combineState(hasher[Nat32.toNat(k)], carry);
+          carry.hashState(carry); // -> double SHA
+          k += 1;
+        };
+        let kk = Nat32.toNat(k);
+        let tmp = hasher[kk];
+        hasher[kk] := carry;
+        carry := tmp;
       };
-      hasher[i].hashState(hasher[i]); // -> double-SHA node
-      level[i] := 1;
-
-      // --- Carry: merge equal-level peaks (see Merkle.mo) ---
-      while (i > 0 and level[i - 1] == level[i]) {
-        hasher[i - 1].combineState(hasher[i - 1], hasher[i]);
-        hasher[i - 1].hashState(hasher[i - 1]);
-        level[i - 1] += 1;
-        i -= 1;
-      };
-      i += 1;
-      p += 2;
+      count += 1;
     };
 
-    // --- Collapse leftover peaks Bitcoin-style (see Merkle.mo) ---
-    while (i > 1) {
-      hasher[i - 1].combineState(hasher[i - 1], hasher[i - 1]);
-      hasher[i - 1].hashState(hasher[i - 1]);
-      level[i - 1] += 1;
-      while (i > 1 and level[i - 2] == level[i - 1]) {
-        hasher[i - 2].combineState(hasher[i - 2], hasher[i - 1]);
-        hasher[i - 2].hashState(hasher[i - 2]);
-        level[i - 2] += 1;
-        i -= 1;
-      };
-    };
+    // Step 2: the Bitcoin collapse (see BitcoinMerkle.mo), walking the bits of
+    // the count from the lowest set bit upward. Every component — including a
+    // parked odd txid, which is simply the bit-0 peak in slot 0 — lives in a
+    // hasher slot, so no case distinction is needed at all.
 
-    // readSum is the one and only allocation.
-    hasher[0].readSum();
+    // A single component is the root outright: the lone txid (n == 1, slot 0)
+    // or one peak (power-of-two count).
+    var k = Nat32.bitcountTrailingZero(count);
+    if (Nat32.bitcountNonZero(count) == 1) return Hasher.readSum(hasher[Nat32.toNat(k)]);
+
+    // acc = the lowest component, doubled once — its level's node count is
+    // odd, so Bitcoin pairs it with itself.
+    var acc = hasher[Nat32.toNat(k)]; // by reference, no copy
+    acc.combineState(acc, acc);
+    acc.hashState(acc); // -> double SHA
+    k += 1;
+    // Walk the remaining bits: set — pair acc with the waiting peak; clear —
+    // the level's node count is odd again, pair acc with itself.
+    while ((count >> k) > 0) {
+      if (((count >> k) & 1) == 1) {
+        acc.combineState(hasher[Nat32.toNat(k)], acc); // dSHA(peak ++ acc)
+      } else {
+        acc.combineState(acc, acc); // duplicate: dSHA(acc ++ acc)
+      };
+      acc.hashState(acc); // -> double SHA
+      k += 1;
+    };
+    Hasher.readSum(acc);
   };
 };

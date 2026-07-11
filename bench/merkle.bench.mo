@@ -4,121 +4,23 @@ import VarArray "mo:core/VarArray";
 import Random "mo:core/Random";
 import Bench "mo:bench-helper";
 import Hasher "../src/Hasher/Sha256";
+import MerkleBuild "counterBuild";
 
 module {
-  // STACK peak-MMR (see examples/Merkle.mo). `hasher[0 .. i-1]` is a stack of
-  // completed-subtree "peaks", `level[j]` is the level of `hasher[j]`, `i` the
-  // stack height. Each leaf PAIR is combined (combineBlob32) into the free top
-  // slot, then merged down while the new peak's level matches the one below it.
-  func merkleRootStack(leaves : [Blob], hasher : [Hasher.Hasher], level : [var Nat], double : Bool) : Blob {
-    let n = leaves.size();
-    var i = 0;
-    var p = 0;
-    while (p < n) {
-      hasher[i].combineBlob32(leaves[p], leaves[p + 1]);
-      if (double) hasher[i].hashState(hasher[i]);
-      level[i] := 1;
-      while (i > 0 and level[i - 1] == level[i]) {
-        hasher[i - 1].combineState(hasher[i - 1], hasher[i]);
-        if (double) hasher[i - 1].hashState(hasher[i - 1]);
-        level[i - 1] += 1;
-        i -= 1;
-      };
-      i += 1;
-      p += 2;
-    };
-    Hasher.readSum(hasher[0]);
-  };
-
-  // BINARY-COUNTER MMR (see examples/MerkleCounter.mo). Height-indexed slots:
-  // `hasher[k]` is the height-k peak, `occupied[k]` whether it holds one. Each
-  // single LEAF is parked (loadBlob32) into a scratch `carry` and carried up the
-  // occupied slots (combineState), then dropped into the free slot with an O(1)
-  // reference swap. No level[] array. Power-of-two leaf counts.
-  func merkleRootCounter(leaves : [Blob], hasher : [var Hasher.Hasher], occupied : [var Bool], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
-    let n = leaves.size();
-    var l = 0;
-    var pow = 1;
-    while (pow < n) { pow *= 2; l += 1 };
-    var j = 0;
-    while (j <= l) { occupied[j] := false; j += 1 };
-    var carry = carryCell[0]; // a spare hasher, never aliased with a slot
-    for (leaf in leaves.values()) {
-      carry.loadBlob32(leaf); // park the leaf hash as a height-0 peak (no re-hash)
-      var k = 0;
-      while (occupied[k]) {
-        carry.combineState(hasher[k], carry); // SHA256(hasher[k] ++ carry)
-        if (double) carry.hashState(carry);
-        occupied[k] := false;
-        k += 1;
-      };
-      let tmp = hasher[k]; // swap the risen peak into the free slot (O(1))
-      hasher[k] := carry;
-      carry := tmp;
-      occupied[k] := true;
-    };
-    carryCell[0] := carry; // persist the orphan for the next reuse (no aliasing)
-    Hasher.readSum(hasher[l]);
-  };
-
-  // BINARY-COUNTER MMR with a DELAYED height-0 leaf: instead of parking every
-  // leaf via loadBlob32, hold one leaf as a pending Blob and, when its partner
-  // arrives, fuse the pair with combineBlob32 (reading both Blobs straight into
-  // the compression, like the stack) — no loadBlob32. Heights >= 1 carry as
-  // states exactly as above. Power-of-two leaf counts, n >= 2.
-  func merkleRootCounterDelayed(leaves : [Blob], hasher : [var Hasher.Hasher], occupied : [var Bool], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
-    let n = leaves.size();
-    var l = 0;
-    var pow = 1;
-    while (pow < n) { pow *= 2; l += 1 };
-    var j = 0;
-    while (j <= l) { occupied[j] := false; j += 1 };
-    var carry = carryCell[0];
-    var pending : ?Blob = null; // the height-0 peak, held as a Blob (not a slot)
-    for (leaf in leaves.values()) {
-      switch (pending) {
-        case (null) { pending := ?leaf };
-        case (?leaf0) {
-          pending := null;
-          carry.combineBlob32(leaf0, leaf); // fuse the two leaf Blobs (no loadBlob32)
-          if (double) carry.hashState(carry);
-          var k = 1; // height-1 node; carry up the state slots
-          while (occupied[k]) {
-            carry.combineState(hasher[k], carry);
-            if (double) carry.hashState(carry);
-            occupied[k] := false;
-            k += 1;
-          };
-          let tmp = hasher[k];
-          hasher[k] := carry;
-          carry := tmp;
-          occupied[k] := true;
-        };
-      };
-    };
-    carryCell[0] := carry;
-    Hasher.readSum(hasher[l]);
-  };
+  // The favored Merkle build: the BINARY-COUNTER MMR with the delay trick,
+  // measured over the two leaf types. Both columns run the same algorithm —
+  // only the height-0 handling differs, as dictated by the leaf type. The
+  // build code is shared with merkle_alloc.bench.mo (bench/counterBuild.mo)
+  // and mirrors examples/MerkleCounter.mo / examples/MerkleCounterState.mo.
 
   public func init() : Bench.V1 {
-    // Same Bitcoin / single-SHA Merkle root over 2^k 32-byte leaves, built two
-    // ways: the STACK peak-MMR (combineBlob32 per pair + level[] bookkeeping)
-    // vs the BINARY-COUNTER MMR (loadBlob32 per leaf + carry-and-swap, occupancy
-    // = the bits of the leaf count, no level[] array). Both allocation-free.
     let exps : [Nat] = [8, 10, 12];
     let rows = ["2^8 leaves", "2^10 leaves", "2^12 leaves"];
-    let cols = [
-      "stack 2-SHA",
-      "counter 2-SHA",
-      "delay 2-SHA",
-      "stack 1-SHA",
-      "counter 1-SHA",
-      "delay 1-SHA",
-    ];
+    let cols = ["Blob leaves", "State leaves"];
 
     let schema : Bench.Schema = {
-      name = "Sha256 Merkle: stack vs counter";
-      description = "Merkle root over 2^k 32-byte leaves, two algorithms x two hash modes. STACK is the peak-mountain-range with a parallel level[] array (examples/Merkle.mo): each leaf PAIR is one combineBlob32 into the free top slot, then merge-down. COUNTER is the binary-counter MMR (examples/MerkleCounter.mo): a height-indexed [var Hasher] whose occupied slots are the bits of the leaf count (no level[] array), each single LEAF parked with loadBlob32 and carried up via combineState, risen peaks moved with O(1) reference swaps through one scratch carry hasher. '2-SHA' double-hashes every node (Bitcoin: combine + hashState); '1-SHA' skips the fold. 'delay' is the counter with the fix: hold the height-0 leaf as a pending Blob and fuse each pair with combineBlob32 (no loadBlob32), carrying states only at heights >= 1. All do the same number of compressions (n-1 combines); naive 'counter' additionally deserializes EVERY leaf Blob (loadBlob32) before combining, so it runs moderately more instructions (largest in 1-SHA, where the fold doesn't dilute the parking), while 'delay' eliminates that and tracks the stack closely. The parking cost is specific to precomputed Blob leaves; leaves arriving as a Digest state (combined directly) avoid it. All allocation-free except the final root Blob.";
+      name = "Sha256 Merkle counter: Blob vs State leaves";
+      description = "Single-SHA Merkle root over 2^k leaves via the binary-counter MMR (the favored build: occupancy = the bits of the leaf count, risen peaks moved by O(1) reference swaps, no flag or level array), comparing the two leaf types. 'Blob leaves' (examples/MerkleCounter.mo) uses the full delay: one leaf waits as a pending ?Blob and each pair is fused with combineBlob32 straight from the input — no per-leaf deserialize. 'State leaves' (examples/MerkleCounterState.mo) are 32-byte hashes already sitting in Hashers, treated as transient: the half-delay parks the first leaf of each pair into slot 0 with one loadState (its partner is read directly by combineState), so n/2 state copies — the gap between the columns is exactly those copies. Both do n-1 combines and are allocation-free except the root Blob. Power-of-two counts, so no bagging finale — the examples add only that. (When state leaves stream out of a Digest, even the park is free: the bridge produces the txid directly INTO slot 0 — see examples/BitcoinTxMerkle.mo.)";
       rows = rows;
       cols = cols;
     };
@@ -130,34 +32,31 @@ module {
       rows.size(),
       func(ri) = Array.tabulate<Blob>(2 ** exps[ri], func(_) = b32()),
     );
-
-    // Stack pool: log2(n) hashers + a per-slot level array. Reused across both
-    // stack columns (each call overwrites the pool and rewrites level).
-    let stackHasherByRow = Array.tabulate<[Hasher.Hasher]>(
+    // The same 32-byte values as read-only leaf STATES (neither algorithm
+    // mutates a leaf), so both columns hash identical content.
+    let stateLeavesByRow = Array.tabulate<[Hasher.Hasher]>(
       rows.size(),
-      func(ri) = Array.tabulate<Hasher.Hasher>(exps[ri], func(_) { Hasher.new() }),
+      func(ri) = Array.map<Blob, Hasher.Hasher>(
+        leavesByRow[ri],
+        func(b) { let h = Hasher.new(); h.loadBlob32(b); h },
+      ),
     );
-    let stackLevelByRow = Array.tabulate<[var Nat]>(rows.size(), func(ri) = VarArray.repeat<Nat>(0, exps[ri]));
 
-    // Counter pool: log2(n)+1 height slots, an occupied[] flag array, and one
-    // spare carry hasher. Reused across both counter columns.
+    // Counter pool: log2(n)+1 height slots and one spare carry hasher
+    // (occupancy needs no storage — it is the bits of the leaf count).
+    // Reused across both columns.
     let counterHasherByRow = Array.tabulate<[var Hasher.Hasher]>(
       rows.size(),
       func(ri) = VarArray.tabulate<Hasher.Hasher>(exps[ri] + 1, func(_) { Hasher.new() }),
     );
-    let counterOccByRow = Array.tabulate<[var Bool]>(rows.size(), func(ri) = VarArray.repeat<Bool>(false, exps[ri] + 1));
     let counterCarryByRow = Array.tabulate<[var Hasher.Hasher]>(rows.size(), func(ri) = VarArray.tabulate<Hasher.Hasher>(1, func(_) { Hasher.new() }));
 
     let routines : [[() -> ()]] = Array.tabulate<[() -> ()]>(
       rows.size(),
       func(ri) {
         [
-          func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], true),
-          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], true),
-          func() = ignore merkleRootCounterDelayed(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], true),
-          func() = ignore merkleRootStack(leavesByRow[ri], stackHasherByRow[ri], stackLevelByRow[ri], false),
-          func() = ignore merkleRootCounter(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], false),
-          func() = ignore merkleRootCounterDelayed(leavesByRow[ri], counterHasherByRow[ri], counterOccByRow[ri], counterCarryByRow[ri], false),
+          func() = ignore MerkleBuild.merkleRootBlob(leavesByRow[ri], counterHasherByRow[ri], counterCarryByRow[ri], false),
+          func() = ignore MerkleBuild.merkleRootState(stateLeavesByRow[ri], counterHasherByRow[ri], counterCarryByRow[ri], false),
         ];
       },
     );

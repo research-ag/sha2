@@ -9,7 +9,7 @@
 - Optimize `close()` with a block-boundary fast path that compresses the all-constant padding block directly for block-aligned messages
 - Make `writeBlob()` allocation-free (drop the per-call accessor closures)
 - Reduce per-call allocations across the API (use `switch` instead of variant `==`)
-- Add `examples/` — allocation-free Bitcoin-style Merkle trees (peak-stack and binary-counter variants; from 32-byte leaves and from raw variable-length transactions) and N-fold hashing, with tests including real-block Merkle-root vectors
+- Add `examples/` — five allocation-free Merkle-tree examples forming a progression (peak stack; binary counter with the delay trick; counter over state leaves; Bitcoin double-SHA tree with its duplicate-and-collapse finalization, from txids and from raw variable-length transactions) plus N-fold hashing, with tests including real-block Merkle-root vectors
 - Replace precondition `assert`s with diagnostic trap messages (e.g. "Sha256: write to closed digest", "Hasher: hashBlob32 expects a 32-byte blob, got N bytes"); same trapping behavior, better error messages
 - Widen the Sha256 block counter to `Nat64` — removes a silent wrong-hash wraparound for cumulative inputs ≥ 256 GiB per digest (theoretical; costs ~10 instructions per hash)
 - Skip the block-processing call for sub-block writes in `writeArray`/`writeVarArray`/`writeAccessor`/`writeReader` (~670 fewer instructions per short write, ~5 fewer per block for accessor/reader on long inputs)
