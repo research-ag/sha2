@@ -58,10 +58,12 @@ module {
   public func merkleRoot(leaves : [Blob]) : Blob {
     let n = leaves.size();
     assert n >= 1;
-    // Height L = ceil(log2 n); slots 1..L can hold peaks.
+    // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
+    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
+    // allocated only so that slot index = height (height 0 is the pending Blob).
     var l = 0;
     var pow = 1;
-    while (pow < n) { pow *= 2; l += 1 };
+    while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     // hasher[1..l]: height-indexed peak slots (slot 0 unused — height 0 is the
     // pending Blob). carry: one scratch hasher that rides each carry up. count:

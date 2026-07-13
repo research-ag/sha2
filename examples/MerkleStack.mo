@@ -42,7 +42,7 @@
 ///      no node is ever duplicated (contrast the Bitcoin collapse in
 ///      `BitcoinMerkle.mo`).
 ///
-/// A tree of N leaves needs only ceil(log2 N) + 1 hashers. No recursion, no
+/// A tree of N leaves needs only ceil(log2 N) hashers. No recursion, no
 /// free-list.
 ///
 /// === Security note: the root does not commit to the leaf count ===
@@ -86,12 +86,13 @@ module {
     };
 
     // A pool of hashers; `hasher[0 .. i-1]` is the peak stack and `level[j]` the
-    // level of `hasher[j]`. One peak per set bit of n, plus slack for the
-    // just-pushed pair: `ceil(log2 n) + 1` slots is always enough.
+    // level of `hasher[j]`. `ceil(log2 n)` slots suffice: a pair is pushed at
+    // index popcount(p) with p (the consumed leaf count) even, and an even
+    // p < 2^L has at most L-1 set bits; the final odd-leaf park is bounded the
+    // same way by popcount(n-1).
     var cap = 0;
     var m = 1;
     while (m < n) { m *= 2; cap += 1 }; // cap = ceil(log2 n)
-    cap += 1;
     let hasher = Array.tabulate<Hasher.Hasher>(cap, func(_) { Hasher.new() });
     let level = VarArray.repeat<Nat>(0, cap);
 

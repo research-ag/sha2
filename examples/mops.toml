@@ -1,6 +1,7 @@
 [dependencies]
 sha2 = "../src/"
 core = "2.6.0"
+prng = "0.2.0"
 
 [toolchain]
 moc = "1.11.0"

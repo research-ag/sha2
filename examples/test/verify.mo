@@ -1,3 +1,4 @@
+// @testmode wasi
 // Verifies the examples produce the same hashes as straightforward references.
 import MerkleStack "../MerkleStack";
 import MerkleCounter "../MerkleCounter";
@@ -10,10 +11,14 @@ import Hasher "mo:sha2/Hasher/Sha256";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import List "mo:core/List";
-import Random "mo:core/Random";
+import Nat64 "mo:core/Nat64";
+import Nat8 "mo:core/Nat8";
+import Seiran128 "mo:prng/Seiran128";
 
-let rng = Random.seed(0x1234);
-func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = rng.nat8()));
+// prng instead of core/Random: the latter contains async code, which does not
+// compile in testmode wasi (needed for speed).
+let rng = Seiran128.new(0x1234);
+func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = Nat8.fromNat(Nat64.toNat(rng.next() & 0xff))));
 
 let ns : [Nat] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 23, 31, 33, 100];
 

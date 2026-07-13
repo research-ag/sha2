@@ -71,10 +71,12 @@ module {
   public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
     let n = txs.size();
     assert n >= 1;
-    // Height L = ceil(log2 n); slots 0..L can hold peaks (slot 0 = parked txid).
+    // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
+    // i.e. the highest possible peak height. Slots 0..L hold peaks (slot 0 =
+    // parked txid).
     var l = 0;
     var pow = 1;
-    while (pow < n) { pow *= 2; l += 1 };
+    while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
     var carry = Hasher.new();
