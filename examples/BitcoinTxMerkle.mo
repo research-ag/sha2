@@ -58,12 +58,8 @@
 ///   * Last-node duplication is the source of CVE-2012-2459; callers must
 ///     reject blocks with duplicate txids in that position.
 
-// In your own application, depend on the sha2 package and import it by name:
-//   import Sha256 "mo:sha2/Sha256";
-//   import Hasher "mo:sha2/Hasher/Sha256";
-// These files live inside the sha2 repo, so they import the source directly.
-import Sha256 "../src/Sha256";
-import Hasher "../src/Hasher/Sha256";
+import Sha256 "mo:sha2/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import VarArray "mo:core/VarArray";
 import Nat32 "mo:core/Nat32";
 

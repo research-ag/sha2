@@ -59,7 +59,7 @@
 /// `BitcoinTxMerkle.mo`, which adds the `Digest` -> `Hasher` bridge in front of
 /// the same tree.
 
-import Hasher "../src/Hasher/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import VarArray "mo:core/VarArray";
 import Nat32 "mo:core/Nat32";
 

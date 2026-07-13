@@ -47,7 +47,7 @@
 /// peak heights are exactly its bits). This is not RFC 6962 — see the full
 /// note in `MerkleStack.mo`.
 
-import Hasher "../src/Hasher/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import VarArray "mo:core/VarArray";
 import Nat32 "mo:core/Nat32";
 

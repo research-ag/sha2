@@ -7,26 +7,26 @@ single-shot `Hasher` (`hashBlob32`, `hashState`, `combineBlob32`, `combineState`
 
 We provide multiple examples to build a Merkle tree from an arbitrary number of leaves.
 The examples all build an MMR first and then "bag" the MMR peaks to obtain a single root hash.
- 
+
 The examples are designed to produce minimal allocations.
 `Hasher`s are used both to hash and to store intermediate hashes.
-`N` `Hasher`s are required for a tree with up to `2^N` leaves , one for each depth-level of the tree.
+`N` `Hasher`s are required for a tree with up to `2^N` leaves, one for each depth-level of the tree.
 The `Hasher`s store the current peaks at different levels of the MMR.
 When two peaks are merged then one `Hasher` holds the new higher peak and the other `Hasher` becomes free again.
 The examples assume that the tree depth is known in advance and pre-allocate the required number of `Hasher`s.
-It is of course also possible to dynamically allocate more `Hasher`s as needed, but this was not in scope for the examples. 
+It is of course also possible to dynamically allocate more `Hasher`s as needed, but this was not in scope for the examples.
 The only allocations made by the code in the examples are the creation of the `Hasher`s plus the final root hash Blob.
 
 The five Merkle examples form a progression — each adds one concept:
 
-| #   | file                                               | what it shows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | [`MerkleStack.mo`](./MerkleStack.mo)               | An MMR over 32-byte Blob leaves. The used `Hasher`s form a stack with the one holding the highest peak at the bottom of the stack and the one holding the lowest peak on the top. A parallel `level[]` array tracks each peak's height. In the end, the peaks left in the stack are bagged top to bottom. |
-| 2   | [`MerkleCounter.mo`](./MerkleCounter.mo)           | The same as Example 1 but the `Hasher`s are arranged in an array and addressed by position instead of on a stack. The array index corresponds to the depth-level in the tree. Which `Hasher`s are free and which hold a peak is determined by the bits in the binary represenation of the number of leaves. Therefore, the `level[]` array of the previous example is replaced by a single leaf counter. This is the preferred implementation. |
-| 3   | [`MerkleCounterState.mo`](./MerkleCounterState.mo) | The same as Example 2 but the incoming leaf values are taken from `Hasher` states instead of from Blobs. This shows the general case where leaves are arbitrary-length messages that have to be hashed first. The point of this example is to demonstrate how do that without causing additional allocations. |
-| 4   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)           | The same as Example 2 but for the Bitcoin-specific Merkle tree over txid leaves that are 32-byte Blobs. It differs from Example 2 in that a) double SHA256 is used on each level and b) "bagging" works by pairing peaks with themselves to move them up one level. |
-| 5   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)       | The combination of Example 4 and 3. This is the Bitcoin-specific Merkle tree over the full (variable-length) transactions as input instead of over already precomupted txids. It uses one `Digest` to absorb the transactions one at a time and a `Digest` → `Hasher` bridge lands each txid directly at its destination. This achieves the Bitcoin Merkle tree without allocations. |
-|     | [`NFold.mo`](./NFold.mo)                           | N-fold hashing (`H^N(msg)`) that absorbs the message with a `Digest`, then bridges its state into a `Hasher` (the expert `digest.state` → `hashState` path) to fold the remaining rounds with no intermediate `Blob`; plus a batch variant reusing one of each engine across many messages. |
+| #   | file                                               | what it shows                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | [`MerkleStack.mo`](./MerkleStack.mo)               | An MMR over 32-byte Blob leaves. The used `Hasher`s form a stack with the one holding the highest peak at the bottom of the stack and the one holding the lowest peak on the top. A parallel `level[]` array tracks each peak's height. In the end, the peaks left in the stack are bagged top to bottom.                                                                                                                                       |
+| 2   | [`MerkleCounter.mo`](./MerkleCounter.mo)           | The same as Example 1 but the `Hasher`s are arranged in an array and addressed by position instead of on a stack. The array index corresponds to the depth-level in the tree. Which `Hasher`s are free and which hold a peak is determined by the bits in the binary representation of the number of leaves. Therefore, the `level[]` array of the previous example is replaced by a single leaf counter. This is the preferred implementation. |
+| 3   | [`MerkleCounterState.mo`](./MerkleCounterState.mo) | The same as Example 2 but the incoming leaf values are taken from `Hasher` states instead of from Blobs. This shows the general case where leaves are arbitrary-length messages that have to be hashed first. The point of this example is to demonstrate how to do that without causing additional allocations.                                                                                                                                |
+| 4   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)           | The same as Example 2 but for the Bitcoin-specific Merkle tree over txid leaves that are 32-byte Blobs. It differs from Example 2 in that a) double SHA256 is used on each level and b) "bagging" works by pairing peaks with themselves to move them up one level.                                                                                                                                                                             |
+| 5   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)       | The combination of Example 4 and 3. This is the Bitcoin-specific Merkle tree over the full (variable-length) transactions as input instead of over already precomputed txids. It uses one `Digest` to absorb the transactions one at a time and a `Digest` → `Hasher` bridge lands each txid directly at its destination. This achieves the Bitcoin Merkle tree without allocations.                                                            |
+|     | [`NFold.mo`](./NFold.mo)                           | N-fold hashing (`H^N(msg)`) that absorbs the message with a `Digest`, then bridges its state into a `Hasher` (the expert `digest.state` → `hashState` path) to fold the remaining rounds with no intermediate `Blob`; plus a batch variant reusing one of each engine across many messages.                                                                                                                                                     |
 
 Each file's header is a how-to: it spells out exactly what you must do to keep
 hashing allocation-free in bulk — reuse a pool of hashers, combine 32-byte leaf
@@ -38,14 +38,13 @@ for identical leaf bytes); Examples 4–5 build Bitcoin's double-SHA tree with
 its last-node duplication. Neither is RFC 6962, which prepends a
 domain-separation byte to each node.
 
-`test/verify.test.mo` checks all examples against straightforward references
-(including real mainnet Bitcoin block vectors); it runs as part of `mops test`.
+The examples are their own small mops project: the [`mops.toml`](./mops.toml)
+in this directory maps the package name `sha2` to `../src/`, so the example
+code imports the package exactly as your own project would
+(`import Hasher "mo:sha2/Hasher/Sha256"`). To reuse an example, copy the code
+unchanged and point `sha2` in your `mops.toml` at the published package
+instead.
 
-> These files live inside the sha2 repo, so they import the source directly
-> (`import Hasher "../src/Hasher/Sha256"`). **In your own project**, depend on
-> the published package and import it by name instead:
->
-> ```motoko
-> import Hasher "mo:sha2/Hasher/Sha256";
->
-> ```
+[`test/verify.mo`](./test/verify.mo) checks all examples against
+straightforward references (including real mainnet Bitcoin block vectors).
+Run it from this directory with `mops test verify`; CI runs it on every PR.

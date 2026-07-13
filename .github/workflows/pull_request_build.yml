@@ -21,6 +21,29 @@ jobs:
       - name: Run mops test
         run: mops test
 
+  examples:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: caffeinelabs/setup-mops@v1
+
+      # The examples are their own mops project: examples/mops.toml maps the
+      # package name `sha2` to ../src, so the example code imports it exactly
+      # as a user would (mo:sha2/...). Their verification file is named
+      # verify.mo (not *.test.mo) so the root `mops test` doesn't pick it up —
+      # it runs from examples/ with the explicit filter.
+      - name: Init toolchain and install deps
+        working-directory: examples
+        run: |
+          mops toolchain init
+          mops install
+
+      - name: Verify examples
+        working-directory: examples
+        run: mops test verify
+
   bench:
     runs-on: ubuntu-22.04
 

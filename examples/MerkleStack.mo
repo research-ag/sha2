@@ -66,10 +66,7 @@
 ///   3. Read the output with `readSum()` exactly once, for the root — that is
 ///      the only allocation.
 
-// In your own application, depend on the sha2 package and import it by name:
-//   import Hasher "mo:sha2/Hasher/Sha256";
-// These files live inside the sha2 repo, so they import the source directly.
-import Hasher "../src/Hasher/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
 

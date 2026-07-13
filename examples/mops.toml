@@ -1,0 +1,7 @@
+[dependencies]
+sha2 = "../src/"
+core = "2.6.0"
+
+[toolchain]
+moc = "1.11.0"
+wasmtime = "44.0.3"

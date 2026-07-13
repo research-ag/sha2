@@ -33,7 +33,7 @@
 /// count; verifiers must be given n out of band (see the note in
 /// `MerkleStack.mo`).
 
-import Hasher "../src/Hasher/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import VarArray "mo:core/VarArray";
 import Nat32 "mo:core/Nat32";
 

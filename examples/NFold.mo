@@ -35,12 +35,8 @@
 /// Note: the fold is sha256-only (its fast block is size-specific), so these
 /// examples use the default `#sha256` algorithm.
 
-// In your own application, depend on the sha2 package and import it by name:
-//   import Sha256 "mo:sha2/Sha256";
-//   import Hasher "mo:sha2/Hasher/Sha256";
-// These files live inside the sha2 repo, so they import the source directly.
-import Sha256 "../src/Sha256";
-import Hasher "../src/Hasher/Sha256";
+import Sha256 "mo:sha2/Sha256";
+import Hasher "mo:sha2/Hasher/Sha256";
 import Array "mo:core/Array";
 
 module {
