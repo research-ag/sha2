@@ -10,8 +10,7 @@ The examples all build an MMR first and then "bag" the MMR peaks to obtain a sin
 
 The examples are designed to produce minimal allocations.
 `Hasher`s are used both to hash and to store intermediate hashes.
-Generally, `N` `Hasher`s are required for a tree with up to `2^N` leaves, one for each depth-level of the tree.
-The counter-based examples use one `Hasher` more: they keep one slot per bit of the leaf count — bit length `N + 1` — including slot 0 for the height-0 peak, which is a raw leaf.
+Both algorithms use `log2(n)` `Hasher`s for a tree with `n` leaves, roughly one for each depth-level of the tree; the difference between the two is marginal (the exact formulas are given below the table).
 The `Hasher`s store the current peaks at different levels of the MMR.
 When two peaks are merged then one `Hasher` holds the new higher peak and the other `Hasher` becomes free again.
 The examples assume that the tree depth is known in advance and pre-allocate the required number of `Hasher`s.
@@ -28,6 +27,15 @@ The five Merkle examples form a progression — each adds one concept:
 | 4   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)           | The same as Example 2 but for the Bitcoin-specific Merkle tree over txid leaves that are 32-byte Blobs. It differs from Example 2 in that a) double SHA256 is used on each level and b) "bagging" works by pairing peaks with themselves to move them up one level.                                                                                                                                                                             |
 | 5   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)       | The combination of Example 4 and 3. This is the Bitcoin-specific Merkle tree over the full (variable-length) transactions as input instead of over already precomputed txids. It uses one `Digest` to absorb the transactions one at a time and a `Digest` → `Hasher` bridge lands each txid directly at its destination. This achieves the Bitcoin Merkle tree without allocations.                                                            |
 |     | [`NFold.mo`](./NFold.mo)                           | N-fold hashing (`H^N(msg)`) that absorbs the message with a `Digest`, then bridges its state into a `Hasher` (the expert `digest.state` → `hashState` path) to fold the remaining rounds with no intermediate `Blob`; plus a batch variant reusing one of each engine across many messages.                                                                                                                                                     |
+
+The exact pool sizes are:
+
+- Counter: `floor(log2 n) + 1` — the bit length of `n`, one slot per bit of the leaf count.
+- Stack: `ceil(log2 n)` — the maximum number of simultaneously live peaks.
+
+The two differ only when `n` is an exact power of two, where the counter uses
+one `Hasher` more (the address space of the height-indexed array exceeds the
+peak occupancy by one exactly there).
 
 Each file's header is a how-to: it spells out exactly what you must do to keep
 hashing allocation-free in bulk — reuse a pool of hashers, combine 32-byte leaf
