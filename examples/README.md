@@ -11,7 +11,7 @@ The examples all build an MMR first and then "bag" the MMR peaks to obtain a sin
 The examples are designed to produce minimal allocations.
 `Hasher`s are used both to hash and to store intermediate hashes.
 Generally, `N` `Hasher`s are required for a tree with up to `2^N` leaves, one for each depth-level of the tree.
-The counter-based examples use one `Hasher` more: slot 0, the workspace holding the pending leaf or the rising carry.
+The counter-based examples use one `Hasher` more: they keep one slot per bit of the leaf count — bit length `N + 1` — including slot 0 for the height-0 peak, which is a raw leaf.
 The `Hasher`s store the current peaks at different levels of the MMR.
 When two peaks are merged then one `Hasher` holds the new higher peak and the other `Hasher` becomes free again.
 The examples assume that the tree depth is known in advance and pre-allocate the required number of `Hasher`s.

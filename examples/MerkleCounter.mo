@@ -10,24 +10,27 @@
 /// no occupancy flags: "is height k occupied?" is bit k of the running count,
 /// `(count >> k) & 1`, and `count += 1` maintains every bit for free.
 ///
-/// === Height 0 is a pending Blob (the "delay" trick) ===
+/// === Height 0 is written lazily (the "delay" trick) ===
 ///
-/// A height-0 peak is a raw leaf, and deserializing every leaf into a Hasher
-/// (`loadBlob32`) would be wasteful. So height 0 is NOT a hasher slot — it is a
-/// pending `?Blob` (bit 0 of the count: set iff a leaf is waiting). When its
-/// partner arrives, the pair is fused straight from the two Blobs with
-/// `combineBlob32` — no `loadBlob32`, exactly like the stack's leaf step — and
-/// the resulting height-1 node carries up the *state* slots (heights >= 1).
-/// This makes the counter as fast as the stack (a touch faster, since
-/// `occupied = count's bits` + reference swaps beat the stack's `level[]`
+/// The height-0 peak is a raw leaf, and deserializing every leaf into slot 0
+/// (`loadBlob32`) would be wasteful. So writing it is DELAYED: the leaf waits
+/// as a pending `?Blob` (bit 0 of the count: set iff a leaf is waiting). When
+/// its partner arrives, the pair is fused straight from the two Blobs with
+/// `combineBlob32` — no `loadBlob32`, exactly like the stack's leaf step. Only
+/// if a leaf is still pending at the END is it actually written into slot 0
+/// (one `loadBlob32`), for the bagging to pick up like any other peak. The
+/// delay changes nothing conceptually — slot 0 is the height-0 slot — it just
+/// avoids n/2 deserializations, making the counter as fast as the stack (a
+/// touch faster, since `occupied = count's bits` beats the stack's `level[]`
 /// updates).
 ///
 /// === The two state tricks ===
 ///
-///   * Hashers are MOVED by reference: the array is a `[var Hasher]`, so a risen
-///     peak is dropped into its new slot with an O(1) SWAP, never a state copy.
-///     Slot 0 — never a peak, since height 0 is the pending Blob — is where
-///     the rising node is built; it is swapped into its destination slot.
+///   * Hashers are MOVED by reference: the array is a `[var Hasher]`, so a
+///     risen peak reaches its slot with an O(1) SWAP, never a state copy. The
+///     rising node climbs the array: the height-(k+1) node is built in slot k
+///     (merging the peak there with the node from slot k-1), and one final
+///     swap drops it into its own slot.
 ///   * `combineBlob32` fuses a leaf pair; `combineState` merges two peaks. Both
 ///     leave the result in place with no intermediate `Blob`.
 ///
@@ -60,63 +63,64 @@ module {
     let n = leaves.size();
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
-    // the carry (height 0 is the pending Blob, so it never holds a peak).
+    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
+    // slot per bit of the count, slot k holding the height-k peak that bit k
+    // asserts. (Slot 0's write is delayed — see the header.)
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
-    // hasher[1..l]: height-indexed peak slots. Slot 0 never holds a peak
-    // (height 0 is the pending Blob) — it is the carry: the rising node is
-    // built in hasher[0] and swapped into its destination slot, so the array
-    // stays a permutation of the pool. count: leaves added so far — bit k
-    // answers "is hasher[k] occupied?" (bit 0 is "is a leaf pending?",
-    // tracked by `pending`).
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0;
-    var pending : ?Blob = null; // the height-0 peak, held as a Blob
+    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
+    var pending : ?Blob = null; // the height-0 peak, its slot-0 write delayed
 
     for (leaf in leaves.values()) {
       switch (pending) {
         case (null) { pending := ?leaf }; // hold this leaf; pair it with the next
         case (?leaf0) {
           pending := null;
-          // Fuse the pair straight from the two Blobs — no loadBlob32.
+          // Fuse the pair straight from the two Blobs — no loadBlob32. The
+          // height-1 node is built in slot 0, free since bit 0 just cleared.
           hasher[0].combineBlob32(leaf0, leaf);
-          // hasher[0] is now a height-1 node; carry it up through occupied slots.
+          // Carry: the rising node climbs the slots — the height-(k+1) node is
+          // built in slot k by merging the peak there with the node from below.
           var k : Nat32 = 1;
           while (((count >> k) & 1) == 1) {
-            hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
+            let kk = Nat32.toNat(k);
+            hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
             k += 1;
           };
+          // The carry stopped at a clear bit: slot k is free, and the finished
+          // height-k node sits one below it — swap it into its slot.
           let kk = Nat32.toNat(k);
           let tmp = hasher[kk];
-          hasher[kk] := hasher[0];
-          hasher[0] := tmp;
+          hasher[kk] := hasher[kk - 1];
+          hasher[kk - 1] := tmp;
         };
       };
       count += 1;
     };
 
-    // Bag the peaks bottom-up: acc := SHA256(hasher[k] ++ acc) for each
-    // occupied height k ascending. acc starts as the lowest peak — the pending
-    // leaf (parked once, into slot 0) if bit 0 is set, else the lowest
-    // occupied slot (taken by reference, no copy).
-    var k : Nat32 = 1;
-    var acc = hasher[0];
+    // Perform the delayed write: a still-pending leaf is the height-0 peak —
+    // put it into slot 0 (the only loadBlob32), for the bagging to pick up
+    // like any other peak.
     switch (pending) {
       case (?b) {
         // n == 1: the lone leaf is its own root — enforce the same 32-byte
         // leaf contract that combineBlob32 checks on the multi-leaf path.
         if (n == 1) { assert b.size() == 32; return b };
-        hasher[0].loadBlob32(b); // the only loadBlob32: once, at the finale
+        hasher[0].loadBlob32(b);
       };
-      case (null) {
-        while (((count >> k) & 1) == 0) { k += 1 };
-        acc := hasher[Nat32.toNat(k)];
-        k += 1;
-      };
+      case (null) {};
     };
+
+    // Bag the peaks bottom-up: acc := SHA256(hasher[k] ++ acc) for each
+    // occupied height k ascending, acc starting as the lowest peak (taken by
+    // reference, no copy).
+    var k : Nat32 = 0;
+    while (((count >> k) & 1) == 0) { k += 1 };
+    let acc = hasher[Nat32.toNat(k)];
+    k += 1;
     while (Nat32.toNat(k) <= l) {
       if (((count >> k) & 1) == 1) {
         acc.combineState(hasher[Nat32.toNat(k)], acc);

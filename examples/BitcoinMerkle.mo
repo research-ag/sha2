@@ -71,16 +71,16 @@ module {
     let n = txids.size();
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
-    // the carry (height 0 is the pending Blob, so it never holds a peak): the
-    // rising node is built in hasher[0] and swapped into its destination slot.
+    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
+    // slot per bit of the count, slot k holding the height-k peak that bit k
+    // asserts. (Slot 0's write is delayed — see MerkleCounter.mo.)
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0;
-    var pending : ?Blob = null; // the height-0 peak, held as a Blob
+    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
+    var pending : ?Blob = null; // the height-0 peak, its slot-0 write delayed
 
     // Step 1: the binary counter of MerkleCounter.mo, with double-SHA nodes.
     for (leaf in txids.values()) {
@@ -88,53 +88,55 @@ module {
         case (null) { pending := ?leaf };
         case (?leaf0) {
           pending := null;
+          // The height-1 node is built in slot 0, free since bit 0 just cleared.
           hasher[0].combineBlob32(leaf0, leaf);
           hasher[0].hashState(hasher[0]); // -> double SHA
+          // Carry: the rising node climbs the slots — the height-(k+1) node is
+          // built in slot k by merging the peak there with the node from below.
           var k : Nat32 = 1;
           while (((count >> k) & 1) == 1) {
-            hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
-            hasher[0].hashState(hasher[0]); // -> double SHA
+            let kk = Nat32.toNat(k);
+            hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
+            hasher[kk].hashState(hasher[kk]); // -> double SHA
             k += 1;
           };
+          // The carry stopped at a clear bit: slot k is free, and the finished
+          // height-k node sits one below it — swap it into its slot.
           let kk = Nat32.toNat(k);
           let tmp = hasher[kk];
-          hasher[kk] := hasher[0];
-          hasher[0] := tmp;
+          hasher[kk] := hasher[kk - 1];
+          hasher[kk - 1] := tmp;
         };
       };
       count += 1;
     };
 
+    // Perform the delayed write: a still-pending leaf is the height-0 peak —
+    // put it into slot 0 (the only loadBlob32), for the collapse to pick up
+    // like any other peak.
+    switch (pending) {
+      case (?b) {
+        // n == 1: by Bitcoin's convention the root is the txid itself — still
+        // enforce the 32-byte contract that combineBlob32 checks above.
+        if (n == 1) { assert b.size() == 32; return b };
+        hasher[0].loadBlob32(b);
+      };
+      case (null) {};
+    };
+
     // Step 2: the Bitcoin collapse, walking the bits of the count from the
     // lowest set bit upward.
 
-    // A single component is the root outright: the pending leaf (n == 1) or
-    // one peak (power-of-two count).
+    // A single peak (power-of-two count) is the root outright.
+    var k = Nat32.bitcountTrailingZero(count);
     if (Nat32.bitcountNonZero(count) == 1) {
-      switch (pending) {
-        case (?b) {
-          // n == 1: by Bitcoin's convention the root is the txid itself — still
-          // enforce the 32-byte contract that combineBlob32 checks above.
-          assert b.size() == 32;
-          return b;
-        };
-        case (null) {
-          return Hasher.readSum(hasher[Nat32.toNat(Nat32.bitcountTrailingZero(count))]);
-        };
-      };
+      return Hasher.readSum(hasher[Nat32.toNat(k)]);
     };
 
-    // acc = the lowest component, doubled once — its level's node count is
-    // odd, so Bitcoin pairs it with itself. (The pending leaf is the odd last
-    // node at level 0; a lowest peak at height k is the odd last of the
-    // n >> k nodes at its level.)
-    var k = Nat32.bitcountTrailingZero(count);
-    // In the pending case k == 0, so this picks the carry slot for acc.
+    // acc = the lowest peak, doubled once — its level's node count n >> k is
+    // odd, so Bitcoin pairs it with itself.
     let acc = hasher[Nat32.toNat(k)]; // by reference, no copy
-    switch (pending) {
-      case (?b) { acc.combineBlob32(b, b) }; // the odd last leaf, paired with itself
-      case (null) { acc.combineState(acc, acc) }; // the lowest peak, doubled
-    };
+    acc.combineState(acc, acc);
     acc.hashState(acc); // -> double SHA
     k += 1;
     // Walk the remaining bits: set — pair acc with the waiting peak; clear —

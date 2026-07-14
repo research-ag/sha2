@@ -72,15 +72,15 @@ module {
     let n = txs.size();
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
-    // the workspace: the parked txid while bit 0 of the count is set, the
-    // rising node while a carry runs.
+    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
+    // slot per bit of the count, slot k holding the height-k peak that bit k
+    // asserts (slot 0: the parked txid).
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0;
+    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
     // One scratch Digest absorbs every transaction (reset between them).
     let d = Sha256.new();
 
@@ -94,21 +94,26 @@ module {
         hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
       } else {
         // Height 0 occupied: finish the txid in the digest and consume it.
-        // The node is built IN PLACE in slot 0, consuming the parked txid
-        // exactly as bit 0 clears.
+        // The height-1 node is built in place in slot 0, consuming the parked
+        // txid exactly as bit 0 clears.
         d.closeDouble(); // d.state := txid
         hasher[0].combineState(hasher[0], d.state);
         hasher[0].hashState(hasher[0]); // -> double SHA
+        // Carry: the rising node climbs the slots — the height-(k+1) node is
+        // built in slot k by merging the peak there with the node from below.
         var k : Nat32 = 1;
         while (((count >> k) & 1) == 1) {
-          hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
-          hasher[0].hashState(hasher[0]); // -> double SHA
+          let kk = Nat32.toNat(k);
+          hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
+          hasher[kk].hashState(hasher[kk]); // -> double SHA
           k += 1;
         };
+        // The carry stopped at a clear bit: slot k is free, and the finished
+        // height-k node sits one below it — swap it into its slot.
         let kk = Nat32.toNat(k);
         let tmp = hasher[kk];
-        hasher[kk] := hasher[0];
-        hasher[0] := tmp;
+        hasher[kk] := hasher[kk - 1];
+        hasher[kk - 1] := tmp;
       };
       count += 1;
     };
