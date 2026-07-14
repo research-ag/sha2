@@ -33,7 +33,7 @@
 ///     stay in the digest's own state — `closeDouble()` finishes the txid in
 ///     place:
 ///         d.closeDouble()                            // d.state = txid
-///         carry.combineState(hasher[0], d.state)     // SHA256(txid0 ++ txid1)
+///         hasher[0].combineState(hasher[0], d.state) // SHA256(txid0 ++ txid1)
 ///
 /// Both are `close()` + one more SHA256 block — identical work — they just land
 /// the txid in different places. A leaf pair costs ONE scratch `Digest` and
@@ -72,14 +72,14 @@ module {
     let n = txs.size();
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. Slots 0..L hold peaks (slot 0 =
-    // parked txid).
+    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
+    // the workspace: the parked txid while bit 0 of the count is set, the
+    // rising node while a carry runs.
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var carry = Hasher.new();
     var count : Nat32 = 0;
     // One scratch Digest absorbs every transaction (reset between them).
     let d = Sha256.new();
@@ -94,19 +94,21 @@ module {
         hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
       } else {
         // Height 0 occupied: finish the txid in the digest and consume it.
+        // The node is built IN PLACE in slot 0, consuming the parked txid
+        // exactly as bit 0 clears.
         d.closeDouble(); // d.state := txid
-        carry.combineState(hasher[0], d.state);
-        carry.hashState(carry); // -> double SHA
+        hasher[0].combineState(hasher[0], d.state);
+        hasher[0].hashState(hasher[0]); // -> double SHA
         var k : Nat32 = 1;
         while (((count >> k) & 1) == 1) {
-          carry.combineState(hasher[Nat32.toNat(k)], carry);
-          carry.hashState(carry); // -> double SHA
+          hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
+          hasher[0].hashState(hasher[0]); // -> double SHA
           k += 1;
         };
         let kk = Nat32.toNat(k);
         let tmp = hasher[kk];
-        hasher[kk] := carry;
-        carry := tmp;
+        hasher[kk] := hasher[0];
+        hasher[0] := tmp;
       };
       count += 1;
     };
@@ -123,7 +125,7 @@ module {
 
     // acc = the lowest component, doubled once — its level's node count is
     // odd, so Bitcoin pairs it with itself.
-    var acc = hasher[Nat32.toNat(k)]; // by reference, no copy
+    let acc = hasher[Nat32.toNat(k)]; // by reference, no copy
     acc.combineState(acc, acc);
     acc.hashState(acc); // -> double SHA
     k += 1;

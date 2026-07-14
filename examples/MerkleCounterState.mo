@@ -46,33 +46,36 @@ module {
     let n = leaves.size();
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. Slots 0..L hold peaks (slot 0 =
-    // parked leaf).
+    // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
+    // the workspace: the parked leaf while bit 0 of the count is set, the
+    // rising node while a carry runs.
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var carry = Hasher.new();
     var count : Nat32 = 0;
 
     for (leaf in leaves.values()) {
       if ((count & 1) == 0) {
-        // Height 0 empty: capture this leaf there (the only copy, every other leaf).
+        // Height 0 empty: capture this leaf in the workspace (the only copy,
+        // every other leaf).
         hasher[0].loadState(leaf);
       } else {
-        // Height 0 occupied: combine the leaf directly from the input (no copy).
-        carry.combineState(hasher[0], leaf);
-        // carry is now a height-1 node; carry it up through occupied slots.
+        // Height 0 occupied: combine the parked leaf with this one, read
+        // directly from the input (no copy). The node is built IN PLACE in
+        // slot 0, consuming the parked leaf exactly as bit 0 clears.
+        hasher[0].combineState(hasher[0], leaf);
+        // hasher[0] is now a height-1 node; carry it up through occupied slots.
         var k : Nat32 = 1;
         while (((count >> k) & 1) == 1) {
-          carry.combineState(hasher[Nat32.toNat(k)], carry);
+          hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
           k += 1;
         };
         let kk = Nat32.toNat(k);
         let tmp = hasher[kk];
-        hasher[kk] := carry;
-        carry := tmp;
+        hasher[kk] := hasher[0];
+        hasher[0] := tmp;
       };
       count += 1;
     };
@@ -82,7 +85,7 @@ module {
     // the parked odd leaf). All by reference — no copies.
     var k : Nat32 = 0;
     while (((count >> k) & 1) == 0) { k += 1 };
-    var acc = hasher[Nat32.toNat(k)];
+    let acc = hasher[Nat32.toNat(k)];
     k += 1;
     while (Nat32.toNat(k) <= l) {
       if (((count >> k) & 1) == 1) {

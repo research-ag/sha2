@@ -72,13 +72,13 @@ module {
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
     // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
-    // allocated only so that slot index = height (height 0 is the pending Blob).
+    // the carry (height 0 is the pending Blob, so it never holds a peak): the
+    // rising node is built in hasher[0] and swapped into its destination slot.
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var carry = Hasher.new();
     var count : Nat32 = 0;
     var pending : ?Blob = null; // the height-0 peak, held as a Blob
 
@@ -88,18 +88,18 @@ module {
         case (null) { pending := ?leaf };
         case (?leaf0) {
           pending := null;
-          carry.combineBlob32(leaf0, leaf);
-          carry.hashState(carry); // -> double SHA
+          hasher[0].combineBlob32(leaf0, leaf);
+          hasher[0].hashState(hasher[0]); // -> double SHA
           var k : Nat32 = 1;
           while (((count >> k) & 1) == 1) {
-            carry.combineState(hasher[Nat32.toNat(k)], carry);
-            carry.hashState(carry); // -> double SHA
+            hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
+            hasher[0].hashState(hasher[0]); // -> double SHA
             k += 1;
           };
           let kk = Nat32.toNat(k);
           let tmp = hasher[kk];
-          hasher[kk] := carry;
-          carry := tmp;
+          hasher[kk] := hasher[0];
+          hasher[0] := tmp;
         };
       };
       count += 1;
@@ -129,13 +129,11 @@ module {
     // node at level 0; a lowest peak at height k is the odd last of the
     // n >> k nodes at its level.)
     var k = Nat32.bitcountTrailingZero(count);
-    var acc = carry;
+    // In the pending case k == 0, so this picks the carry slot for acc.
+    let acc = hasher[Nat32.toNat(k)]; // by reference, no copy
     switch (pending) {
-      case (?b) { carry.combineBlob32(b, b) }; // k == 0
-      case (null) {
-        acc := hasher[Nat32.toNat(k)]; // by reference, no copy
-        acc.combineState(acc, acc);
-      };
+      case (?b) { acc.combineBlob32(b, b) }; // the odd last leaf, paired with itself
+      case (null) { acc.combineState(acc, acc) }; // the lowest peak, doubled
     };
     acc.hashState(acc); // -> double SHA
     k += 1;

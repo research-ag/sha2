@@ -26,7 +26,8 @@
 ///
 ///   * Hashers are MOVED by reference: the array is a `[var Hasher]`, so a risen
 ///     peak is dropped into its new slot with an O(1) SWAP, never a state copy.
-///     One scratch `carry` hasher rides the carry up and is swapped into place.
+///     Slot 0 — never a peak, since height 0 is the pending Blob — is where
+///     the rising node is built; it is swapped into its destination slot.
 ///   * `combineBlob32` fuses a leaf pair; `combineState` merges two peaks. Both
 ///     leave the result in place with no intermediate `Blob`.
 ///
@@ -60,17 +61,18 @@ module {
     assert n >= 1;
     // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
     // i.e. the highest possible peak height. Slots 1..L hold peaks; slot 0 is
-    // allocated only so that slot index = height (height 0 is the pending Blob).
+    // the carry (height 0 is the pending Blob, so it never holds a peak).
     var l = 0;
     var pow = 1;
     while (pow * 2 <= n) { pow *= 2; l += 1 };
 
-    // hasher[1..l]: height-indexed peak slots (slot 0 unused — height 0 is the
-    // pending Blob). carry: one scratch hasher that rides each carry up. count:
-    // leaves added so far — bit k answers "is hasher[k] occupied?" (bit 0 is
-    // "is a leaf pending?", tracked by `pending`).
+    // hasher[1..l]: height-indexed peak slots. Slot 0 never holds a peak
+    // (height 0 is the pending Blob) — it is the carry: the rising node is
+    // built in hasher[0] and swapped into its destination slot, so the array
+    // stays a permutation of the pool. count: leaves added so far — bit k
+    // answers "is hasher[k] occupied?" (bit 0 is "is a leaf pending?",
+    // tracked by `pending`).
     let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var carry = Hasher.new();
     var count : Nat32 = 0;
     var pending : ?Blob = null; // the height-0 peak, held as a Blob
 
@@ -80,17 +82,17 @@ module {
         case (?leaf0) {
           pending := null;
           // Fuse the pair straight from the two Blobs — no loadBlob32.
-          carry.combineBlob32(leaf0, leaf);
-          // carry is now a height-1 node; carry it up through occupied slots.
+          hasher[0].combineBlob32(leaf0, leaf);
+          // hasher[0] is now a height-1 node; carry it up through occupied slots.
           var k : Nat32 = 1;
           while (((count >> k) & 1) == 1) {
-            carry.combineState(hasher[Nat32.toNat(k)], carry);
+            hasher[0].combineState(hasher[Nat32.toNat(k)], hasher[0]);
             k += 1;
           };
           let kk = Nat32.toNat(k);
           let tmp = hasher[kk];
-          hasher[kk] := carry;
-          carry := tmp;
+          hasher[kk] := hasher[0];
+          hasher[0] := tmp;
         };
       };
       count += 1;
@@ -98,16 +100,16 @@ module {
 
     // Bag the peaks bottom-up: acc := SHA256(hasher[k] ++ acc) for each
     // occupied height k ascending. acc starts as the lowest peak — the pending
-    // leaf (parked once, into the scratch) if bit 0 is set, else the lowest
+    // leaf (parked once, into slot 0) if bit 0 is set, else the lowest
     // occupied slot (taken by reference, no copy).
     var k : Nat32 = 1;
-    var acc = carry;
+    var acc = hasher[0];
     switch (pending) {
       case (?b) {
         // n == 1: the lone leaf is its own root — enforce the same 32-byte
         // leaf contract that combineBlob32 checks on the multi-leaf path.
         if (n == 1) { assert b.size() == 32; return b };
-        carry.loadBlob32(b); // the only loadBlob32: once, at the finale
+        hasher[0].loadBlob32(b); // the only loadBlob32: once, at the finale
       };
       case (null) {
         while (((count >> k) & 1) == 0) { k += 1 };
