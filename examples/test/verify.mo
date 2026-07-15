@@ -92,6 +92,50 @@ for (n in ns.values()) {
   assert (MerkleCounterState.merkleRoot(stateLeaves) == expected);
 };
 
+// --- Incremental use (stack and both counters): bagging must not destroy the
+// MMR. Bag mid-way, keep adding leaves, bag again; all roots must match the
+// reference over the corresponding leaf prefix. The first bag hits the even
+// (fuse-two-lowest-peaks) path, the second the odd (pending/parked leaf) path.
+do {
+  let leaves = Array.tabulate<Blob>(23, func(_) = bytes(32));
+  let stateLeaves = Array.map<Blob, Hasher.Hasher>(
+    leaves,
+    func(b) { let h = Hasher.new(); h.loadBlob32(b); h },
+  );
+  let stack = MerkleStack.new(23);
+  let counter = MerkleCounter.new(23);
+  let counterState = MerkleCounterState.new(23);
+  let bitcoin = BitcoinMerkle.new(23);
+  // MerkleCounter.Mmr and BitcoinMerkle.Mmr are structurally identical, so
+  // dot notation on them is ambiguous (M0224) — qualify those calls.
+  var i = 0;
+  while (i < 12) {
+    stack.add(leaves[i]);
+    MerkleCounter.add(counter, leaves[i]);
+    counterState.add(stateLeaves[i]);
+    BitcoinMerkle.add(bitcoin, leaves[i]);
+    i += 1;
+  };
+  let prefix12 = Array.tabulate<Blob>(12, func(j) = leaves[j]);
+  let ref12 = refBagged(prefix12);
+  assert (stack.root() == ref12);
+  assert (MerkleCounter.root(counter) == ref12);
+  assert (counterState.root() == ref12);
+  assert (BitcoinMerkle.root(bitcoin) == refBitcoin(prefix12));
+  while (i < 23) {
+    stack.add(leaves[i]);
+    MerkleCounter.add(counter, leaves[i]);
+    counterState.add(stateLeaves[i]);
+    BitcoinMerkle.add(bitcoin, leaves[i]);
+    i += 1;
+  };
+  let ref23 = refBagged(leaves);
+  assert (stack.root() == ref23);
+  assert (MerkleCounter.root(counter) == ref23);
+  assert (counterState.root() == ref23);
+  assert (BitcoinMerkle.root(bitcoin) == refBitcoin(leaves));
+};
+
 // --- Example 4 equals ref B on every leaf count ---
 for (n in ns.values()) {
   let leaves = Array.tabulate<Blob>(n, func(_) = bytes(32));
@@ -135,6 +179,20 @@ for (count in ([1, 2, 3, 4, 5, 8, 9, 16, 17, 30] : [Nat]).values()) {
   let txs = Array.tabulate<Blob>(count, func(j) = bytes(8 + (j * 53) % 250));
   let txids = Array.map<Blob, Blob>(txs, func(tx) = Sha256.fromBlob(Sha256.fromBlob(tx)));
   assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(txs) == BitcoinMerkle.bitcoinMerkleRoot(txids));
+};
+
+// --- Incremental use of the raw-tx tree: collapse mid-way, keep adding
+// transactions, collapse again; both roots must match the vector-tested
+// BitcoinMerkle over the corresponding txid prefix.
+do {
+  let txs = Array.tabulate<Blob>(23, func(j) = bytes(8 + (j * 53) % 250));
+  let txids = Array.map<Blob, Blob>(txs, func(tx) = Sha256.fromBlob(Sha256.fromBlob(tx)));
+  let mmr = BitcoinTxMerkle.new(23);
+  var i = 0;
+  while (i < 12) { mmr.add(txs[i]); i += 1 };
+  assert (mmr.root() == BitcoinMerkle.bitcoinMerkleRoot(Array.tabulate<Blob>(12, func(j) = txids[j])));
+  while (i < 23) { mmr.add(txs[i]); i += 1 };
+  assert (mmr.root() == BitcoinMerkle.bitcoinMerkleRoot(txids));
 };
 
 // --- NFold against manual repeated fromBlob ---

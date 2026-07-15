@@ -36,6 +36,12 @@
 /// level. (Above the lowest set bit, a level's node count is `(n >> k) + 1`
 /// — the +1 is the dangling tail `acc` — so odd exactly when bit k is clear.)
 ///
+/// The accumulator `acc` is slot 0 — free, thanks to the delay trick — so the
+/// collapse only READS the peaks: the MMR remains valid afterwards, and one
+/// can keep adding leaves and collapse again. The module exposes this as an
+/// incremental API (`new`, `add`, `root`) alongside the one-shot convenience
+/// `bitcoinMerkleRoot`.
+///
 /// Note how close this is to the typical bagging of `MerkleCounter.mo`: same
 /// walk over the bits, same combine at every set bit. The Bitcoin collapse is
 /// BAGGING PLUS SELF-PAIRING ON THE GAPS — bagging is height-agnostic and
@@ -60,85 +66,61 @@
 /// the same tree.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import VarArray "mo:core/VarArray";
+import Base "CounterBase";
 import Nat32 "mo:core/Nat32";
 
 module {
-  /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,
-  /// in internal byte order), for ANY leaf count (>= 1). Allocation-free
-  /// except the returned root `Blob`.
-  public func bitcoinMerkleRoot(txids : [Blob]) : Blob {
-    let n = txids.size();
-    assert n >= 1;
-    // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
-    // slot per bit of the count, slot k holding the height-k peak that bit k
-    // asserts. (Slot 0's write is delayed — see MerkleCounter.mo.)
-    var l = 0;
-    var pow = 1;
-    while (pow * 2 <= n) { pow *= 2; l += 1 };
+  /// The MMR state — see `CounterBase.mo`, which holds the building machinery
+  /// shared with `MerkleCounter.mo`. A static record — it can be declared
+  /// `stable`.
+  public type Mmr = Base.Mmr;
 
-    let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
-    var pending : ?Blob = null; // the height-0 peak, its slot-0 write delayed
+  /// Create an empty MMR with capacity for at least `maxLeaves` txid leaves
+  /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`).
+  public let new = Base.new;
 
-    // Step 1: the binary counter of MerkleCounter.mo, with double-SHA nodes.
-    for (leaf in txids.values()) {
-      switch (pending) {
-        case (null) { pending := ?leaf };
-        case (?leaf0) {
-          pending := null;
-          // The height-1 node is built in slot 0, free since bit 0 just cleared.
-          hasher[0].combineBlob32(leaf0, leaf);
-          hasher[0].hashState(hasher[0]); // -> double SHA
-          // Carry: the rising node climbs the slots — the height-(k+1) node is
-          // built in slot k by merging the peak there with the node from below.
-          var k : Nat32 = 1;
-          while (((count >> k) & 1) == 1) {
-            let kk = Nat32.toNat(k);
-            hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
-            hasher[kk].hashState(hasher[kk]); // -> double SHA
-            k += 1;
-          };
-          // The carry stopped at a clear bit: slot k is free, and the finished
-          // height-k node sits one below it — swap it into its slot.
-          let kk = Nat32.toNat(k);
-          let tmp = hasher[kk];
-          hasher[kk] := hasher[kk - 1];
-          hasher[kk - 1] := tmp;
-        };
-      };
-      count += 1;
-    };
+  /// Add one 32-byte txid leaf to the MMR (double SHA256 per node). Traps (on
+  /// a slot index out of bounds) if the capacity chosen at `new` is exceeded.
+  public func add(self : Mmr, leaf : Blob) = Base.add(self, leaf, true);
 
-    // Perform the delayed write: a still-pending leaf is the height-0 peak —
-    // put it into slot 0 (the only loadBlob32), for the collapse to pick up
-    // like any other peak.
-    switch (pending) {
+  /// The Bitcoin Merkle root over the txids added so far (>= 1): the collapse,
+  /// walking the bits of the count from the lowest set bit upward, with slot 0
+  /// — free, since the height-0 peak is the pending Blob — as the accumulator.
+  /// No peak slot is written, so the MMR remains valid — keep adding leaves
+  /// and collapse again for an updated root. Allocation-free except the
+  /// returned root `Blob`.
+  public func root(self : Mmr) : Blob {
+    let hasher = self.hasher;
+    let count = self.count;
+    assert count >= 1;
+    let acc = hasher[0];
+    var k : Nat32 = 1;
+    switch (self.pending) {
       case (?b) {
-        // n == 1: by Bitcoin's convention the root is the txid itself — still
-        // enforce the 32-byte contract that combineBlob32 checks above.
-        if (n == 1) { assert b.size() == 32; return b };
-        hasher[0].loadBlob32(b);
+        // count == 1: by Bitcoin's convention the root is the txid itself —
+        // still enforce the 32-byte contract that combineBlob32 checks above.
+        if (count == 1) { assert b.size() == 32; return b };
+        // Perform the delayed write of the height-0 peak — into the
+        // accumulator — and pair it with itself: it is Bitcoin's odd last
+        // node at level 0.
+        acc.loadBlob32(b);
+        acc.combineState(acc, acc);
       };
-      case (null) {};
+      case (null) {
+        // A single peak (power-of-two count) is the root outright — leave it
+        // untouched.
+        while (((count >> k) & 1) == 0) { k += 1 };
+        if (Nat32.bitcountNonZero(count) == 1) {
+          return Hasher.readSum(hasher[Nat32.toNat(k)]);
+        };
+        // The lowest peak doubles — into the accumulator: its level's node
+        // count n >> k is odd, so Bitcoin pairs it with itself.
+        let k0 = Nat32.toNat(k);
+        acc.combineState(hasher[k0], hasher[k0]);
+        k += 1;
+      };
     };
-
-    // Step 2: the Bitcoin collapse, walking the bits of the count from the
-    // lowest set bit upward.
-
-    // A single peak (power-of-two count) is the root outright.
-    var k = Nat32.bitcountTrailingZero(count);
-    if (Nat32.bitcountNonZero(count) == 1) {
-      return Hasher.readSum(hasher[Nat32.toNat(k)]);
-    };
-
-    // acc = the lowest peak, doubled once — its level's node count n >> k is
-    // odd, so Bitcoin pairs it with itself.
-    let acc = hasher[Nat32.toNat(k)]; // by reference, no copy
-    acc.combineState(acc, acc);
-    acc.hashState(acc); // -> double SHA
-    k += 1;
+    acc.hashState(acc); // -> double SHA (completes the doubling)
     // Walk the remaining bits: set — pair acc with the waiting peak; clear —
     // the level's node count is odd again, pair acc with itself.
     while ((count >> k) > 0) {
@@ -151,5 +133,17 @@ module {
       k += 1;
     };
     Hasher.readSum(acc);
+  };
+
+  /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,
+  /// in internal byte order), for ANY leaf count (>= 1), in one shot.
+  /// Allocation-free except the returned root `Blob`.
+  public func bitcoinMerkleRoot(txids : [Blob]) : Blob {
+    assert txids.size() >= 1;
+    let mmr = new(txids.size());
+    for (leaf in txids.values()) {
+      mmr.add(leaf);
+    };
+    mmr.root();
   };
 };

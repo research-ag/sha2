@@ -34,15 +34,22 @@
 ///   * `combineBlob32` fuses a leaf pair; `combineState` merges two peaks. Both
 ///     leave the result in place with no intermediate `Blob`.
 ///
-/// === Finalization: bag the peaks ===
+/// === Finalization: bag the peaks, without touching them ===
 ///
 /// For a power-of-two count the counter ends with a single peak — the root.
 /// Otherwise one peak per set bit of the count remains; BAG them bottom-up:
 /// `acc := SHA256(peak_k ++ acc)` for each occupied height `k` ascending, `acc`
-/// starting as the lowest peak (the pending leaf, if one is waiting). Same
-/// typical mountain-range finalization as `MerkleStack.mo` — identical roots
-/// for identical leaves. (Bitcoin's duplicate-and-collapse variant is shown in
-/// `BitcoinMerkle.mo`.)
+/// starting as the lowest component (the pending leaf, if one is waiting).
+/// Slot 0 — free, thanks to the delay trick — serves as the accumulator, so
+/// bagging only READS the peaks: the MMR remains valid afterwards, and one
+/// could keep adding leaves and bag again for an updated root each time.
+/// Same typical mountain-range finalization as `MerkleStack.mo` — identical
+/// roots for identical leaves. (Bitcoin's duplicate-and-collapse variant is
+/// shown in `BitcoinMerkle.mo`.)
+///
+/// Accordingly, the module exposes the MMR as an incremental API — `new`
+/// (fixed capacity), `add` and `root` — alongside the one-shot convenience
+/// `merkleRoot`: add leaves, bag a root, keep adding, bag again.
 ///
 /// SECURITY NOTE: the bagged root does not commit to the leaf count — the
 /// same root arises from the same peak hashes at different heights, and a
@@ -52,75 +59,58 @@
 /// note in `MerkleStack.mo`.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import VarArray "mo:core/VarArray";
+import Base "CounterBase";
 import Nat32 "mo:core/Nat32";
 
 module {
-  /// Single-SHA256 Merkle root over `leaves` (each a 32-byte `Blob`), for ANY
-  /// leaf count (>= 1). Equals `MerkleStack.merkleRoot` on the same leaves.
+  /// The MMR state — see `CounterBase.mo`, which holds the building machinery
+  /// shared with `BitcoinMerkle.mo`. A static record — it can be declared
+  /// `stable`.
+  public type Mmr = Base.Mmr;
+
+  /// Create an empty MMR with capacity for at least `maxLeaves` leaves
+  /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`).
+  public let new = Base.new;
+
+  /// Add one 32-byte leaf to the MMR (single SHA256 per node). Traps (on a
+  /// slot index out of bounds) if the capacity chosen at `new` is exceeded.
+  public func add(self : Mmr, leaf : Blob) = Base.add(self, leaf, false);
+
+  /// The Merkle root over the leaves added so far (>= 1): bag the peaks
+  /// bottom-up, acc := SHA256(hasher[k] ++ acc) for each occupied height k
+  /// ascending. Slot 0 — free, since the height-0 peak is the pending Blob —
+  /// serves as the accumulator, so NO peak slot is written: the MMR remains
+  /// valid, and one can keep adding leaves and bag again for an updated root.
   /// Allocation-free except the returned root `Blob`.
-  public func merkleRoot(leaves : [Blob]) : Blob {
-    let n = leaves.size();
-    assert n >= 1;
-    // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
-    // slot per bit of the count, slot k holding the height-k peak that bit k
-    // asserts. (Slot 0's write is delayed — see the header.)
-    var l = 0;
-    var pow = 1;
-    while (pow * 2 <= n) { pow *= 2; l += 1 };
-
-    let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
-    var pending : ?Blob = null; // the height-0 peak, its slot-0 write delayed
-
-    for (leaf in leaves.values()) {
-      switch (pending) {
-        case (null) { pending := ?leaf }; // hold this leaf; pair it with the next
-        case (?leaf0) {
-          pending := null;
-          // Fuse the pair straight from the two Blobs — no loadBlob32. The
-          // height-1 node is built in slot 0, free since bit 0 just cleared.
-          hasher[0].combineBlob32(leaf0, leaf);
-          // Carry: the rising node climbs the slots — the height-(k+1) node is
-          // built in slot k by merging the peak there with the node from below.
-          var k : Nat32 = 1;
-          while (((count >> k) & 1) == 1) {
-            let kk = Nat32.toNat(k);
-            hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
-            k += 1;
-          };
-          // The carry stopped at a clear bit: slot k is free, and the finished
-          // height-k node sits one below it — swap it into its slot.
-          let kk = Nat32.toNat(k);
-          let tmp = hasher[kk];
-          hasher[kk] := hasher[kk - 1];
-          hasher[kk - 1] := tmp;
-        };
-      };
-      count += 1;
-    };
-
-    // Perform the delayed write: a still-pending leaf is the height-0 peak —
-    // put it into slot 0 (the only loadBlob32), for the bagging to pick up
-    // like any other peak.
-    switch (pending) {
+  public func root(self : Mmr) : Blob {
+    let hasher = self.hasher;
+    let count = self.count;
+    assert count >= 1;
+    let l = hasher.size() - 1 : Nat;
+    let acc = hasher[0];
+    var k : Nat32 = 1;
+    switch (self.pending) {
       case (?b) {
-        // n == 1: the lone leaf is its own root — enforce the same 32-byte
+        // count == 1: the lone leaf is its own root — enforce the same 32-byte
         // leaf contract that combineBlob32 checks on the multi-leaf path.
-        if (n == 1) { assert b.size() == 32; return b };
-        hasher[0].loadBlob32(b);
+        if (count == 1) { assert b.size() == 32; return b };
+        // Perform the delayed write of the height-0 peak — into the accumulator.
+        acc.loadBlob32(b); // the only loadBlob32: once, per bagging
       };
-      case (null) {};
+      case (null) {
+        // A single peak is the root outright — leave it untouched.
+        while (((count >> k) & 1) == 0) { k += 1 };
+        if (Nat32.bitcountNonZero(count) == 1) {
+          return Hasher.readSum(hasher[Nat32.toNat(k)]);
+        };
+        // Fuse the two lowest peaks straight into the accumulator.
+        let k0 = Nat32.toNat(k);
+        k += 1;
+        while (((count >> k) & 1) == 0) { k += 1 };
+        acc.combineState(hasher[Nat32.toNat(k)], hasher[k0]);
+        k += 1;
+      };
     };
-
-    // Bag the peaks bottom-up: acc := SHA256(hasher[k] ++ acc) for each
-    // occupied height k ascending, acc starting as the lowest peak (taken by
-    // reference, no copy).
-    var k : Nat32 = 0;
-    while (((count >> k) & 1) == 0) { k += 1 };
-    let acc = hasher[Nat32.toNat(k)];
-    k += 1;
     while (Nat32.toNat(k) <= l) {
       if (((count >> k) & 1) == 1) {
         acc.combineState(hasher[Nat32.toNat(k)], acc);
@@ -128,5 +118,17 @@ module {
       k += 1;
     };
     Hasher.readSum(acc);
+  };
+
+  /// Single-SHA256 Merkle root over `leaves` (each a 32-byte `Blob`), for ANY
+  /// leaf count (>= 1), in one shot. Equals `MerkleStack.merkleRoot` on the
+  /// same leaves. Allocation-free except the returned root `Blob`.
+  public func merkleRoot(leaves : [Blob]) : Blob {
+    assert leaves.size() >= 1;
+    let mmr = new(leaves.size());
+    for (leaf in leaves.values()) {
+      mmr.add(leaf);
+    };
+    mmr.root();
   };
 };

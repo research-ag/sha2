@@ -39,13 +39,20 @@
 /// the txid in different places. A leaf pair costs ONE scratch `Digest` and
 /// ZERO dedicated leaf hashers, with no state copies at all.
 ///
-/// === Finalization ===
+/// === Finalization: collapse, without touching the peaks ===
 ///
 /// The Bitcoin collapse of `BitcoinMerkle.mo` — walk the bits of the count
 /// from the lowest set bit upward: the lowest component doubles once, then a
 /// SET bit pairs the accumulator with the waiting peak and a CLEAR bit pairs
 /// it with itself. Bit 0 is the parked txid in slot 0, so a lone final
-/// transaction is paired with itself from there, with no special case.
+/// transaction is paired with itself from there, with no special case. The
+/// accumulator is the TOP slot of the array — one above the highest possible
+/// peak, always free when a collapse actually happens (its bit could only be
+/// set at a full power of two, i.e. a single peak, which short-circuits). The
+/// collapse therefore only READS the peaks: the MMR remains valid, and one
+/// can keep adding transactions and collapse again — the module exposes this
+/// as an incremental API (`new`, `add`, `root`) alongside the one-shot
+/// convenience `bitcoinTxMerkleRoot`.
 ///
 /// === Caveats (byte order, segwit, CVE) ===
 ///
@@ -60,78 +67,75 @@
 
 import Sha256 "mo:sha2/Sha256";
 import Hasher "mo:sha2/Hasher/Sha256";
-import VarArray "mo:core/VarArray";
+import Base "CounterStateBase";
 import Nat32 "mo:core/Nat32";
 
 module {
-  /// Bitcoin Merkle root over the RAW transactions `txs` (each an
-  /// arbitrary-length `Blob`), for ANY count (>= 1). Equals
-  /// `BitcoinMerkle.bitcoinMerkleRoot` over the transactions' txids.
-  /// Allocates nothing per transaction or node — only the returned root `Blob`.
-  public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
-    let n = txs.size();
-    assert n >= 1;
-    // Height L = floor(log2 n) — the highest set bit the leaf count can reach,
-    // i.e. the highest possible peak height. l + 1 is the bit length of n: one
-    // slot per bit of the count, slot k holding the height-k peak that bit k
-    // asserts (slot 0: the parked txid).
-    var l = 0;
-    var pow = 1;
-    while (pow * 2 <= n) { pow *= 2; l += 1 };
+  /// The MMR state: the base state of `CounterStateBase.mo` (shared with
+  /// `MerkleCounterState.mo`) extended with the one reused `Digest` that
+  /// absorbs the raw transactions. A static record — it can be declared
+  /// `stable`.
+  public type Mmr = Base.Mmr and {
+    d : Sha256.Digest;
+  };
 
-    let hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-    var count : Nat32 = 0; // bit k answers "is hasher[k] occupied?"
-    // One scratch Digest absorbs every transaction (reset between them).
-    let d = Sha256.new();
-
-    // Step 1: the binary counter, leaves produced through the bridge.
-    for (tx in txs.values()) {
-      if (count > 0) d.reset();
-      d.writeBlob(tx);
-      if ((count & 1) == 0) {
-        // Height 0 empty: produce the txid directly INTO slot 0 (free capture).
-        d.close();
-        hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
-      } else {
-        // Height 0 occupied: finish the txid in the digest and consume it.
-        // The height-1 node is built in place in slot 0, consuming the parked
-        // txid exactly as bit 0 clears.
-        d.closeDouble(); // d.state := txid
-        hasher[0].combineState(hasher[0], d.state);
-        hasher[0].hashState(hasher[0]); // -> double SHA
-        // Carry: the rising node climbs the slots — the height-(k+1) node is
-        // built in slot k by merging the peak there with the node from below.
-        var k : Nat32 = 1;
-        while (((count >> k) & 1) == 1) {
-          let kk = Nat32.toNat(k);
-          hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
-          hasher[kk].hashState(hasher[kk]); // -> double SHA
-          k += 1;
-        };
-        // The carry stopped at a clear bit: slot k is free, and the finished
-        // height-k node sits one below it — swap it into its slot.
-        let kk = Nat32.toNat(k);
-        let tmp = hasher[kk];
-        hasher[kk] := hasher[kk - 1];
-        hasher[kk - 1] := tmp;
-      };
-      count += 1;
+  /// Create an empty MMR with capacity for at least `maxTxs` transactions
+  /// (`ceil(log2 maxTxs) + 1` hashers — see `CounterStateBase.mo` — plus the
+  /// one scratch `Digest`).
+  public func new(maxTxs : Nat) : Mmr {
+    // Record extension (`base and {...}`) cannot alias a `var` field, so the
+    // fresh base record is rebuilt with its (zero) count copied over.
+    let base = Base.new(maxTxs);
+    {
+      hasher = base.hasher;
+      var count = base.count;
+      d = Sha256.new();
     };
+  };
 
-    // Step 2: the Bitcoin collapse (see BitcoinMerkle.mo), walking the bits of
-    // the count from the lowest set bit upward. Every component — including a
-    // parked odd txid, which is simply the bit-0 peak in slot 0 — lives in a
-    // hasher slot, so no case distinction is needed at all.
+  /// Add one RAW (arbitrary-length) transaction to the MMR; its txid — the
+  /// double SHA256 of the bytes — becomes the leaf, produced through the
+  /// Digest -> Hasher bridge with no intermediate `Blob`. Traps (on a slot
+  /// index out of bounds) if the capacity chosen at `new` is exceeded.
+  public func add(self : Mmr, tx : Blob) {
+    let d = self.d;
+    if (self.count > 0) d.reset();
+    d.writeBlob(tx);
+    if ((self.count & 1) == 0) {
+      // Height 0 empty: produce the txid directly INTO slot 0 (free capture).
+      d.close();
+      self.hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
+    } else {
+      // Height 0 occupied: finish the txid in the digest, then fuse it with
+      // the parked one and carry the node up.
+      d.closeDouble(); // d.state := txid
+      Base.fuseAndCarry(self, d.state, true);
+    };
+    self.count += 1;
+  };
 
-    // A single component is the root outright: the lone txid (n == 1, slot 0)
-    // or one peak (power-of-two count).
+  /// The Bitcoin Merkle root over the transactions added so far (>= 1): the
+  /// collapse of `BitcoinMerkle.mo`, with the TOP slot as the accumulator. No
+  /// peak slot is written, so the MMR remains valid — keep adding
+  /// transactions and collapse again for an updated root. Allocation-free
+  /// except the returned root `Blob`.
+  public func root(self : Mmr) : Blob {
+    let hasher = self.hasher;
+    let count = self.count;
+    assert count >= 1;
+    // A single component is the root outright: the lone txid (count == 1,
+    // slot 0) or one peak (power-of-two count) — leave it untouched.
     var k = Nat32.bitcountTrailingZero(count);
-    if (Nat32.bitcountNonZero(count) == 1) return Hasher.readSum(hasher[Nat32.toNat(k)]);
-
+    if (Nat32.bitcountNonZero(count) == 1) {
+      return Hasher.readSum(hasher[Nat32.toNat(k)]);
+    };
+    // The top slot is free — its bit could only be set at the full power of
+    // two, a single peak, handled above. It is the accumulator.
+    let acc = hasher[hasher.size() - 1];
     // acc = the lowest component, doubled once — its level's node count is
     // odd, so Bitcoin pairs it with itself.
-    let acc = hasher[Nat32.toNat(k)]; // by reference, no copy
-    acc.combineState(acc, acc);
+    let k0 = Nat32.toNat(k);
+    acc.combineState(hasher[k0], hasher[k0]);
     acc.hashState(acc); // -> double SHA
     k += 1;
     // Walk the remaining bits: set — pair acc with the waiting peak; clear —
@@ -146,5 +150,18 @@ module {
       k += 1;
     };
     Hasher.readSum(acc);
+  };
+
+  /// Bitcoin Merkle root over the RAW transactions `txs` (each an
+  /// arbitrary-length `Blob`), for ANY count (>= 1), in one shot. Equals
+  /// `BitcoinMerkle.bitcoinMerkleRoot` over the transactions' txids.
+  /// Allocates nothing per transaction or node — only the returned root `Blob`.
+  public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
+    assert txs.size() >= 1;
+    let mmr = new(txs.size());
+    for (tx in txs.values()) {
+      mmr.add(tx);
+    };
+    mmr.root();
   };
 };
