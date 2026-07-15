@@ -1,5 +1,5 @@
 /// Shared MMR-building machinery for the counter examples over STATE leaves:
-/// `MerkleCounterState.mo` (Example 3) and `BitcoinTxMerkle.mo` (Example 5).
+/// `MerkleCounterState.mo` (Example 4) and `BitcoinTxMerkle.mo` (Example 6).
 /// The two examples import this base and differ only in how a leaf lands in
 /// slot 0 (a `loadState` capture vs the Digest -> Hasher bridge), in the
 /// `double` flag they pass, and in their finalization — bagging vs the

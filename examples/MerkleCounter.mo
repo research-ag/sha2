@@ -1,4 +1,4 @@
-/// Example 2: the same Merkle root as `MerkleStack.mo`, built via the
+/// Example 3: the same Merkle root as `MerkleStack.mo`, built via the
 /// BINARY-COUNTER mountain range. Blob leaves, single SHA256 per node, any
 /// leaf count. Allocation-free.
 ///

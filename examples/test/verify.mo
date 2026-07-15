@@ -1,6 +1,7 @@
 // @testmode wasi
 // Verifies the examples produce the same hashes as straightforward references.
 import MerkleStack "../MerkleStack";
+import MerkleStackState "../MerkleStackState";
 import MerkleCounter "../MerkleCounter";
 import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
@@ -22,7 +23,7 @@ func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = Na
 
 let ns : [Nat] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 23, 31, 33, 100];
 
-// --- Reference A: generic single-SHA mountain-range root (Examples 1-3) ---
+// --- Reference A: generic single-SHA mountain-range root (Examples 1-4) ---
 // Split the leaves into maximal power-of-two chunks left to right (the binary
 // decomposition of n), root each perfect subtree recursively, then bag the
 // peaks right to left: acc := SHA256(peak ++ acc). Materializes every node.
@@ -56,7 +57,7 @@ func refBagged(leaves : [Blob]) : Blob {
   acc;
 };
 
-// --- Reference B: canonical Bitcoin Merkle root (Examples 4-5) ---
+// --- Reference B: canonical Bitcoin Merkle root (Examples 5-6) ---
 // Level by level, duplicating the last node on odd counts, double SHA256 per
 // node (materializes every intermediate digest as a Blob).
 func refBitcoin(leaves : [Blob]) : Blob {
@@ -78,18 +79,20 @@ func refBitcoin(leaves : [Blob]) : Blob {
   level[0];
 };
 
-// --- Examples 1-3: stack, counter and state-leaf counter all equal ref A ---
+// --- Examples 1-4: stack and counter, over Blob and state leaves, all equal
+// ref A ---
 for (n in ns.values()) {
   let leaves = Array.tabulate<Blob>(n, func(_) = bytes(32));
   let expected = refBagged(leaves);
   assert (MerkleStack.merkleRoot(leaves) == expected);
   assert (MerkleCounter.merkleRoot(leaves) == expected);
-  // Example 3 takes the same 32-byte values as Hasher STATES.
+  // Examples 2 and 4 take the same 32-byte values as Hasher STATES.
   let stateLeaves = Array.map<Blob, Hasher.Hasher>(
     leaves,
     func(b) { let h = Hasher.new(); h.loadBlob32(b); h },
   );
   assert (MerkleCounterState.merkleRoot(stateLeaves) == expected);
+  assert (MerkleStackState.merkleRoot(stateLeaves) == expected);
 };
 
 // --- Incremental use (stack and both counters): bagging must not destroy the
@@ -103,6 +106,7 @@ do {
     func(b) { let h = Hasher.new(); h.loadBlob32(b); h },
   );
   let stack = MerkleStack.new(23);
+  let stackState = MerkleStackState.new(23);
   let counter = MerkleCounter.new(23);
   let counterState = MerkleCounterState.new(23);
   let bitcoin = BitcoinMerkle.new(23);
@@ -111,6 +115,7 @@ do {
   var i = 0;
   while (i < 12) {
     stack.add(leaves[i]);
+    stackState.add(stateLeaves[i]);
     MerkleCounter.add(counter, leaves[i]);
     counterState.add(stateLeaves[i]);
     BitcoinMerkle.add(bitcoin, leaves[i]);
@@ -119,11 +124,13 @@ do {
   let prefix12 = Array.tabulate<Blob>(12, func(j) = leaves[j]);
   let ref12 = refBagged(prefix12);
   assert (stack.root() == ref12);
+  assert (stackState.root() == ref12);
   assert (MerkleCounter.root(counter) == ref12);
   assert (counterState.root() == ref12);
   assert (BitcoinMerkle.root(bitcoin) == refBitcoin(prefix12));
   while (i < 23) {
     stack.add(leaves[i]);
+    stackState.add(stateLeaves[i]);
     MerkleCounter.add(counter, leaves[i]);
     counterState.add(stateLeaves[i]);
     BitcoinMerkle.add(bitcoin, leaves[i]);
@@ -131,12 +138,13 @@ do {
   };
   let ref23 = refBagged(leaves);
   assert (stack.root() == ref23);
+  assert (stackState.root() == ref23);
   assert (MerkleCounter.root(counter) == ref23);
   assert (counterState.root() == ref23);
   assert (BitcoinMerkle.root(bitcoin) == refBitcoin(leaves));
 };
 
-// --- Example 4 equals ref B on every leaf count ---
+// --- Example 5 equals ref B on every leaf count ---
 for (n in ns.values()) {
   let leaves = Array.tabulate<Blob>(n, func(_) = bytes(32));
   assert (BitcoinMerkle.bitcoinMerkleRoot(leaves) == refBitcoin(leaves));
@@ -168,7 +176,7 @@ do {
   assert (BitcoinMerkle.bitcoinMerkleRoot([b586t0, b586t1, b586t2]) == b586root);
 };
 
-// --- Example 5: root over RAW (variable-length) transactions must equal the
+// --- Example 6: root over RAW (variable-length) transactions must equal the
 // vector-tested BitcoinMerkle fed the same transactions' txids (txid = double
 // SHA256 of the raw bytes). This exercises the Digest -> Hasher bridge, close +
 // hashState-into-slot and closeDouble against the naive double hash,

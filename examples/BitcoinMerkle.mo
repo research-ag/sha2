@@ -1,4 +1,4 @@
-/// Example 4: the BITCOIN Merkle root over txid leaves — the binary counter
+/// Example 5: the BITCOIN Merkle root over txid leaves — the binary counter
 /// of `MerkleCounter.mo` with double SHA256 and Bitcoin's collapse. Any leaf
 /// count. Allocation-free.
 ///
@@ -12,7 +12,7 @@
 ///      the typical bagging of `MerkleStack.mo`/`MerkleCounter.mo` — it is a
 ///      COLLAPSE that doubles its way up (see below).
 ///
-/// === Step 1: build the mountain range (as in Example 2) ===
+/// === Step 1: build the mountain range (as in Example 3) ===
 ///
 /// Identical to `MerkleCounter.mo` except for the double-SHA: leaf pairs fuse
 /// with `combineBlob32` + `hashState` (height 0 is the pending `?Blob` — the

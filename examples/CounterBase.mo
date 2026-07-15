@@ -1,5 +1,5 @@
 /// Shared MMR-building machinery for the counter examples over Blob leaves:
-/// `MerkleCounter.mo` (Example 2) and `BitcoinMerkle.mo` (Example 4). The two
+/// `MerkleCounter.mo` (Example 3) and `BitcoinMerkle.mo` (Example 5). The two
 /// examples import this base and differ only in the `double` flag they pass
 /// (single vs double SHA256 per node) and in their finalization — bagging vs
 /// the Bitcoin collapse — which lives in the example files. See their headers

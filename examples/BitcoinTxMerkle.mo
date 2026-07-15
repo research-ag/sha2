@@ -1,4 +1,4 @@
-/// Example 5: the Bitcoin Merkle root of `BitcoinMerkle.mo`, but from RAW
+/// Example 6: the Bitcoin Merkle root of `BitcoinMerkle.mo`, but from RAW
 /// (variable-length) transactions instead of ready txid Blobs. Any count.
 /// Allocation-free.
 ///

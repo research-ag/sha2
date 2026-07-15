@@ -1,4 +1,4 @@
-/// Example 3: the binary-counter Merkle root of `MerkleCounter.mo`, but over
+/// Example 4: the binary-counter Merkle root of `MerkleCounter.mo`, but over
 /// STATE leaves. Single SHA256 per node, any leaf count. Allocation-free.
 ///
 /// Here each leaf is a 32-byte hash already sitting in a `Hasher` — e.g. read
