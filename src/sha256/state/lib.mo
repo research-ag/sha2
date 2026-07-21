@@ -5,6 +5,8 @@ import Prim "mo:prim";
 import fromBlob "process/blocks/blob";
 import fromMerge "process/blocks/merge";
 import fromLeaf "process/blocks/leaf";
+import fromStateBlob "process/blocks/stateBlob";
+import fromBlobState "process/blocks/blobState";
 import fromArray "process/blocks/array";
 import fromVarArray "process/blocks/varArray";
 import fromAccessor "process/blocks/accessor";
@@ -30,6 +32,10 @@ module {
   public let process_merge_block = fromMerge.process;
   /// Inner block of a leaf combine: hash one block of `b1 ++ b2` (two 32-byte blobs) from the IV, overwriting `self` (see `process/blocks/leaf`).
   public let process_leaf_block = fromLeaf.process;
+  /// Inner block of a mixed combine: hash one block of `s1 ++ b2` (a 32-byte digest, then a 32-byte blob) from the IV, overwriting `self`; `s1` may alias `self` (see `process/blocks/stateBlob`).
+  public let process_state_blob_block = fromStateBlob.process;
+  /// Inner block of a mixed combine: hash one block of `b1 ++ s2` (a 32-byte blob, then a 32-byte digest) from the IV, overwriting `self`; `s2` may alias `self` (see `process/blocks/blobState`).
+  public let process_blob_state_block = fromBlobState.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[Nat8]` (see `process/blocks/array`).
   public let process_blocks_from_array = fromArray.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[var Nat8]` (see `process/blocks/varArray`).

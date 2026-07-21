@@ -25,7 +25,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle allocation probe";
-      description = "Run R = 1 / 10 / 100 single-SHA Merkle-tree builds (2^8 leaves) per measurement, all on the same reused pool of hashers, using the binary-counter build with the delay trick shared with merkle.bench.mo (the algorithm of examples/MerkleCounter.mo). 'build + readSum' reads the root Blob out each time, so its garbage should grow ~linearly with R. 'build only (no readSum)' runs the full counter loop — combineBlob32, combineState, the pending ?Blob, the reference swaps — but never calls readSum, so it allocates no Blob; if the loop itself allocates nothing, its garbage must stay flat as R grows. A flat 'build only' column is proof that the counter, the pending option and the loop cause no per-node / per-level / per-computation allocation.";
+      description = "Allocation-freeness proof for the binary-counter Merkle build: R = 1/10/100 builds per measurement on one reused pool — the 'build only' garbage column must stay flat as R grows.";
       rows = rows;
       cols = cols;
     };

@@ -17,7 +17,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha512 lifecycle";
-      description = "Per-operation cost of the Sha512 hasher lifecycle. The hasher in reset()/sum()/close() rows already exists and has had a block written to it. close() finalizes without returning a Blob; 'close() partial' has a sub-block 80-byte message, so the padding goes through the buffer, while 'close() @block' has a 128-byte (one full block) message, so close() takes the block-boundary fast path that compresses the all-constant padding block directly, skipping the buffer fill.";
+      description = "Per-operation cost of the Sha512 digest lifecycle: every row runs exactly one operation on a PRE-BUILT digest, so no row includes a writeBlob.";
       rows = rows;
       cols = cols;
     };

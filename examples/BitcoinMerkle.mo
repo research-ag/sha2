@@ -76,8 +76,10 @@ module {
   public type Mmr = Base.Mmr;
 
   /// Create an empty MMR with capacity for at least `maxLeaves` txid leaves
-  /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`).
-  public let new = Base.new;
+  /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`). With
+  /// `witness` the coinbase witness spine is captured as txids are added —
+  /// extraction and verification live in `BitcoinWitness.mo` (Example 7).
+  public func new(maxLeaves : Nat, witness : Bool) : Mmr = Base.new(maxLeaves, witness);
 
   /// Add one 32-byte txid leaf to the MMR (double SHA256 per node). Traps (on
   /// a slot index out of bounds) if the capacity chosen at `new` is exceeded.
@@ -111,11 +113,11 @@ module {
         // untouched.
         while (((count >> k) & 1) == 0) { k += 1 };
         if (Nat32.bitcountNonZero(count) == 1) {
-          return Hasher.readSum(hasher[Nat32.toNat(k)]);
+          return hasher[k.toNat()].readSum();
         };
         // The lowest peak doubles — into the accumulator: its level's node
         // count n >> k is odd, so Bitcoin pairs it with itself.
-        let k0 = Nat32.toNat(k);
+        let k0 = k.toNat();
         acc.combineState(hasher[k0], hasher[k0]);
         k += 1;
       };
@@ -125,14 +127,14 @@ module {
     // the level's node count is odd again, pair acc with itself.
     while ((count >> k) > 0) {
       if (((count >> k) & 1) == 1) {
-        acc.combineState(hasher[Nat32.toNat(k)], acc); // dSHA(peak ++ acc)
+        acc.combineState(hasher[k.toNat()], acc); // dSHA(peak ++ acc)
       } else {
         acc.combineState(acc, acc); // duplicate: dSHA(acc ++ acc)
       };
       acc.hashState(acc); // -> double SHA
       k += 1;
     };
-    Hasher.readSum(acc);
+    acc.readSum();
   };
 
   /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,
@@ -140,7 +142,7 @@ module {
   /// Allocation-free except the returned root `Blob`.
   public func bitcoinMerkleRoot(txids : [Blob]) : Blob {
     assert txids.size() >= 1;
-    let mmr = new(txids.size());
+    let mmr = new(txids.size(), false);
     for (leaf in txids.values()) {
       mmr.add(leaf);
     };

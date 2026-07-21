@@ -148,7 +148,7 @@ module {
       case (null) {
         assert i >= 1; // at least one leaf must have been added
         // A single peak is the root outright — leave it untouched.
-        if (i == 1) return Hasher.readSum(hasher[0]);
+        if (i == 1) return hasher[0].readSum();
       };
     };
     // The stack is never full (see `new`), so hasher[i] is free — the
@@ -172,7 +172,7 @@ module {
       acc.combineState(hasher[j], acc);
     };
     // readSum is the one and only allocation.
-    Hasher.readSum(acc);
+    acc.readSum();
   };
 
   /// Single-SHA256 Merkle root of `leaves`, for ANY leaf count (>= 1), in one

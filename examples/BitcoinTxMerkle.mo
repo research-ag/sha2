@@ -20,9 +20,8 @@
 ///
 /// With raw transactions the pending height-0 leaf cannot be a `?Blob` — the
 /// txid exists only as the digest's STATE, and materializing it would allocate.
-/// Instead the counter's slot 0 holds it (the half-delay of
-/// `MerkleCounterState.mo`), and the two leaves of a pair take different exits
-/// out of the `Digest`:
+/// Instead the counter's slot 0 holds it (as in `MerkleCounterState.mo`), and
+/// the two leaves of a pair take different exits out of the `Digest`:
 ///
 ///   * The FIRST leaf must SURVIVE while the second is computed, so the bridge
 ///     produces it directly INTO slot 0 — `close()` leaves SHA256(tx) in the
@@ -37,7 +36,8 @@
 ///
 /// Both are `close()` + one more SHA256 block — identical work — they just land
 /// the txid in different places. A leaf pair costs ONE scratch `Digest` and
-/// ZERO dedicated leaf hashers, with no state copies at all.
+/// ZERO dedicated leaf hashers, with no state copies at all. (These mechanics
+/// live in `CounterStateBase.mo`, selected by the `double` flag.)
 ///
 /// === Finalization: collapse, without touching the peaks ===
 ///
@@ -65,54 +65,29 @@
 ///   * Last-node duplication is the source of CVE-2012-2459; callers must
 ///     reject blocks with duplicate txids in that position.
 
-import Sha256 "mo:sha2/Sha256";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterStateBase";
 import Nat32 "mo:core/Nat32";
 
 module {
-  /// The MMR state: the base state of `CounterStateBase.mo` (shared with
-  /// `MerkleCounterState.mo`) extended with the one reused `Digest` that
-  /// absorbs the raw transactions. A static record — it can be declared
-  /// `stable`.
-  public type Mmr = Base.Mmr and {
-    d : Sha256.Digest;
-  };
+  /// The MMR state — see `CounterStateBase.mo`, which holds the building
+  /// machinery and the embedded `Digest` that absorbs the raw transactions,
+  /// shared with `MerkleCounterState.mo`. A static record — it can be
+  /// declared `stable`.
+  public type Mmr = Base.Mmr;
 
   /// Create an empty MMR with capacity for at least `maxTxs` transactions
-  /// (`ceil(log2 maxTxs) + 1` hashers — see `CounterStateBase.mo` — plus the
-  /// one scratch `Digest`).
-  public func new(maxTxs : Nat) : Mmr {
-    // Record extension (`base and {...}`) cannot alias a `var` field, so the
-    // fresh base record is rebuilt with its (zero) count copied over.
-    let base = Base.new(maxTxs);
-    {
-      hasher = base.hasher;
-      var count = base.count;
-      d = Sha256.new();
-    };
-  };
+  /// (`ceil(log2 maxTxs) + 1` hashers plus the one scratch `Digest` — see
+  /// `CounterStateBase.mo`). With `witness` the coinbase witness spine is
+  /// captured as transactions are added — extraction and verification live
+  /// in `BitcoinWitness.mo` (Example 7).
+  public func new(maxTxs : Nat, witness : Bool) : Mmr = Base.new(maxTxs, witness);
 
   /// Add one RAW (arbitrary-length) transaction to the MMR; its txid — the
   /// double SHA256 of the bytes — becomes the leaf, produced through the
   /// Digest -> Hasher bridge with no intermediate `Blob`. Traps (on a slot
   /// index out of bounds) if the capacity chosen at `new` is exceeded.
-  public func add(self : Mmr, tx : Blob) {
-    let d = self.d;
-    if (self.count > 0) d.reset();
-    d.writeBlob(tx);
-    if ((self.count & 1) == 0) {
-      // Height 0 empty: produce the txid directly INTO slot 0 (free capture).
-      d.close();
-      self.hasher[0].hashState(d.state); // slot0 := SHA256(SHA256(tx)) = txid
-    } else {
-      // Height 0 occupied: finish the txid in the digest, then fuse it with
-      // the parked one and carry the node up.
-      d.closeDouble(); // d.state := txid
-      Base.fuseAndCarry(self, d.state, true);
-    };
-    self.count += 1;
-  };
+  public func add(self : Mmr, tx : Blob) = Base.add(self, tx, true);
 
   /// The Bitcoin Merkle root over the transactions added so far (>= 1): the
   /// collapse of `BitcoinMerkle.mo`, with the TOP slot as the accumulator. No
@@ -127,14 +102,14 @@ module {
     // slot 0) or one peak (power-of-two count) — leave it untouched.
     var k = Nat32.bitcountTrailingZero(count);
     if (Nat32.bitcountNonZero(count) == 1) {
-      return Hasher.readSum(hasher[Nat32.toNat(k)]);
+      return hasher[k.toNat()].readSum();
     };
     // The top slot is free — its bit could only be set at the full power of
     // two, a single peak, handled above. It is the accumulator.
     let acc = hasher[hasher.size() - 1];
     // acc = the lowest component, doubled once — its level's node count is
     // odd, so Bitcoin pairs it with itself.
-    let k0 = Nat32.toNat(k);
+    let k0 = k.toNat();
     acc.combineState(hasher[k0], hasher[k0]);
     acc.hashState(acc); // -> double SHA
     k += 1;
@@ -142,14 +117,14 @@ module {
     // the level's node count is odd again, pair acc with itself.
     while ((count >> k) > 0) {
       if (((count >> k) & 1) == 1) {
-        acc.combineState(hasher[Nat32.toNat(k)], acc); // dSHA(peak ++ acc)
+        acc.combineState(hasher[k.toNat()], acc); // dSHA(peak ++ acc)
       } else {
         acc.combineState(acc, acc); // duplicate: dSHA(acc ++ acc)
       };
       acc.hashState(acc); // -> double SHA
       k += 1;
     };
-    Hasher.readSum(acc);
+    acc.readSum();
   };
 
   /// Bitcoin Merkle root over the RAW transactions `txs` (each an
@@ -158,7 +133,7 @@ module {
   /// Allocates nothing per transaction or node — only the returned root `Blob`.
   public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
     assert txs.size() >= 1;
-    let mmr = new(txs.size());
+    let mmr = new(txs.size(), false);
     for (tx in txs.values()) {
       mmr.add(tx);
     };

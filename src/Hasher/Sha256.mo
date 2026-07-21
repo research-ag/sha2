@@ -26,9 +26,11 @@
 /// `hashState(h, h)` fold and Merkle-style `combineState(h, h, sib)` safe.
 ///
 /// The verbs come in three families, each over a `Blob` operand or a state
-/// operand: `hash…` (one operand), `combine…` (a pair), and `load…` (copy a
-/// finished 32-byte hash in verbatim, no hashing — the inverse of `readSum`,
-/// used to park a precomputed leaf/peak or transfer one from a `Digest`).
+/// operand: `hash…` (one operand), `combine…` (a pair — all four Blob/state
+/// operand combinations: `combineBlob32`, `combineState`, and the mixed
+/// `combineStateBlob32`/`combineBlob32State`), and `load…` (copy a finished
+/// 32-byte hash in verbatim, no hashing — the inverse of `readSum`, used to
+/// park a precomputed leaf/peak or transfer one from a `Digest`).
 ///
 /// ```motoko name=import
 /// import Hasher "mo:sha2/Hasher/Sha256";
@@ -140,6 +142,49 @@ module {
   /// ```
   public func combineState(self : Hasher, s1 : Hasher, s2 : Hasher) {
     self.process_merge_block(s1, s2); // data block (s1 ++ s2) from the IV
+    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+  };
+
+  /// Combine a `Hasher` state with a 32-byte `Blob`: `self := SHA256(s1 ++ b2)`
+  /// (a 64-byte message), reading the state words and the blob bytes directly —
+  /// no staging copy of the blob into an engine. Two compression blocks. The
+  /// mixed-operand counterpart of `combineState`/`combineBlob32`, e.g. for
+  /// folding a stored sibling hash (a `Blob`) onto a running node:
+  /// `h.combineStateBlob32(h, sib)` — `s1` may alias `self`. Allocation-free.
+  ///
+  /// ```motoko include=import
+  /// let node = Hasher.new();
+  /// node.hashBlob32("\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f");
+  /// let sibling : Blob = "\20\21\22\23\24\25\26\27\28\29\2a\2b\2c\2d\2e\2f\30\31\32\33\34\35\36\37\38\39\3a\3b\3c\3d\3e\3f";
+  /// node.combineStateBlob32(node, sibling); // node := SHA256(node ++ sibling)
+  /// let parent : Blob = node.readSum();
+  /// ```
+  ///
+  /// Traps if `b2` is not exactly 32 bytes.
+  public func combineStateBlob32(self : Hasher, s1 : Hasher, b2 : Blob) {
+    if (b2.size() != 32) Prim.trap("Hasher: combineStateBlob32 expects a 32-byte blob, got " # debug_show (b2.size()) # " bytes");
+    self.process_state_blob_block(s1, b2); // data block (s1 ++ b2) from the IV
+    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+  };
+
+  /// Combine a 32-byte `Blob` with a `Hasher` state: `self := SHA256(b1 ++ s2)`
+  /// (a 64-byte message) — the mirror of `combineStateBlob32`, for when the
+  /// `Blob` operand is on the LEFT, e.g. folding a running accumulator onto a
+  /// stored left sibling: `acc.combineBlob32State(sib, acc)` — `s2` may alias
+  /// `self`. Two compression blocks. Allocation-free.
+  ///
+  /// ```motoko include=import
+  /// let node = Hasher.new();
+  /// node.hashBlob32("\20\21\22\23\24\25\26\27\28\29\2a\2b\2c\2d\2e\2f\30\31\32\33\34\35\36\37\38\39\3a\3b\3c\3d\3e\3f");
+  /// let sibling : Blob = "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f";
+  /// node.combineBlob32State(sibling, node); // node := SHA256(sibling ++ node)
+  /// let parent : Blob = node.readSum();
+  /// ```
+  ///
+  /// Traps if `b1` is not exactly 32 bytes.
+  public func combineBlob32State(self : Hasher, b1 : Blob, s2 : Hasher) {
+    if (b1.size() != 32) Prim.trap("Hasher: combineBlob32State expects a 32-byte blob, got " # debug_show (b1.size()) # " bytes");
+    self.process_blob_state_block(b1, s2); // data block (b1 ++ s2) from the IV
     self.process_padding_block(512); // padding: 64-byte message = 512 bits
   };
 

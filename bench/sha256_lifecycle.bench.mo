@@ -21,7 +21,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 lifecycle";
-      description = "Per-operation cost of the hasher lifecycle. Every measured row runs exactly one operation on a PRE-BUILT hasher (already created and, where relevant, already written/closed), so no row includes a writeBlob. new()/reset() create or rewind. close() finalizes without returning a Blob: 'close() partial' has a sub-block 40-byte message so the padding goes through the buffer, while 'close() @block' has a 64-byte (one full block) message so close() takes the block-boundary fast path that compresses the all-constant padding block directly. readSum() reads a closed digest's 32-byte state out as a Blob (length-independent). sum() = close() + readSum(); sumDouble() = close() + an in-place re-hash of the 32-byte state + readSum() (sha256 only). sum() and sumDouble() are shown at both message shapes; their partial-vs-@block gap is entirely close()'s padding path (readSum and the re-hash are length-independent). (Merkle-tree and Hasher-vs-Digest benchmarks live in bench/merkle.bench.mo and bench/hasher.bench.mo.)";
+      description = "Per-operation cost of the Sha256 digest lifecycle: every row runs exactly one operation on a PRE-BUILT digest, so no row includes a writeBlob.";
       rows = rows;
       cols = cols;
     };
@@ -29,7 +29,9 @@ module {
     let rng : Random.Random = Random.seed(0x5f5f5f5f5f5f5f5f);
     // Sub-block input (block size is 64 bytes) so the partial finalize rows
     // exercise padding through the buffer, and an exactly-one-block input so
-    // close() hits the block-boundary fast path.
+    // close() hits the block-boundary fast path. The sum()/sumDouble()
+    // partial-vs-@block gaps are entirely close()'s padding path — readSum
+    // and the sumDouble fold are length-independent.
     let input : Blob = Blob.fromArray(Array.tabulate<Nat8>(40, func(_) = rng.nat8()));
     let block : Blob = Blob.fromArray(Array.tabulate<Nat8>(64, func(_) = rng.nat8()));
 

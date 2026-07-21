@@ -14,18 +14,21 @@ module {
     //   * 'Digest'  — the general path: reset, writeBlob(s), close / closeDouble.
     // Both produce the identical hash; the gap is the buffer/lifecycle overhead
     // the Hasher skips. No cell reads the digest out, so neither allocates — the
-    // comparison is pure instruction count.
+    // comparison is pure instruction count. (The readSum/sumDouble readout cost
+    // is isolated in sha256_lifecycle.bench.mo.)
     let rows = [
       "hash 32 B",
       "double-hash 32 B",
       "combine 2x32 B blobs",
       "combine 2 states",
+      "combine state + blob",
+      "combine blob + state",
     ];
     let cols = ["Hasher", "Digest"];
 
     let schema : Bench.Schema = {
       name = "Sha256 Hasher";
-      description = "Short fixed-length SHA256 with the single-shot Hasher vs the general buffered Digest path, on a reused engine. 'hash 32 B' = SHA256 of a 32-byte message (1 block). 'double-hash 32 B' = SHA256(SHA256(msg)) left in the engine (Hasher: hashBlob32 + hashState; Digest: reset + writeBlob + closeDouble). 'combine 2x32 B blobs' = SHA256(b1 ++ b2) of two 32-byte blobs (2 blocks; Hasher: combineBlob32; Digest: two writeBlobs + close). 'combine 2 states' = SHA256 of two 32-byte digests read straight from their hashers (Hasher: combineState, no Blob; Digest: writeBlob each state blob + close). No cell reads the result out, so all are allocation-free; the gap is pure overhead the Hasher avoids. (The readSum/sumDouble readout cost is isolated in sha256_lifecycle.bench.mo.)";
+      description = "Short fixed-length SHA256: the single-shot Hasher vs the general buffered Digest path, on reused engines — identical hashes, the gap is the buffer/lifecycle overhead the Hasher skips.";
       rows = rows;
       cols = cols;
     };
@@ -68,6 +71,16 @@ module {
       [
         func() = h.combineState(x, y),
         func() { d.reset(); d.writeBlob(sa); d.writeBlob(sb); d.close() },
+      ],
+      // combine state + blob (mixed operands, e.g. the witness-verifier fold)
+      [
+        func() = h.combineStateBlob32(x, b),
+        func() { d.reset(); d.writeBlob(sa); d.writeBlob(b); d.close() },
+      ],
+      // combine blob + state (the mirror)
+      [
+        func() = h.combineBlob32State(a, y),
+        func() { d.reset(); d.writeBlob(a); d.writeBlob(sb); d.close() },
       ],
     ];
 

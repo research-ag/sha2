@@ -70,7 +70,7 @@ module {
 
   /// Create an empty MMR with capacity for at least `maxLeaves` leaves
   /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`).
-  public let new = Base.new;
+  public func new(maxLeaves : Nat) : Mmr = Base.new(maxLeaves, false);
 
   /// Add one 32-byte leaf to the MMR (single SHA256 per node). Traps (on a
   /// slot index out of bounds) if the capacity chosen at `new` is exceeded.
@@ -101,23 +101,23 @@ module {
         // A single peak is the root outright — leave it untouched.
         while (((count >> k) & 1) == 0) { k += 1 };
         if (Nat32.bitcountNonZero(count) == 1) {
-          return Hasher.readSum(hasher[Nat32.toNat(k)]);
+          return hasher[k.toNat()].readSum();
         };
         // Fuse the two lowest peaks straight into the accumulator.
-        let k0 = Nat32.toNat(k);
+        let k0 = k.toNat();
         k += 1;
         while (((count >> k) & 1) == 0) { k += 1 };
-        acc.combineState(hasher[Nat32.toNat(k)], hasher[k0]);
+        acc.combineState(hasher[k.toNat()], hasher[k0]);
         k += 1;
       };
     };
-    while (Nat32.toNat(k) <= l) {
+    while (k.toNat() <= l) {
       if (((count >> k) & 1) == 1) {
-        acc.combineState(hasher[Nat32.toNat(k)], acc);
+        acc.combineState(hasher[k.toNat()], acc);
       };
       k += 1;
     };
-    Hasher.readSum(acc);
+    acc.readSum();
   };
 
   /// Single-SHA256 Merkle root over `leaves` (each a 32-byte `Blob`), for ANY

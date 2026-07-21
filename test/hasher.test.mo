@@ -69,6 +69,26 @@ for (_ in Nat.range(0, 200)) {
   peak.combineState(peak, sib); // peak := SHA256(peak ++ sib)
   assert (peak.readSum() == nodeRef);
 
+  // combineStateBlob32(state, blob) == SHA256(state-bytes ++ blob).
+  h.combineStateBlob32(xa, b);
+  assert (h.readSum() == sha256Concat(Sha256.fromBlob(a), b));
+  // xa must be untouched (read-only source).
+  assert (xa.readSum() == Sha256.fromBlob(a));
+
+  // combineBlob32State(blob, state) == SHA256(blob ++ state-bytes).
+  h.combineBlob32State(a, yb);
+  assert (h.readSum() == sha256Concat(a, Sha256.fromBlob(b)));
+  assert (yb.readSum() == Sha256.fromBlob(b));
+
+  // Aliasing: the witness-verifier fold h := SHA256(h ++ sib) in place ...
+  h.loadBlob32(a);
+  h.combineStateBlob32(h, b);
+  assert (h.readSum() == sha256Concat(a, b));
+  // ... and its mirror h := SHA256(sib ++ h).
+  h.loadBlob32(b);
+  h.combineBlob32State(a, h);
+  assert (h.readSum() == sha256Concat(a, b));
+
   // loadBlob32 deposits bytes verbatim (no hash): round-trips through readSum.
   h.loadBlob32(a);
   assert (h.readSum() == a);
@@ -94,4 +114,17 @@ for (_ in Nat.range(0, 200)) {
   ly.loadBlob32(b);
   h.combineState(lx, ly);
   assert (h.readSum() == sha256Concat(a, b)); // == combineBlob32(a, b)
+
+  // The full 2x2 combine matrix agrees on the same 32-byte values:
+  // (blob,blob), (state,blob), (blob,state) and (state,state) of a and b
+  // (lx/ly hold them verbatim) all give SHA256(a ++ b).
+  let pairRef = sha256Concat(a, b);
+  h.combineBlob32(a, b);
+  assert (h.readSum() == pairRef);
+  h.combineStateBlob32(lx, b);
+  assert (h.readSum() == pairRef);
+  h.combineBlob32State(a, ly);
+  assert (h.readSum() == pairRef);
+  h.combineState(lx, ly);
+  assert (h.readSum() == pairRef);
 };

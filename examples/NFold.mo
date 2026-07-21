@@ -12,9 +12,9 @@
 ///
 ///   * `Digest` absorbs the arbitrary-length message (it has the buffer), then
 ///     `close()` leaves H1 = SHA256(msg) in its state.
-///   * `Hasher.hashState(h, digest.state)` reads those 32 bytes directly and
+///   * `h.hashState(digest.state)` reads those 32 bytes directly and
 ///     computes H2 = SHA256(H1) — no `Blob` materialized.
-///   * `Hasher.hashState(h, h)` then folds in place for each further round.
+///   * `h.hashState(h)` then folds in place for each further round.
 ///
 /// Caveats of the bridge (the `Hasher` only sees the bare state, so YOU must
 /// guarantee these): the digest must be CLOSED, and it must be sha256 (not
