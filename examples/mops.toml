@@ -1,5 +1,7 @@
 [dependencies]
 sha2 = "../src/"
+# Replace with:
+# sha2 = "0.3.0"
 core = "2.6.0"
 prng = "0.2.0"
 

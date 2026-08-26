@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Make sure moc is installed
+        run: mops toolchain bin moc
+
+      - name: Show versions
+        run: |
+          mops --version
+          $(mops toolchain bin moc) --version
+
+      - name: Install dependencies
+        run: mops install
+
+      - name: Run tests
+        run: mops test
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Install dependencies
+        working-directory: examples
+        run: mops install
+
+      - name: Verify examples
+        working-directory: examples
+        run: mops test verify
+
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Install dependencies
+        run: mops install
+
+      - name: Make sure pocket-ic is installed
+        run: mops toolchain bin pocket-ic
+
+      - name: Make sure wasm-opt is installed
+        run: mops toolchain bin wasm-opt
+
+      - name: Run benchmarks
+        run: mops bench
+
+  fmt:
+    name: Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+
+      - name: Prettier Check
+        run: |
+          npm install prettier prettier-plugin-motoko --no-save
+          npx -y prettier --plugin prettier-plugin-motoko --check '**/*.{mo,json,md}'

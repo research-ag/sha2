@@ -256,15 +256,17 @@ A `Hasher` has NO buffer: it is nothing but the 256-bit state, and every operati
 
 The operations (each sets `h := SHA256(...)` in place):
 
-| Function             | Input                    | Meaning                                          |
-| -------------------- | ------------------------ | ------------------------------------------------ |
-| `hashBlob32(b)`      | one 32-byte `Blob`       | `SHA256(b)`                                      |
-| `hashState(src)`     | another `Hasher`'s state | `SHA256(src)` — iterated / double hashing        |
-| `combineBlob32(a,b)` | two 32-byte `Blob`s      | `SHA256(a ++ b)` — Merkle leaf pair              |
-| `combineState(a,b)`  | two `Hasher`s            | `SHA256(a ++ b)` — Merkle inner node             |
-| `loadBlob32(b)`      | a 32-byte hash           | load verbatim, no hashing (inverse of `readSum`) |
-| `loadState(src)`     | another `Hasher`         | copy verbatim, no hashing                        |
-| `readSum()`          | —                        | read the state as a 32-byte `Blob`               |
+| Function                    | Input                              | Meaning                                          |
+| --------------------------- | ---------------------------------- | ------------------------------------------------ |
+| `hashBlob32(b)`             | one 32-byte `Blob`                 | `SHA256(b)`                                      |
+| `hashState(src)`            | another `Hasher`'s state           | `SHA256(src)` — iterated / double hashing        |
+| `combineBlob32(a,b)`        | two 32-byte `Blob`s                | `SHA256(a ++ b)` — Merkle leaf pair              |
+| `combineState(a,b)`         | two `Hasher`s                      | `SHA256(a ++ b)` — Merkle inner node             |
+| `combineStateBlob32(s1,b2)` | a `Hasher` state, a 32-byte `Blob` | `SHA256(s1 ++ b2)` — mixed operand order         |
+| `combineBlob32State(b1,s2)` | a 32-byte `Blob`, a `Hasher` state | `SHA256(b1 ++ s2)` — mirror of the above         |
+| `loadBlob32(b)`             | a 32-byte hash                     | load verbatim, no hashing (inverse of `readSum`) |
+| `loadState(src)`            | another `Hasher`                   | copy verbatim, no hashing                        |
+| `readSum()`                 | —                                  | read the state as a 32-byte `Blob`               |
 
 In `combineState` the sources may alias the destination (e.g. `h.combineState(h, sibling)`), which is what lets a Merkle node move up the tree in place. Example — the Bitcoin double hash of a 32-byte leaf:
 
@@ -305,12 +307,6 @@ Run
 
 ```bash
 mops bench
-```
-
-or
-
-```bash
-mops bench --replica pocket-ic
 ```
 
 or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
