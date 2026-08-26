@@ -1,12 +1,13 @@
 /// SHA512 digest implementation.
 
-import Prim "mo:prim";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
+import Prim "mo:prim";
 
 import Byte "../write/byte";
 import Write "../write";
 import ProcessBlock "../process_block";
+import Padding "../padding";
 import Types "../types";
 
 module {
@@ -14,8 +15,12 @@ module {
   /// Digest type re-export.
   public type Digest = Types.Digest;
 
-  // We must be at a word boundary, i.e. i_byte must be equal to 8
-  func writeWord(self : Digest, val : Nat64) : () {
+  /// Append a single byte, processing a full block if one completes.
+  public func writeByte(self : Digest, val : Nat8) : () = Byte.writeByte(self, val);
+
+  /// Append a 64-bit word, processing a full block if one completes. Traps
+  /// unless the digest is at a word boundary (`i_byte == 8`).
+  public func writeWord(self : Digest, val : Nat64) : () {
     assert (self.i_byte == 8);
     let msg = self.msg;
     var i_msg = self.i_msg;
@@ -35,6 +40,7 @@ module {
   public func writeBlob(self : Digest, data : Blob) {
     Write.blob(self, data);
   };
+
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
   public func writeArray(self : Digest, data : [Nat8]) {
@@ -64,8 +70,17 @@ module {
   /// Finalize the digest by writing padding.
   /// Traps if `self` is closed.
   public func close(self : Digest) {
-    assert not self.closed;
+    if (self.closed) Prim.trap("Sha512: close of closed digest");
     self.closed := true;
+    // Fast path: at a block boundary (empty buffer — no buffered words and no
+    // partial word) the entire padding is a single block whose 16 message words
+    // are constant except the length, so compress it directly and skip the
+    // 16-word buffer fill (which would also box every Nat64 written).
+    if (self.i_msg == 0 and self.i_byte == 8) {
+      let n_bits : Nat64 = (self.i_block << 7) << 3; // i_block * 128 bytes * 8
+      Padding.process(self.s, n_bits);
+      return;
+    };
     // calculate padding
     // t = bytes in the last incomplete block (0-127)
     let t : Nat8 = (self.i_msg << 3) +% 8 -% self.i_byte;

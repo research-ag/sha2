@@ -10,7 +10,7 @@ module {
   public func new() : Buffer = {
     msg : [var Nat16] = [var 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var i_msg : Nat8 = 0;
-    var i_block : Nat32 = 0;
+    var i_block : Nat64 = 0;
     var high : Bool = true;
     var word : Nat16 = 0;
   };
@@ -86,6 +86,48 @@ module {
         self.high := false;
       } else {
         msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(at(i));
+        i_msg +%= 1;
+        self.high := true;
+      };
+      i += 1;
+    };
+    self.i_msg := i_msg;
+    return i;
+  };
+
+  /// Like `load_chunk`, but reads directly from a `Blob` instead of through an
+  /// accessor function — avoids allocating a closure on every call.
+  public func load_chunk_blob(self : Buffer, data : Blob, sz : Nat, start : Nat) : (end : Nat) {
+    if (start >= sz) return start;
+    var i = start;
+    let msg = self.msg;
+    var i_msg = self.i_msg;
+    if (not self.high) {
+      msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(data[i]);
+      i_msg +%= 1;
+      self.high := true;
+      i += 1;
+      if (i_msg == 32) {
+        self.i_msg := i_msg;
+        return i;
+      };
+    };
+    let i_max : Nat = i + ((sz - i) / 2) * 2;
+    while (i < i_max) {
+      msg[nat8ToNat(i_msg)] := nat8To16(data[i]) << 8 ^ nat8To16(data[i + 1]);
+      i_msg +%= 1;
+      i += 2;
+      if (i_msg == 32) {
+        self.i_msg := i_msg;
+        return i;
+      };
+    };
+    while (i < sz) {
+      if (self.high) {
+        self.word := nat8To16(data[i]) << 8;
+        self.high := false;
+      } else {
+        msg[nat8ToNat(i_msg)] := self.word ^ nat8To16(data[i]);
         i_msg +%= 1;
         self.high := true;
       };

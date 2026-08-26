@@ -1,21 +1,27 @@
 [package]
 name = "sha2"
-version = "0.2.4"
+version = "0.3.0"
 description = "Optimized implementation of all SHA2 functions"
 repository = "https://github.com/research-ag/sha2"
 keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-core = "2.5.0"
+core = "2.6.0"
 
 [dev-dependencies]
 bench-helper = "0.0.3"
-sha2_0_1_14 = "https://github.com/research-ag/sha2#0.1.14@80024217689ec0a065e5bba1b793e75b398c7184"
 
 [requirements]
 moc = "1.0.0"
 
 [toolchain]
-moc = "1.9.0"
-wasmtime = "44.0.2"
+moc = "1.11.0"
+wasmtime = "44.0.3"
+pocket-ic = "15.0.0"
+wasm-opt = "132"
+
+[optimize]
+
+[moc]
+args = [ "--legacy-persistence" ]

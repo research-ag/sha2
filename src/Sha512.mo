@@ -13,7 +13,7 @@
 /// ```
 
 import { type Iter } "mo:core/Types";
-import { arrayToBlob; explodeNat64 } "mo:prim";
+import { arrayToBlob; explodeNat64; trap } "mo:prim";
 import VarArray "mo:core/VarArray";
 import _Digest "sha512/digest";
 import Types "sha512/types";
@@ -121,6 +121,24 @@ module {
     };
   };
 
+  // Load the algorithm's initial hash value (IV) into the state.
+  // Unrolled copy avoids allocating the `[0..7]` index array and its iterator
+  // on every reset (cf. the Sha256 reset optimization).
+  func loadIV(self : Digest) {
+    let i = switch (self.algo) {
+      case (#sha512_224) 0;
+      case (#sha512_256) 1;
+      case (#sha384) 2;
+      case (#sha512) 3;
+    };
+    let v = ivs[i];
+    // prettier-ignore
+    do {
+      self.s[0] := v[0]; self.s[1] := v[1]; self.s[2] := v[2]; self.s[3] := v[3];
+      self.s[4] := v[4]; self.s[5] := v[5]; self.s[6] := v[6]; self.s[7] := v[7];
+    };
+  };
+
   /// Reset the digest state to start a new hash computation.
   /// After reset, the digest can be reused to hash new data.
   /// This works even if the digest was previously finalized (is closed).
@@ -137,20 +155,7 @@ module {
     self.i_msg := 0;
     self.i_byte := 8;
     self.i_block := 0;
-    let i = switch (self.algo) {
-      case (#sha512_224) 0;
-      case (#sha512_256) 1;
-      case (#sha384) 2;
-      case (#sha512) 3;
-    };
-    // Unrolled IV copy avoids allocating the `[0..7]` index array and its
-    // iterator on every reset (cf. the Sha256 reset optimization).
-    let v = ivs[i];
-    // prettier-ignore
-    do {
-      self.s[0] := v[0]; self.s[1] := v[1]; self.s[2] := v[2]; self.s[3] := v[3];
-      self.s[4] := v[4]; self.s[5] := v[5]; self.s[6] := v[6]; self.s[7] := v[7];
-    };
+    loadIV(self);
     self.closed := false;
   };
 
@@ -169,7 +174,7 @@ module {
   ///
   /// Traps if `self` is closed.
   public func clone(self : Digest) : Digest {
-    assert not self.closed;
+    if (self.closed) trap("Sha512: clone of closed digest");
     {
       algo = self.algo;
       msg = VarArray.clone(self.msg);
@@ -281,83 +286,95 @@ module {
     stateBlob(self);
   };
 
+  /// Finalize the digest by writing padding, without returning the hash. After
+  /// `close()` the digest is closed; read the hash with `readSum()` (any number
+  /// of times).
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello world");
+  /// digest.close();
+  /// let hash : Blob = digest.readSum();
+  /// ```
+  ///
+  /// Traps if `self` is already closed.
+  public func close(self : Digest) : () = _Digest.close(self);
+
+  /// Read the hash of a closed digest. Idempotent: unlike `sum()` it does not
+  /// finalize, so it can be called repeatedly after `close()` or `sum()`.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha512.new();
+  /// digest.writeBlob("Hello world");
+  /// let once : Blob = digest.sum();
+  /// let again : Blob = digest.readSum(); // == once
+  /// ```
+  ///
+  /// Traps if `self` is not closed.
+  public func readSum(self : Digest) : Blob {
+    if (not self.closed) trap("Sha512: readSum on non-closed digest");
+    stateBlob(self);
+  };
+
   func stateBlob(x : Digest) : Blob {
     let (d0, d1, d2, d3, d4, d5, d6, d7) = explodeNat64(x.s[0]);
     let (d8, d9, d10, d11, d12, d13, d14, d15) = explodeNat64(x.s[1]);
     let (d16, d17, d18, d19, d20, d21, d22, d23) = explodeNat64(x.s[2]);
     let (d24, d25, d26, d27, d28, d29, d30, d31) = explodeNat64(x.s[3]);
 
-    if (x.algo == #sha512_224) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27
-      ]);
+    // `switch` (not `== #...`) because variant `==` allocates per call. Longer
+    // digests explode the extra state words lazily inside their cases.
+    switch (x.algo) {
+      case (#sha512_224) {
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27
+        ]);
+      };
+      case (#sha512_256) {
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27,
+          d28, d29, d30, d31
+        ]);
+      };
+      case (#sha384) {
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27, d28, d29, d30, d31,
+          d32, d33, d34, d35, d36, d37, d38, d39,
+          d40, d41, d42, d43, d44, d45, d46, d47
+        ]);
+      };
+      case (#sha512) {
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
+        let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(x.s[6]);
+        let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(x.s[7]);
+        // prettier-ignore
+        arrayToBlob([
+          d0, d1, d2, d3, d4, d5, d6, d7,
+          d8, d9, d10, d11, d12, d13, d14, d15,
+          d16, d17, d18, d19, d20, d21, d22, d23,
+          d24, d25, d26, d27, d28, d29, d30, d31,
+          d32, d33, d34, d35, d36, d37, d38, d39,
+          d40, d41, d42, d43, d44, d45, d46, d47,
+          d48, d49, d50, d51, d52, d53, d54, d55,
+          d56, d57, d58, d59, d60, d61, d62, d63
+        ]);
+      };
     };
-
-    if (x.algo == #sha512_256) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27,
-        d28, d29, d30, d31
-      ]);
-    };
-
-    let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
-    let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
-
-    if (x.algo == #sha384) {
-      // prettier-ignore
-      return arrayToBlob([
-        d0, d1, d2, d3, d4, d5, d6, d7,
-        d8, d9, d10, d11, d12, d13, d14, d15,
-        d16, d17, d18, d19, d20, d21, d22, d23,
-        d24, d25, d26, d27, d28, d29, d30, d31,
-        d32, d33, d34, d35, d36, d37, d38, d39,
-        d40, d41, d42, d43, d44, d45, d46, d47
-      ]);
-    };
-
-    let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(x.s[6]);
-    let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(x.s[7]);
-
-    // prettier-ignore
-    return arrayToBlob([
-      d0, d1, d2, d3, d4, d5, d6, d7,
-      d8, d9, d10, d11, d12, d13, d14, d15,
-      d16, d17, d18, d19, d20, d21, d22, d23,
-      d24, d25, d26, d27, d28, d29, d30, d31,
-      d32, d33, d34, d35, d36, d37, d38, d39,
-      d40, d41, d42, d43, d44, d45, d46, d47,
-      d48, d49, d50, d51, d52, d53, d54, d55,
-      d56, d57, d58, d59, d60, d61, d62, d63
-    ]);
-  };
-
-  /// Get the current hash value without finalizing the digest.
-  /// This internally clones the digest, finalizes the clone, and returns the hash.
-  /// The purpose is to allow obtaining intermediate hash values without closing the original digest.
-  ///
-  /// Additionally, `peekSum()` can be called on an already finalized digest.
-  /// It simply returns the final hash in that case.
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha512.new();
-  /// digest.writeBlob("Hello");
-  /// let intermediate = digest.peekSum();
-  /// digest.writeBlob(" world");
-  /// let final = digest.sum();
-  /// let sameFinal = digest.peekSum();
-  /// ```
-  ///
-  /// Never traps.
-  public func peekSum(self : Digest) : Blob {
-    if (self.closed) stateBlob(self) else sum(clone(self));
   };
 
   /// Directly calculate the SHA2 hash digest from a `Blob`.

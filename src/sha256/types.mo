@@ -4,13 +4,13 @@ module {
   /// Message buffer.
   /// `msg`: block buffer (16 words of 16 bits).
   /// `i_msg`: current word index in `msg`.
-  /// `i_block`: total number of bits hashed so far.
+  /// `i_block`: number of 64-byte blocks processed so far.
   /// `high`: whether we are in the high byte of the current word.
   /// `word`: current word being built.
   public type Buffer = {
     msg : [var Nat16];
     var i_msg : Nat8;
-    var i_block : Nat32;
+    var i_block : Nat64;
     var high : Bool;
     var word : Nat16;
   };

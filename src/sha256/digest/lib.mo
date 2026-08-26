@@ -20,14 +20,14 @@ import { type Digest } "../types";
 import { type State } "../types";
 
 module {
-  let natToNat32 = Prim.natToNat32;
+  let natToNat64 = Prim.natToNat64;
+  let nat64To32 = Prim.nat64ToNat32;
   let nat8ToNat = Prim.nat8ToNat;
   let nat8To16 = Prim.nat8ToNat16;
-  let nat32To64 = Prim.nat32ToNat64;
   let intToNat64Wrap = Prim.intToNat64Wrap;
 
   func writeData(x : Digest, data : Nat -> Nat8, sz : Nat, start : Nat, process_blocks : Nat -> Nat) {
-    assert not x.closed;
+    if (x.closed) Prim.trap("Sha256: write to closed digest");
     if (sz == start) return;
     let (buf, state) = (x.buffer, x.state);
     var pos = start;
@@ -41,7 +41,7 @@ module {
     };
     // if (buf.i_msg != 0) return;
     let end = process_blocks(pos);
-    buf.i_block +%= natToNat32(end - pos) / 64;
+    buf.i_block +%= natToNat64(end - pos) / 64;
     ignore buf.load_chunk(data, sz, end);
     if (buf.i_msg == 32) {
       state.process_block_from_msg(buf.msg);
@@ -52,9 +52,35 @@ module {
 
   /// Write a `Blob` to the digest.
   /// Traps if `self` is closed.
+  ///
+  /// Specialized for `Blob` and inlined — it reads the blob directly via
+  /// `load_chunk_blob` / `process_blocks_from_blob` rather than through the
+  /// generic `writeData`'s accessor/processor closures, so it allocates
+  /// nothing. Handles any alignment and length: fills the partial block, runs
+  /// whole blocks directly from the blob, then packs the tail (fast for short
+  /// and long inputs alike).
   public func writeBlob(self : Digest, data : Blob) {
-    func process_blocks(pos : Nat) : Nat = self.state.process_blocks_from_blob(data, pos);
-    writeData(self, func(i) = data[i], data.size(), 0, process_blocks);
+    if (self.closed) Prim.trap("Sha256: write to closed digest");
+    let sz = data.size();
+    if (sz == 0) return;
+    let (buf, state) = (self.buffer, self.state);
+    var pos = 0;
+    if (buf.i_msg > 0 or not buf.high) {
+      pos := buf.load_chunk_blob(data, sz, 0);
+      if (buf.i_msg == 32) {
+        state.process_block_from_msg(buf.msg);
+        buf.i_msg := 0;
+        buf.i_block +%= 1;
+      };
+    };
+    // Run whole blocks directly from the blob — but only when block-aligned and
+    // at least one full block remains, so sub-block inputs skip the call.
+    if (buf.i_msg == 0 and pos + 64 <= sz) {
+      let end = state.process_blocks_from_blob(data, pos);
+      buf.i_block +%= natToNat64(end - pos) / 64;
+      pos := end;
+    };
+    ignore buf.load_chunk_blob(data, sz, pos);
   };
   /// Write a `[Nat8]` array to the digest.
   /// Traps if `self` is closed.
@@ -85,7 +111,7 @@ module {
   /// Write data from an iterator to the digest.
   /// Traps if `self` is closed.
   public func writeIter(self : Digest, data : () -> ?Nat8) {
-    assert not self.closed;
+    if (self.closed) Prim.trap("Sha256: write to closed digest");
     let (buf, state) = (self.buffer, self.state);
 
     if (buf.i_msg > 0 or not buf.high) {
@@ -108,11 +134,21 @@ module {
   /// Write SHA256 padding to the digest.
   public func writePadding(x : Digest) : () {
     let (buf, state) = (x.buffer, x.state);
+    // Fast path: at a block boundary (empty buffer) the entire padding is a
+    // single block whose 16 message words are constant except the length, so
+    // skip the 32-half-word buffer fill and compress the padding block directly.
+    // Limited to messages whose bit length fits in Nat32 (< 512 MiB, i.e.
+    // i_block < 2^23); larger messages fall through to the buffer path.
+    if (buf.i_msg == 0 and buf.high and buf.i_block < 0x80_0000) {
+      let n_bits : Nat32 = nat64To32(buf.i_block) << 9; // i_block * 64 bytes * 8
+      state.process_padding_block(n_bits);
+      return;
+    };
     let msg = buf.msg;
     var i_msg = buf.i_msg;
     // n_bits = length of message in bits
     let t : Nat8 = if (buf.high) i_msg << 1 else i_msg << 1 +% 1;
-    let n_bits : Nat64 = ((nat32To64(buf.i_block) << 6) +% intToNat64Wrap(nat8ToNat(t))) << 3;
+    let n_bits : Nat64 = ((buf.i_block << 6) +% intToNat64Wrap(nat8ToNat(t))) << 3;
     // separator byte
     if (buf.high) {
       msg[nat8ToNat(i_msg)] := 0x8000;
@@ -150,7 +186,7 @@ module {
   /// Finalize the digest by writing padding.
   /// Traps if `self` is closed.
   public func close(self : Digest) {
-    assert not self.closed;
+    if (self.closed) Prim.trap("Sha256: close of closed digest");
     self.closed := true;
     writePadding(self);
   };

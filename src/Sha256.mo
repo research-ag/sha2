@@ -13,7 +13,7 @@
 /// ```
 
 import { type Iter } "mo:core/Types";
-import { arrayToBlob } "mo:prim";
+import { arrayToBlob; trap } "mo:prim";
 
 import Buffer "sha256/buffer";
 import State "sha256/state";
@@ -55,19 +55,41 @@ module {
   /// ```
   public func new(algo : (implicit : Algorithm)) : Digest {
     let buf = Buffer.new();
-    if (algo == #sha224) {
-      {
-        algo = #sha224;
-        state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
-        buffer = buf;
-        var closed = false;
+    switch (algo) {
+      case (#sha224) {
+        {
+          algo = #sha224;
+          state = [var 0xc105, 0x9ed8, 0x367c, 0xd507, 0x3070, 0xdd17, 0xf70e, 0x5939, 0xffc0, 0x0b31, 0x6858, 0x1511, 0x64f9, 0x8fa7, 0xbefa, 0x4fa4];
+          buffer = buf;
+          var closed = false;
+        };
       };
-    } else {
-      {
-        algo = #sha256;
-        state = [var 0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19];
-        buffer = buf;
-        var closed = false;
+      case (_) {
+        {
+          algo = #sha256;
+          state = [var 0x6a09, 0xe667, 0xbb67, 0xae85, 0x3c6e, 0xf372, 0xa54f, 0xf53a, 0x510e, 0x527f, 0x9b05, 0x688c, 0x1f83, 0xd9ab, 0x5be0, 0xcd19];
+          buffer = buf;
+          var closed = false;
+        };
+      };
+    };
+  };
+
+  // Load the algorithm's initial hash value (IV) into `state`.
+  func loadIV(s : Types.State, algo : Algorithm) {
+    // prettier-ignore
+    switch (algo) {
+      case (#sha224) {
+      s[0] := 0xc105; s[1] := 0x9ed8; s[2] := 0x367c; s[3] := 0xd507;
+      s[4] := 0x3070; s[5] := 0xdd17; s[6] := 0xf70e; s[7] := 0x5939;
+      s[8] := 0xffc0; s[9] := 0x0b31; s[10] := 0x6858; s[11] := 0x1511;
+      s[12] := 0x64f9; s[13] := 0x8fa7; s[14] := 0xbefa; s[15] := 0x4fa4;
+      };
+      case (_) {
+      s[0] := 0x6a09; s[1] := 0xe667; s[2] := 0xbb67; s[3] := 0xae85;
+      s[4] := 0x3c6e; s[5] := 0xf372; s[6] := 0xa54f; s[7] := 0xf53a;
+      s[8] := 0x510e; s[9] := 0x527f; s[10] := 0x9b05; s[11] := 0x688c;
+      s[12] := 0x1f83; s[13] := 0xd9ab; s[14] := 0x5be0; s[15] := 0xcd19;
       };
     };
   };
@@ -84,25 +106,6 @@ module {
   /// digest.writeBlob("Second message");
   /// let hash2 = digest.sum();
   /// ```
-  // Load the algorithm's initial hash value (IV) into `state`.
-  // Direct half-word assignment avoids allocating a literal array (the original
-  // `state.set([...])` allocated a fresh 16-element array and copied it through
-  // a `Nat.range` iterator — ~10x the cost, dominating short-message hashing).
-  func loadIV(s : Types.State, algo : Algorithm) {
-    // prettier-ignore
-    if (algo == #sha224) {
-      s[0] := 0xc105; s[1] := 0x9ed8; s[2] := 0x367c; s[3] := 0xd507;
-      s[4] := 0x3070; s[5] := 0xdd17; s[6] := 0xf70e; s[7] := 0x5939;
-      s[8] := 0xffc0; s[9] := 0x0b31; s[10] := 0x6858; s[11] := 0x1511;
-      s[12] := 0x64f9; s[13] := 0x8fa7; s[14] := 0xbefa; s[15] := 0x4fa4;
-    } else {
-      s[0] := 0x6a09; s[1] := 0xe667; s[2] := 0xbb67; s[3] := 0xae85;
-      s[4] := 0x3c6e; s[5] := 0xf372; s[6] := 0xa54f; s[7] := 0xf53a;
-      s[8] := 0x510e; s[9] := 0x527f; s[10] := 0x9b05; s[11] := 0x688c;
-      s[12] := 0x1f83; s[13] := 0xd9ab; s[14] := 0x5be0; s[15] := 0xcd19;
-    };
-  };
-
   public func reset(self : Digest) {
     self.buffer.reset();
     loadIV(self.state, self.algo);
@@ -124,7 +127,7 @@ module {
   ///
   /// Traps if `self` is closed.
   public func clone(self : Digest) : Digest {
-    assert not self.closed;
+    if (self.closed) trap("Sha256: clone of closed digest");
     {
       algo = self.algo;
       buffer = self.buffer.clone();
@@ -241,13 +244,66 @@ module {
     return stateBlob(self);
   };
 
-  /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
-  /// return the hash as a `Blob`. This is the hash used by Bitcoin.
+  /// Finalize the digest by writing padding, without returning the hash. After
+  /// `close()` the digest is closed; read the hash with `readSum()` (any number
+  /// of times).
   ///
-  /// Equivalent to hashing the message, feeding the resulting 32-byte digest
-  /// into a fresh digest, and finalizing again — but without materializing the
-  /// intermediate digest as a `Blob`: the first hash's state words are copied
-  /// straight into the message buffer for the second hash.
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// digest.close();
+  /// let hash : Blob = digest.readSum();
+  /// ```
+  ///
+  /// Traps if `self` is already closed.
+  public func close(self : Digest) : () = _Digest.close(self);
+
+  /// Read the hash of a closed digest. Idempotent: unlike `sum()` it does not
+  /// finalize, so it can be called repeatedly after `close()` or `sum()`.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// let once : Blob = digest.sum();
+  /// let again : Blob = digest.readSum(); // == once
+  /// ```
+  ///
+  /// Traps if `self` is not closed.
+  public func readSum(self : Digest) : Blob {
+    if (not self.closed) trap("Sha256: readSum on non-closed digest");
+    stateBlob(self);
+  };
+
+  /// Finalize the digest as a double SHA256 in place, WITHOUT returning the
+  /// hash: `close()` the message, then re-hash the resulting 32-byte state once
+  /// more (one specialized block, no intermediate `Blob`). Leaves the digest
+  /// closed — read it with `readSum()` any number of times. The non-returning
+  /// counterpart of `sumDouble` (which is `closeDouble()` + `readSum()`); use it
+  /// when you want the double hash but not yet — or never — a `Blob`.
+  /// Allocation-free.
+  ///
+  /// ```motoko include=import
+  /// let digest = Sha256.new();
+  /// digest.writeBlob("Hello world");
+  /// digest.closeDouble();
+  /// let hash : Blob = digest.readSum();
+  /// ```
+  ///
+  /// Closes the digest. Traps if `self` is already closed, or if `self` is a
+  /// sha224 digest (double SHA256 is sha256-only).
+  public func closeDouble(self : Digest) {
+    switch (self.algo) {
+      case (#sha224) trap("Sha256: closeDouble requires #sha256");
+      case (#sha256) {};
+    };
+    _Digest.close(self);
+    State.process_fold_block(self.state, self.state);
+  };
+
+  /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and
+  /// return the hash as a `Blob`. This is the hash used by Bitcoin. Equivalent
+  /// to `closeDouble()` followed by `readSum()`, so the only allocation is the
+  /// returned `Blob`.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
@@ -255,53 +311,14 @@ module {
   /// let hash : Blob = digest.sumDouble();
   /// ```
   ///
-  /// Like `sum()`, this closes the digest. Traps if `self` is already closed.
+  /// To iterate further (N-fold hashing), bridge into a `Hasher` after `close()`
+  /// — see `examples/NFold.mo`.
+  ///
+  /// Closes the digest. Traps if `self` is already closed, or if `self` is a
+  /// sha224 digest (double SHA256 is sha256-only).
   public func sumDouble(self : Digest) : Blob {
-    // First finalize: `self.state` now holds SHA256(message) as 16 half-words.
-    _Digest.close(self);
-    // Reload the digest as the message for the second hash. State and message
-    // words share the same big-endian half-word packing, so copying
-    // state[i] -> msg[i] places the digest bytes in order. The message length
-    // is the digest length: 32 bytes (16 words) for sha256, 28 bytes (14 words)
-    // for sha224 — for sha224 the copied words 14..15 are simply overwritten by
-    // the padding, so the unconditional 16-word copy stays correct.
-    let buf = self.buffer;
-    buf.reset();
-    let s = self.state;
-    let m = buf.msg;
-    // prettier-ignore
-    do {
-      m[0] := s[0]; m[1] := s[1]; m[2] := s[2]; m[3] := s[3];
-      m[4] := s[4]; m[5] := s[5]; m[6] := s[6]; m[7] := s[7];
-      m[8] := s[8]; m[9] := s[9]; m[10] := s[10]; m[11] := s[11];
-      m[12] := s[12]; m[13] := s[13]; m[14] := s[14]; m[15] := s[15];
-    };
-    buf.i_msg := if (self.algo == #sha224) 14 else 16;
-    // Reset the state to the IV and run the second (final) hash.
-    loadIV(s, self.algo);
-    _Digest.writePadding(self);
-    return stateBlob(self);
-  };
-
-  /// Get the current hash value without finalizing the digest.
-  /// This internally clones the digest, finalizes the clone, and returns the hash.
-  /// The purpose is to allow obtaining intermediate hash values without closing the original digest.
-  ///
-  /// Additionally, `peekSum()` can be called on an already finalized digest.
-  /// It simply returns the final hash in that case.
-  ///
-  /// ```motoko include=import
-  /// let digest = Sha256.new();
-  /// digest.writeBlob("Hello");
-  /// let intermediate = digest.peekSum();
-  /// digest.writeBlob(" world");
-  /// let final = digest.sum();
-  /// let sameFinal = digest.peekSum();
-  /// ```
-  ///
-  /// Never traps.
-  public func peekSum(self : Digest) : Blob {
-    if (self.closed) stateBlob(self) else sum(clone(self));
+    closeDouble(self);
+    stateBlob(self);
   };
 
   /// Directly calculate the SHA2 hash digest from a `Blob`.

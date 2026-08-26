@@ -35,12 +35,3 @@ do {
   func at(i : Nat) : Nat8 = List.at(l, i);
   prt(Sha256.fromAccessor(at, 6, 5));
 };
-/*
-do {
-  let digest = Sha256.new(); // default algo #sha256
-  digest.writeBlob("hello");
-  prt (digest.peekSum());
-  digest.writeBlob(" world!");
-  prt (digest.sum());
-};
-*/

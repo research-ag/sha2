@@ -3,11 +3,17 @@ import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
 import fromBlob "process/blocks/blob";
+import fromMerge "process/blocks/merge";
+import fromLeaf "process/blocks/leaf";
+import fromStateBlob "process/blocks/stateBlob";
+import fromBlobState "process/blocks/blobState";
 import fromArray "process/blocks/array";
 import fromVarArray "process/blocks/varArray";
 import fromAccessor "process/blocks/accessor";
 import fromReader "process/blocks/reader";
 import fromMsg "process/msg_buffer";
+import fromPadding "process/padding";
+import fromFold "process/fold";
 
 module {
   /// SHA256 internal state — 8 state words split into 16 `Nat16` half-words (even indices hold the high byte, odd indices the low byte).
@@ -22,6 +28,14 @@ module {
   public let clone = VarArray.clone;
   /// Run the SHA256 compression on every full 64-byte block in the input `Blob` (see `process/blocks/blob`).
   public let process_blocks_from_blob = fromBlob.process;
+  /// Inner block of a merge: hash one block of `s1 ++ s2` (two 32-byte digests) from the IV, overwriting `self`; `s1`/`s2` may alias `self` (see `process/blocks/merge`).
+  public let process_merge_block = fromMerge.process;
+  /// Inner block of a leaf combine: hash one block of `b1 ++ b2` (two 32-byte blobs) from the IV, overwriting `self` (see `process/blocks/leaf`).
+  public let process_leaf_block = fromLeaf.process;
+  /// Inner block of a mixed combine: hash one block of `s1 ++ b2` (a 32-byte digest, then a 32-byte blob) from the IV, overwriting `self`; `s1` may alias `self` (see `process/blocks/stateBlob`).
+  public let process_state_blob_block = fromStateBlob.process;
+  /// Inner block of a mixed combine: hash one block of `b1 ++ s2` (a 32-byte blob, then a 32-byte digest) from the IV, overwriting `self`; `s2` may alias `self` (see `process/blocks/blobState`).
+  public let process_blob_state_block = fromBlobState.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[Nat8]` (see `process/blocks/array`).
   public let process_blocks_from_array = fromArray.process;
   /// Run the SHA256 compression on every full 64-byte block in the input `[var Nat8]` (see `process/blocks/varArray`).
@@ -32,6 +46,10 @@ module {
   public let process_blocks_from_reader = fromReader.process;
   /// Run the SHA256 compression on a single block already loaded into the message buffer (see `process/msg_buffer`).
   public let process_block_from_msg = fromMsg.process;
+  /// Run the SHA256 compression on the all-constant final padding block for a block-aligned message, encoding only the bit length (see `process/padding`).
+  public let process_padding_block = fromPadding.process;
+  /// Hash the 32-byte digest held in `src` as a fresh message in one specialized block, overwriting `self` with `SHA256(src)`; `src` may alias `self` (see `process/fold`).
+  public let process_fold_block = fromFold.process;
 
   /// Serialize `self` as a `[Nat8]` of the requested truncation length: `28` for SHA-224 or `32` for SHA-256.
   public func toNat8Array(self : State, len : Nat) : [Nat8] {
