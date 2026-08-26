@@ -290,12 +290,6 @@ Run
 mops bench
 ```
 
-or
-
-```bash
-mops bench --replica pocket-ic
-```
-
 or look at the [benchmark on mops](https://mops.one/sha2/benchmarks).
 
 ### Performance
