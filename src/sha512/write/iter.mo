@@ -1,9 +1,12 @@
+/// Writes data from an `Iter<Nat8>` to a SHA-512 digest.
+
 import Prim "mo:prim";
 import ProcessBlock "../process_block";
 import Process "../whole_blocks/iter";
 
 module {
 
+  /// SHA-512 digest state: message buffer (16 words of 64 bits), buffer position, and hash state.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -15,6 +18,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write data read from the iterator function `data` to the digest, consuming it entirely.
   public func write(x : Digest, data : () -> ?Nat8) {
     if (x.i_msg != 0 or x.i_byte != 8) {
       write_data_to_buffer(x, data);
@@ -33,8 +37,8 @@ module {
     Process.process_blocks(x, data);
   };
 
-  // Write iter to buffer until either the block is full or the end of the blob is reached
-  // The return value refers to the interval that was written in the form [start,end)
+  /// Write data from the iterator `data` into the buffer until either the block is full or the
+  /// iterator is exhausted.
   public func write_data_to_buffer(x : Digest, data : () -> ?Nat8) {
     let msg = x.msg;
     var word = x.word;

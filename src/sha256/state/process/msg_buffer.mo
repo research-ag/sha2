@@ -1,3 +1,5 @@
+/// Processes a single filled SHA-256 message buffer into the hash state.
+
 import Prim "mo:prim";
 import K "constants";
 
@@ -7,6 +9,7 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Compress one filled 64-byte message buffer `msg` into the hash state `self`, in place.
   public func process(self : [var Nat16], msg : [var Nat16]) : () {
     let w00 = nat16To32(msg[0]) << 16 | nat16To32(msg[1]);
     let w01 = nat16To32(msg[2]) << 16 | nat16To32(msg[3]);

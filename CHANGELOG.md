@@ -1,5 +1,31 @@
 # Sha2 changelog
 
+## 1.0.0
+
+### Changed
+
+- **Breaking:** `Digest` is now a plain, directly-`stable` record instead of
+  a class. The `share()`/`unshare()` conversion methods and the
+  `DigestShared` type introduced in `0.1.0` are gone — to persist a digest
+  across upgrades, declare it `stable` directly (e.g.
+  `stable var digestState : ?Sha256.Digest = null;` in a `persistent actor`).
+  See the updated README for a full example.
+
+### Fixed
+
+- README and doc-string examples updated to match the current API: the
+  "Stable state across upgrades" example no longer references the removed
+  `share`/`unshare`/`DigestShared` API, and every `Iter<Nat8>` example now
+  type-checks (an unannotated `[72, 101, ...].vals()` was inferring
+  `Iter<Nat>` instead of `Iter<Nat8>`).
+- Fixed compiler warnings (`M0244` in several files not covered by the
+  `0.1.15` fix, plus an unused `Prim` import).
+
+### Documentation
+
+- Documentation coverage raised to 100% (`mops docs coverage`) by adding
+  doc comments to previously-undocumented internal modules.
+
 ## [0.1.15] - 2026-05-05
 
 ### Changed

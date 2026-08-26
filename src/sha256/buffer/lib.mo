@@ -52,11 +52,12 @@ module {
   };
   */
 
-  // Write chunk of input data to buffer until either the block is full or the end of the input data is reached
-  // The return value refers to the input interval that was written in the form [start,end)
-  // at: random access function for input data
-  // sz: absolute data size for random access
-  // start: start index from which to read data in
+  /// Write a chunk of input data to the buffer until either the block is full or the end of the
+  /// input data is reached. The return value refers to the input interval that was written, in
+  /// the form `[start, end)`.
+  /// `at`: random access function for input data.
+  /// `sz`: absolute data size for random access.
+  /// `start`: start index from which to read data.
   public func load_chunk(self : Buffer, at : Nat -> Nat8, sz : Nat, start : Nat) : (end : Nat) {
     if (start >= sz) return start;
     var i = start;
@@ -98,8 +99,8 @@ module {
     return i;
   };
 
-  // Write chunk of data to buffer until either the block is full or the end of the data is reached
-  // Data is taken from an iterator `next` function
+  /// Write a chunk of data to the buffer until either the block is full or the end of the data is
+  /// reached. Data is taken from an iterator `next` function.
   public func load_iter(self : Buffer, next : () -> ?Nat8) {
     let msg = self.msg;
     var i_msg = self.i_msg;

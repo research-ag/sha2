@@ -1,8 +1,11 @@
+/// Core SHA-512 compression function: processes one 128-byte block into the hash state.
+
 import K "constants";
 
 module {
   func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
 
+  /// Compress one filled 128-byte message buffer `msg` into the hash state `s`, in place.
   public func process_block_from_buffer(s : [var Nat64], msg : [var Nat64]) : () {
     // Below is an inlined and unrolled version of this code:
     // for ((i, j, k, l, m) in expansion_rounds.vals()) {

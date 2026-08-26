@@ -1,8 +1,11 @@
+/// Writes a single byte to a SHA-512 digest's message buffer.
+
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
 import ProcessBlock "../process_block";
 
 module {
+  /// SHA-512 digest state: message buffer (16 words of 64 bits), buffer position, and hash state.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -15,6 +18,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write a single byte `val` to the digest's message buffer.
   public func writeByte(x : Digest, val : Nat8) : () {
     var word = x.word;
     word := (word << 8) ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(val)));

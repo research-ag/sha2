@@ -193,7 +193,7 @@ module {
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
-  /// let iter = [72, 101, 108, 108, 111].vals();
+  /// let iter = ([72, 101, 108, 108, 111] : [Nat8]).vals();
   /// digest.writeIter(iter); // "Hello"
   /// let hash = digest.sum();
   /// ```
@@ -317,7 +317,7 @@ module {
   /// from the iterator, and returns the final hash in one step.
   ///
   /// ```motoko include=import
-  /// let data = [72, 101, 108, 108, 111].vals();
+  /// let data = ([72, 101, 108, 108, 111] : [Nat8]).vals();
   /// let hash = Sha256.fromIter(data);
   /// ```
   ///

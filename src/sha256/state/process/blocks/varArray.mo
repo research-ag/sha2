@@ -1,3 +1,5 @@
+/// Processes SHA-256 blocks read from a `[var Nat8]` array.
+
 import Prim "mo:prim";
 import K "../constants";
 
@@ -8,6 +10,8 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Process complete 64-byte blocks of the `[var Nat8]` array `data` starting at `start`,
+  /// mutating the state `self`. Returns the index up to which data was consumed.
   public func process(self : [var Nat16], data : [var Nat8], start : Nat) : Nat {
     let sz = data.size();
     var i = start;
@@ -21,7 +25,7 @@ module {
     var g = nat16To32(self[12]) << 16 | nat16To32(self[13]);
     var h = nat16To32(self[14]) << 16 | nat16To32(self[15]);
     var t = 0 : Nat32;
-    var i_max : Nat = i + ((sz - i) / 64) * 64;
+    let i_max : Nat = i + ((sz - i) / 64) * 64;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;

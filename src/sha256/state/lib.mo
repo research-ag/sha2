@@ -1,3 +1,5 @@
+/// SHA-256 hash state (8 words of 32 bits) and its block-processing entry points.
+
 import Nat "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
@@ -10,20 +12,30 @@ import fromReader "process/blocks/reader";
 import fromMsg "process/msg_buffer";
 
 module {
-  // indices 0,2,4,6,8,10,12,14 = high bytes, indices 1,3,5,7,9,11,13,15 = low bytes
+  /// SHA-256 hash state: 8 words of 32 bits, represented as 16 words of 16 bits.
+  /// Indices 0,2,4,6,8,10,12,14 hold the high bytes; indices 1,3,5,7,9,11,13,15 hold the low bytes.
   public type State = [var Nat16];
 
+  /// Overwrite the state in place with the 16 given `Nat16` words.
   public func set(self : State, vals : [Nat16]) {
     for (i in Nat.range(0, 16)) self[i] := vals[i];
   };
+  /// Create an independent copy of the state.
   public let clone = VarArray.clone;
+  /// Process complete blocks of a `Blob`, mutating the state.
   public let process_blocks_from_blob = fromBlob.process;
+  /// Process complete blocks of a `[Nat8]` array, mutating the state.
   public let process_blocks_from_array = fromArray.process;
+  /// Process complete blocks of a `[var Nat8]` array, mutating the state.
   public let process_blocks_from_vararray = fromVarArray.process;
+  /// Process complete blocks read through a positional accessor function, mutating the state.
   public let process_blocks_from_accessor = fromAccessor.process;
+  /// Process complete blocks read through a reader function, mutating the state.
   public let process_blocks_from_reader = fromReader.process;
+  /// Process a single already-filled message buffer, mutating the state.
   public let process_block_from_msg = fromMsg.process;
 
+  /// Extract the state as a `[Nat8]` array of the given digest length (28 for `sha224`, 32 for `sha256`).
   public func toNat8Array(self : State, len : Nat) : [Nat8] {
     let (d0, d1) = Prim.explodeNat16(self[0]);
     let (d2, d3) = Prim.explodeNat16(self[1]);

@@ -1,3 +1,5 @@
+/// Writes a `[Nat8]` array to a SHA-512 digest.
+
 import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
@@ -6,6 +8,7 @@ import Process "../whole_blocks/array";
 import Byte "byte";
 
 module {
+  /// SHA-512 digest state: message buffer (16 words of 64 bits), buffer position, and hash state.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -17,6 +20,7 @@ module {
     s : [var Nat64];
   };
 
+  /// Write the `[Nat8]` array `data` to the digest.
   public func write(x : Digest, data : [Nat8]) {
     let sz = data.size();
     if (sz == 0) return;

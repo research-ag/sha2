@@ -1,3 +1,5 @@
+/// Processes whole 128-byte SHA-512 blocks read from an `Iter<Nat8>`.
+
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 import K "../constants";
@@ -22,6 +24,8 @@ module {
 
   func rot(x : Nat64, y : Nat64) : Nat64 = x <>> y;
 
+  /// Process complete 128-byte blocks read from the iterator function `data`, mutating the
+  /// digest `x`. Leftover bytes that don't fill a block are kept in the digest's buffer.
   public func process_blocks(x : Digest, data : () -> ?Nat8) {
     let state = x.s;
     // load state registers

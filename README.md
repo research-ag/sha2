@@ -24,7 +24,6 @@ This allows hashing very large messages over multiple executions of the canister
 ### Links
 
 The package is published on [MOPS](https://mops.one/sha2) and [GitHub](https://github.com/research-ag/sha2).
-Please refer to the README on GitHub where it renders properly with formulas and tables.
 
 The API documentation can be found [here](https://mops.one/sha2/docs/lib) on Mops.
 
@@ -98,7 +97,7 @@ let readerLen = 100; // number of bytes to read
 let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, readerLen);
 
 // Hash from Iter<Nat8>
-let iter = [72, 101, 108, 108, 111].vals();
+let iter = ([72, 101, 108, 108, 111] : [Nat8]).vals();
 let hash7 : Blob = Sha256.fromIter(#sha256, iter);
 
 ```
@@ -200,25 +199,21 @@ For hashing very large messages across multiple message executions and even upgr
 ```motoko
 import Sha256 "mo:sha2/Sha256";
 
-actor {
-  // Declare digest as stable
-  stable var digestState : ?Sha256.DigestShared = null;
+persistent actor {
+  // Digest is a plain stable record, so it can be declared `stable`
+  // directly -- no separate share/unshare conversion is needed.
+  var digestState : ?Sha256.Digest = null;
 
   // Initialize on first call
   public func initDigest() : async () {
-    let d = Sha256.new();
-    digestState := ?d.share();
+    digestState := ?Sha256.new();
   };
 
   // Write a chunk (can be called multiple times across different messages)
   public func writeChunk(data : Blob) : async () {
     switch (digestState) {
       case null { assert false }; // Must call initDigest first
-      case (?state) {
-        let d = Sha256.unshare(state);
-        d.writeBlob(data);
-        digestState := ?d.share(); // Save updated state
-      };
+      case (?d) { d.writeBlob(data) };
     };
   };
 
@@ -226,10 +221,7 @@ actor {
   public query func peekHash() : async ?Blob {
     switch (digestState) {
       case null { null };
-      case (?state) {
-        let d = Sha256.unshare(state);
-        ?d.peekSum();
-      };
+      case (?d) { ?d.peekSum() };
     };
   };
 
@@ -237,8 +229,7 @@ actor {
   public func finalizeHash() : async ?Blob {
     switch (digestState) {
       case null { null };
-      case (?state) {
-        let d = Sha256.unshare(state);
+      case (?d) {
         let hash = d.sum();
         digestState := null; // Clear the consumed digest
         ?hash;
@@ -250,11 +241,7 @@ actor {
   public func resetDigest() : async () {
     switch (digestState) {
       case null {};
-      case (?state) {
-        let d = Sha256.unshare(state);
-        d.reset();
-        digestState := ?d.share();
-      };
+      case (?d) { d.reset() };
     };
   };
 
@@ -326,7 +313,7 @@ npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
 
 ## Copyright
 
-MR Research AG, 2023-2025
+MR Research AG, 2023-2026
 
 ## Authors
 

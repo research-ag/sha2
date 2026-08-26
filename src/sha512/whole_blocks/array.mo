@@ -1,3 +1,5 @@
+/// Processes whole 128-byte SHA-512 blocks read from a `[Nat8]` array.
+
 import Prim "mo:prim";
 import K "../constants";
 
@@ -8,6 +10,8 @@ module {
   let nat16To32 = Prim.nat16ToNat32;
   let nat8To16 = Prim.nat8ToNat16;
 
+  /// Process complete 128-byte blocks of the `[Nat8]` array `data` starting at `start`,
+  /// mutating `state`. Returns the index up to which data was consumed.
   public func process_blocks(state : [var Nat64], data : [Nat8], start : Nat) : Nat {
     let sz = data.size();
     var i = start;
@@ -21,7 +25,7 @@ module {
     var g = state[6];
     var h = state[7];
     var t = 0 : Nat64;
-    var i_max : Nat = i + ((sz - i) / 128) * 128;
+    let i_max : Nat = i + ((sz - i) / 128) * 128;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;

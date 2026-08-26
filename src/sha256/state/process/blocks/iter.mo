@@ -1,3 +1,5 @@
+/// Processes SHA-256 blocks read from an `Iter<Nat8>`.
+
 import Prim "mo:prim";
 import K "../constants";
 import { type Buffer } "../../../types";
@@ -10,6 +12,8 @@ module {
 
   func rot(x : Nat32, y : Nat32) : Nat32 = x <>> y;
 
+  /// Process complete 64-byte blocks read from the iterator function `data`,
+  /// mutating the state `self`. Leftover bytes that don't fill a block are kept in `buf`.
   public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer) {
     var blocks : Nat32 = 0;
     // load state registers

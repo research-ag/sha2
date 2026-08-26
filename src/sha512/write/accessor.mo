@@ -1,3 +1,5 @@
+/// Writes data from a positional accessor function to a SHA-512 digest.
+
 import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Prim "mo:prim";
@@ -6,6 +8,7 @@ import Process "../whole_blocks/accessor";
 import Byte "byte";
 
 module {
+  /// SHA-512 digest state: message buffer (16 words of 64 bits), buffer position, and hash state.
   public type Digest = {
     // msg buffer
     msg : [var Nat64];
@@ -17,7 +20,7 @@ module {
     s : [var Nat64];
   };
 
-  // Write `len` bytes taken from the `start` position
+  /// Write `len` bytes read from the positional accessor function `data`, starting at `start`.
   public func write(x : Digest, data : Nat -> Nat8, start : Nat, len : Nat) {
     if (len == 0) return;
     var pos = start;

@@ -1,6 +1,5 @@
 /// SHA512 digest implementation.
 
-import Prim "mo:prim";
 import Nat8 "mo:core/Nat8";
 import Nat64 "mo:core/Nat64";
 
