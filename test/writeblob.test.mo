@@ -1,5 +1,4 @@
 import Array "mo:core/Array";
-import Blob "mo:core/Blob";
 import Random "mo:core/Random";
 import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
@@ -15,8 +14,8 @@ for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
   let data = Array.tabulate<Nat8>(total, func(_) = rng.nat8());
   let reference = Sha256.fromArray(algo, data);
   for (k in ([0, 1, 3, 5, 31, 32, 33, 64, 127] : [Nat]).values()) {
-    let part1 = Blob.fromArray(Array.tabulate<Nat8>(k, func(i) = data[i]));
-    let part2 = Blob.fromArray(Array.tabulate<Nat8>(total - k, func(i) = data[k + i]));
+    let part1 = (Array.tabulate<Nat8>(k, func(i) = data[i])).toBlob();
+    let part2 = (Array.tabulate<Nat8>(total - k, func(i) = data[k + i])).toBlob();
     let d = Sha256.new(algo);
     d.writeBlob(part1); // length k; odd k leaves the buffer mid-word
     d.writeBlob(part2); // starts mid-word for odd k -> misaligned branch
@@ -31,8 +30,8 @@ for (algo in ([#sha512, #sha384, #sha512_224, #sha512_256] : [Sha512.Algorithm])
   let data = Array.tabulate<Nat8>(total, func(_) = rng.nat8());
   let reference = Sha512.fromArray(algo, data);
   for (k in ([0, 1, 7, 8, 9, 64, 127, 128, 129, 200] : [Nat]).values()) {
-    let part1 = Blob.fromArray(Array.tabulate<Nat8>(k, func(i) = data[i]));
-    let part2 = Blob.fromArray(Array.tabulate<Nat8>(total - k, func(i) = data[k + i]));
+    let part1 = (Array.tabulate<Nat8>(k, func(i) = data[i])).toBlob();
+    let part2 = (Array.tabulate<Nat8>(total - k, func(i) = data[k + i])).toBlob();
     let d = Sha512.new(algo);
     d.writeBlob(part1);
     d.writeBlob(part2);

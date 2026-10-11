@@ -24,7 +24,7 @@ module {
 
   /// Create an independent copy of the buffer.
   public func clone(self : Buffer) : Buffer = {
-    msg = VarArray.clone(self.msg);
+    msg = self.msg.clone();
     var i_msg = self.i_msg;
     var i_block = self.i_block;
     var high = self.high;

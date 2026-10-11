@@ -297,7 +297,7 @@ module {
       case (#sha256) {};
     };
     _Digest.close(self);
-    State.process_fold_block(self.state, self.state);
+    self.state.process_fold_block(self.state);
   };
 
   /// Finalize the digest as a double SHA256, i.e. `sum(sum(message))`, and

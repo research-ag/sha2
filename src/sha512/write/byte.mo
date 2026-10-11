@@ -23,7 +23,7 @@ module {
     let i_byte = x.i_byte;
     if (i_byte == 1) {
       var i_msg = x.i_msg;
-      x.msg[Nat8.toNat(i_msg)] := word;
+      x.msg[i_msg.toNat()] := word;
       x.word := 0;
       x.i_byte := 8;
       i_msg +%= 1;

@@ -10,7 +10,7 @@ import Hasher "../src/Hasher/Sha256";
 // write+sum path), which is independently tested against the SHA-256 vectors.
 let rng = Random.seed(0xbeef);
 
-func rnd32() : Blob = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8()));
+func rnd32() : Blob = (Array.tabulate<Nat8>(32, func(_) = rng.nat8())).toBlob();
 
 // Reference SHA256(x ++ y) via the general Digest path.
 func sha256Concat(x : Blob, y : Blob) : Blob {

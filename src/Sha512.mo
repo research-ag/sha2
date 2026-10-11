@@ -177,7 +177,7 @@ module {
     if (self.closed) trap("Sha512: clone of closed digest");
     {
       algo = self.algo;
-      msg = VarArray.clone(self.msg);
+      msg = self.msg.clone();
       var word = self.word;
       var i_msg = self.i_msg;
       var i_byte = self.i_byte;

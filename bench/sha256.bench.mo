@@ -1,5 +1,4 @@
 import Array "mo:core/Array";
-import Blob "mo:core/Blob";
 import List "mo:core/List";
 import Random "mo:core/Random";
 import Bench "mo:bench-helper";
@@ -50,9 +49,9 @@ module {
           cols.size(),
           func(ci) {
             let source = rowSourceArrays[ci];
-            let blob = Blob.fromArray(source);
+            let blob = source.toBlob();
             let list = List.fromArray(source);
-            let varArray = Array.toVarArray(source);
+            let varArray = source.toVarArray();
 
             switch (ri) {
               case (0) {

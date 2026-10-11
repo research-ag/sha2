@@ -7,21 +7,18 @@ keywords = [ "hash", "sha256", "sha512", "sha224", "sha384" ]
 license = "Apache-2.0"
 
 [dependencies]
-core = "2.6.0"
+core = "2.6.2"
 
 [dev-dependencies]
-bench-helper = "0.0.3"
+bench-helper = "0.0.4"
 
 [requirements]
 moc = "1.0.0"
 
 [toolchain]
-moc = "1.11.0"
-wasmtime = "44.0.3"
+moc = "2.0.0"
+wasmtime = "49.0.2"
 pocket-ic = "15.0.0"
-wasm-opt = "132"
+wasm-opt = "133"
 
 [optimize]
-
-[moc]
-args = [ "--legacy-persistence" ]

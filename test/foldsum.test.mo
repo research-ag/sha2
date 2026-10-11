@@ -5,7 +5,7 @@ import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
 let rng = Random.seed(0xf0d5);
-func bytes(n : Nat) : Blob = Blob.fromArray(Array.tabulate<Nat8>(n, func(_) = rng.nat8()));
+func bytes(n : Nat) : Blob = (Array.tabulate<Nat8>(n, func(_) = rng.nat8())).toBlob();
 
 // --- Sha256 sumDouble (sha256 only; double SHA256 traps on sha224) ---
 // (N-fold beyond double is exercised via the NFold example in

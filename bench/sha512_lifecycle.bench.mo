@@ -26,31 +26,31 @@ module {
     // Sub-block input (block size is 128 bytes) so the partial finalize rows
     // exercise padding through the buffer, and an exactly-one-block input so
     // close() hits the block-boundary fast path.
-    let input : Blob = Blob.fromArray(Array.tabulate<Nat8>(80, func(_) = rng.nat8()));
-    let block : Blob = Blob.fromArray(Array.tabulate<Nat8>(128, func(_) = rng.nat8()));
+    let input : Blob = (Array.tabulate<Nat8>(80, func(_) = rng.nat8())).toBlob();
+    let block : Blob = (Array.tabulate<Nat8>(128, func(_) = rng.nat8())).toBlob();
 
     // Pre-built hashers for the non-creation rows. Each cell runs exactly
     // once per measurement, so a single finalize per hasher is safe.
     let resetLocal = Sha512.new();
-    Sha512.writeBlob(resetLocal, input);
+    resetLocal.writeBlob(input);
     let sumLocal = Sha512.new();
-    Sha512.writeBlob(sumLocal, input);
+    sumLocal.writeBlob(input);
     let closeLocal = Sha512.new();
-    Sha512.writeBlob(closeLocal, input);
+    closeLocal.writeBlob(input);
     let closeBlockLocal = Sha512.new();
-    Sha512.writeBlob(closeBlockLocal, block);
+    closeBlockLocal.writeBlob(block);
 
     let routines : [[() -> ()]] = [
       // new()
       [func() = ignore Sha512.new()],
       // reset()
-      [func() = Sha512.reset(resetLocal)],
+      [func() = resetLocal.reset()],
       // sum()
-      [func() = ignore Sha512.sum(sumLocal)],
+      [func() = ignore sumLocal.sum()],
       // close() partial: sub-block message, padding via the buffer
-      [func() = Sha512.close(closeLocal)],
+      [func() = closeLocal.close()],
       // close() @block: block-aligned message, padding via the fast path
-      [func() = Sha512.close(closeBlockLocal)],
+      [func() = closeBlockLocal.close()],
     ];
 
     Bench.V1(schema, func(ri : Nat, ci : Nat) = routines[ri][ci]());

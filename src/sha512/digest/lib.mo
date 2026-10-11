@@ -24,7 +24,7 @@ module {
     assert (self.i_byte == 8);
     let msg = self.msg;
     var i_msg = self.i_msg;
-    msg[Nat8.toNat(i_msg)] := val;
+    msg[i_msg.toNat()] := val;
     i_msg +%= 1;
     if (i_msg == 16) {
       ProcessBlock.process_block_from_buffer(self.s, msg);
@@ -78,7 +78,7 @@ module {
     // 16-word buffer fill (which would also box every Nat64 written).
     if (self.i_msg == 0 and self.i_byte == 8) {
       let n_bits : Nat64 = (self.i_block << 7) << 3; // i_block * 128 bytes * 8
-      Padding.process(self.s, n_bits);
+      self.s.process(n_bits);
       return;
     };
     // calculate padding
@@ -88,7 +88,7 @@ module {
     var p : Nat8 = if (t < 112) (112 -% t) else (240 -% t);
     // n_bits = length of message in bits
     // Note: This implementation only handles messages < 2^64 bits
-    let n_bits : Nat64 = ((self.i_block << 7) +% Nat64.fromIntWrap(Nat8.toNat(t))) << 3;
+    let n_bits : Nat64 = ((self.i_block << 7) +% Nat64.fromIntWrap(t.toNat())) << 3;
 
     // write 1-7 padding bytes
     Byte.writeByte(self, 0x80);

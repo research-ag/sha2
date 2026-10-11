@@ -46,7 +46,7 @@ module {
     let msg = x.msg;
     while (i < i_max) {
       // prettier-ignore
-      msg[Nat8.toNat(i_msg)] :=
+      msg[i_msg.toNat()] :=
       Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 56
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 48
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 40

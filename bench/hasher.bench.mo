@@ -34,7 +34,7 @@ module {
     };
 
     let rng : Random.Random = Random.seed(0x4861_7368_6572_2121);
-    func b32() : Blob = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8()));
+    func b32() : Blob = (Array.tabulate<Nat8>(32, func(_) = rng.nat8())).toBlob();
 
     let a = b32();
     let b = b32();

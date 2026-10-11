@@ -29,10 +29,10 @@ jobs:
           $(mops toolchain bin moc) --version
 
       - name: Install dependencies
-        run: mops install
+        run: mops install --locked
 
       - name: Run tests
-        run: mops test
+        run: mops test --locked
 
   examples:
     name: Examples
@@ -49,11 +49,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: examples
-        run: mops install
+        run: mops install --locked
 
       - name: Verify examples
         working-directory: examples
-        run: mops test verify
+        run: mops test --locked verify
 
   bench:
     name: Benchmarks
@@ -71,7 +71,7 @@ jobs:
         uses: caffeinelabs/setup-mops@v1
 
       - name: Install dependencies
-        run: mops install
+        run: mops install --locked
 
       - name: Make sure pocket-ic is installed
         run: mops toolchain bin pocket-ic
@@ -80,7 +80,7 @@ jobs:
         run: mops toolchain bin wasm-opt
 
       - name: Run benchmarks
-        run: mops bench
+        run: mops bench --locked
 
   fmt:
     name: Formatting Check

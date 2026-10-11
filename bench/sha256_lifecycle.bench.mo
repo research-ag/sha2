@@ -32,50 +32,50 @@ module {
     // close() hits the block-boundary fast path. The sum()/sumDouble()
     // partial-vs-@block gaps are entirely close()'s padding path — readSum
     // and the sumDouble fold are length-independent.
-    let input : Blob = Blob.fromArray(Array.tabulate<Nat8>(40, func(_) = rng.nat8()));
-    let block : Blob = Blob.fromArray(Array.tabulate<Nat8>(64, func(_) = rng.nat8()));
+    let input : Blob = (Array.tabulate<Nat8>(40, func(_) = rng.nat8())).toBlob();
+    let block : Blob = (Array.tabulate<Nat8>(64, func(_) = rng.nat8())).toBlob();
 
     // Pre-built hashers for the non-creation rows. Each cell runs exactly once
     // per measurement, so a single finalize per hasher is safe. 'partial' rows
     // get the 40-byte sub-block message, '@block' rows the 64-byte one.
     let resetLocal = Sha256.new();
-    Sha256.writeBlob(resetLocal, input);
+    resetLocal.writeBlob(input);
     let closeLocal = Sha256.new();
-    Sha256.writeBlob(closeLocal, input);
+    closeLocal.writeBlob(input);
     let closeBlockLocal = Sha256.new();
-    Sha256.writeBlob(closeBlockLocal, block);
+    closeBlockLocal.writeBlob(block);
     // readSum() reads a closed digest, so this one is pre-closed.
     let readSumLocal = Sha256.new();
-    Sha256.writeBlob(readSumLocal, input);
-    Sha256.close(readSumLocal);
+    readSumLocal.writeBlob(input);
+    readSumLocal.close();
     let sumLocal = Sha256.new();
-    Sha256.writeBlob(sumLocal, input);
+    sumLocal.writeBlob(input);
     let sumBlockLocal = Sha256.new();
-    Sha256.writeBlob(sumBlockLocal, block);
+    sumBlockLocal.writeBlob(block);
     let dshaLocal = Sha256.new();
-    Sha256.writeBlob(dshaLocal, input);
+    dshaLocal.writeBlob(input);
     let dshaBlockLocal = Sha256.new();
-    Sha256.writeBlob(dshaBlockLocal, block);
+    dshaBlockLocal.writeBlob(block);
 
     let routines : [[() -> ()]] = [
       // new()
       [func() = ignore Sha256.new()],
       // reset()
-      [func() = Sha256.reset(resetLocal)],
+      [func() = resetLocal.reset()],
       // close() partial: sub-block message, padding via the buffer
-      [func() = Sha256.close(closeLocal)],
+      [func() = closeLocal.close()],
       // close() @block: block-aligned message, padding via the fast path
-      [func() = Sha256.close(closeBlockLocal)],
+      [func() = closeBlockLocal.close()],
       // readSum(): read a closed digest's 32-byte state out as a Blob
-      [func() = ignore Sha256.readSum(readSumLocal)],
+      [func() = ignore readSumLocal.readSum()],
       // sum() partial: close() partial + readSum()
-      [func() = ignore Sha256.sum(sumLocal)],
+      [func() = ignore sumLocal.sum()],
       // sum() @block: close() @block + readSum()
-      [func() = ignore Sha256.sum(sumBlockLocal)],
+      [func() = ignore sumBlockLocal.sum()],
       // sumDouble() partial: close() partial + re-hash + readSum()
-      [func() = ignore Sha256.sumDouble(dshaLocal)],
+      [func() = ignore dshaLocal.sumDouble()],
       // sumDouble() @block: close() @block + re-hash + readSum()
-      [func() = ignore Sha256.sumDouble(dshaBlockLocal)],
+      [func() = ignore dshaBlockLocal.sumDouble()],
     ];
 
     Bench.V1(schema, func(ri : Nat, ci : Nat) = routines[ri][ci]());

@@ -121,7 +121,7 @@ module {
         // Carry: while the top peak matches the level of the one below it, merge.
         while (i > 0 and level[i - 1] == level[i]) {
           hasher[i - 1].combineState(hasher[i - 1], hasher[i]); // lower := SHA256(lower ++ top)
-          level[i - 1] += 1; // it rose a level
+          level[(i - 1 : Nat)] += 1; // it rose a level
           i -= 1; // pop the top
         };
         self.i := i + 1;

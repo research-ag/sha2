@@ -33,7 +33,7 @@ module {
     let rng : Random.Random = Random.seed(0xa11_0c_a11_0c);
     let n = 256; // 2^8 leaves
     let levels = 8;
-    let leaves = Array.tabulate<Blob>(n, func(_) = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8())));
+    let leaves = Array.tabulate<Blob>(n, func(_) = (Array.tabulate<Nat8>(32, func(_) = rng.nat8())).toBlob());
     // One pool, reused across every cell and every repetition.
     let hasher = VarArray.tabulate<Hasher.Hasher>(levels + 1, func(_) { Hasher.new() });
     let carryCell = VarArray.tabulate<Hasher.Hasher>(1, func(_) { Hasher.new() });

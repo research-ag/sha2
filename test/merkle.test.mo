@@ -44,17 +44,17 @@ func mmrRoot256(leaves : [Blob], levels : Nat) : Blob {
     while (i > 0 and level[i - 1] == level[i]) {
       hasher[i - 1].combineState(hasher[i - 1], hasher[i]);
       hasher[i - 1].hashState(hasher[i - 1]); // -> double-SHA
-      level[i - 1] += 1;
+      level[(i - 1 : Nat)] += 1;
       i -= 1;
     };
     i += 1;
     p += 2;
   };
-  Hasher.readSum(hasher[0]);
+  hasher[0].readSum();
 };
 
 for (k in ([1, 2, 3, 6] : [Nat]).values()) {
   let count = 2 ** k;
-  let leaves = Array.tabulate<Blob>(count, func(_) = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8())));
+  let leaves = Array.tabulate<Blob>(count, func(_) = (Array.tabulate<Nat8>(32, func(_) = rng.nat8())).toBlob());
   assert (mmrRoot256(leaves, k) == refRoot256(leaves));
 };

@@ -122,7 +122,7 @@ module {
     // Carry: while the top peak matches the level of the one below it, merge.
     while (i > 0 and level[i - 1] == level[i]) {
       hasher[i - 1].combineState(hasher[i - 1], hasher[i]); // lower := SHA256(lower ++ top)
-      level[i - 1] += 1; // it rose a level
+      level[(i - 1 : Nat)] += 1; // it rose a level
       i -= 1; // pop the top
     };
     self.i := i + 1;
@@ -147,7 +147,7 @@ module {
     // components straight into it, then fold the remaining peaks on.
     let acc = hasher[i];
     acc.combineState(hasher[i - 2], hasher[i - 1]);
-    var j = i - 2;
+    var j : Nat = i - 2;
     while (j > 0) {
       j -= 1;
       acc.combineState(hasher[j], acc);

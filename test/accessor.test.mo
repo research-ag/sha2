@@ -1,5 +1,4 @@
 import Array "mo:core/Array";
-import Blob "mo:core/Blob";
 import Random "mo:core/Random";
 import Nat "mo:core/Nat";
 import Nat8 "mo:core/Nat8";

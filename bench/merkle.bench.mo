@@ -37,7 +37,7 @@ module {
     };
 
     let rng : Random.Random = Random.seed(0x6d6b_6c65_6d6b_6c65);
-    func b32() : Blob = Blob.fromArray(Array.tabulate<Nat8>(32, func(_) = rng.nat8()));
+    func b32() : Blob = (Array.tabulate<Nat8>(32, func(_) = rng.nat8())).toBlob();
 
     let leavesByRow = Array.tabulate<[Blob]>(
       rows.size(),
@@ -47,9 +47,8 @@ module {
     // mutates a leaf), so both columns hash identical content.
     let stateLeavesByRow = Array.tabulate<[Hasher.Hasher]>(
       rows.size(),
-      func(ri) = Array.map<Blob, Hasher.Hasher>(
-        leavesByRow[ri],
-        func(b) { let h = Hasher.new(); h.loadBlob32(b); h },
+      func(ri) = leavesByRow[ri].map<Blob, Hasher.Hasher>(
+        func(b) { let h = Hasher.new(); h.loadBlob32(b); h }
       ),
     );
 

@@ -32,11 +32,11 @@ module {
           if (double) carry.hashState(carry);
           var k : Nat32 = 1; // height-1 node; carry up the state slots
           while (((count >> k) & 1) == 1) {
-            carry.combineState(hasher[Nat32.toNat(k)], carry);
+            carry.combineState(hasher[k.toNat()], carry);
             if (double) carry.hashState(carry);
             k += 1;
           };
-          let kk = Nat32.toNat(k);
+          let kk = k.toNat();
           let tmp = hasher[kk];
           hasher[kk] := carry;
           carry := tmp;
@@ -51,7 +51,7 @@ module {
   /// `buildBlob` plus the root readout — the only allocation.
   public func merkleRootBlob(leaves : [Blob], hasher : [var Hasher.Hasher], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
     let l = buildBlob(leaves, hasher, carryCell, double);
-    Hasher.readSum(hasher[l]);
+    hasher[l].readSum();
   };
 
   /// Counter build over STATE leaves (32-byte hashes already in Hashers) —
@@ -76,11 +76,11 @@ module {
         if (double) carry.hashState(carry);
         var k : Nat32 = 1;
         while (((count >> k) & 1) == 1) {
-          carry.combineState(hasher[Nat32.toNat(k)], carry);
+          carry.combineState(hasher[k.toNat()], carry);
           if (double) carry.hashState(carry);
           k += 1;
         };
-        let kk = Nat32.toNat(k);
+        let kk = k.toNat();
         let tmp = hasher[kk];
         hasher[kk] := carry;
         carry := tmp;
@@ -94,6 +94,6 @@ module {
   /// `buildState` plus the root readout — the only allocation.
   public func merkleRootState(leaves : [Hasher.Hasher], hasher : [var Hasher.Hasher], carryCell : [var Hasher.Hasher], double : Bool) : Blob {
     let l = buildState(leaves, hasher, carryCell, double);
-    Hasher.readSum(hasher[l]);
+    hasher[l].readSum();
   };
 };
