@@ -340,7 +340,8 @@ This was mainly motivated by reducing the heap allocations but it also reduced t
 To format the code, run:
 
 ```bash
-npx -y prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+npm install --no-save prettier prettier-plugin-motoko
+npx prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
 ```
 
 ## Copyright
