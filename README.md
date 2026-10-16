@@ -100,7 +100,7 @@ let readerLen = 100; // number of bytes to read
 let hash6 : Blob = Sha512.fromReader(#sha512_256, nextByte, readerLen);
 
 // Hash from Iter<Nat8>
-let iter = [72, 101, 108, 108, 111].vals();
+let iter = ([72, 101, 108, 108, 111] : [Nat8]).values();
 let hash7 : Blob = Sha256.fromIter(#sha256, iter);
 
 ```
@@ -109,6 +109,8 @@ To hash a `Text`, UTF-8 encode it into a `Blob` first:
 
 ```motoko
 // Hash from Text
+import Text "mo:core/Text";
+
 let text = "Hello, World!";
 let hash8 : Blob = Sha256.fromBlob(text.encodeUtf8());
 
@@ -210,8 +212,8 @@ A `Digest` is a static record (no classes, no function fields), so it is a stabl
 ```motoko
 import Sha256 "mo:sha2/Sha256";
 
-persistent actor {
-  // In a persistent actor all declarations are stable by default, and
+actor {
+  // In an actor all declarations are stable by default, and
   // Digest is a stable type — the digest state survives upgrades.
   let digest = Sha256.new();
 
