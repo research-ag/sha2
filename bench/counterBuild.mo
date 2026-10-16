@@ -13,8 +13,9 @@ module {
   /// Counter build over 32-byte BLOB leaves — the full delay: one leaf waits
   /// as a pending ?Blob and each pair is fused with combineBlob32 straight
   /// from the input (no per-leaf loadBlob32); heights >= 1 carry as states.
-  /// Power-of-two count. Leaves the root in `hasher[l]` and returns `l`
-  /// (= log2 n); does NOT read it out.
+  /// Power-of-two count of at least 2: a single leaf stays pending and is
+  /// never written to `hasher[0]`. Leaves the root in `hasher[l]` and returns
+  /// `l` (= log2 n); does NOT read it out.
   public func buildBlob(leaves : [Blob], hasher : [var Hasher.Hasher], carryCell : [var Hasher.Hasher], double : Bool) : Nat {
     let n = leaves.size();
     var l = 0;
