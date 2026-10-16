@@ -60,7 +60,7 @@ import Sha256 "mo:sha2/Sha256";
 import CounterBase "CounterBase";
 import CounterStateBase "CounterStateBase";
 import Array "mo:core/Array";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 import Runtime "mo:core/Runtime";
 // VarArray is needed for dot notation on the witness array (w.sliceToArray).
 import VarArray "mo:core/VarArray";
@@ -73,9 +73,9 @@ module {
   func assemble(
     w : [var Blob],
     hasher : [var Hasher.Hasher],
-    count : Nat32,
+    count : Nat64,
     acc : Hasher.Hasher,
-    kStart : Nat32,
+    kStart : Nat64,
     kTop : Nat,
   ) : [Blob] {
     var k = kStart;
@@ -106,9 +106,9 @@ module {
     let count = self.count;
     assert count >= 1;
     if (count == 1) return []; // the lone txid is its own root
-    let kTop = (31 - Nat32.bitcountLeadingZero(count)).toNat(); // floor(log2 count), the highest peak's height
+    let kTop = (63 - Nat64.bitcountLeadingZero(count)).toNat(); // floor(log2 count), the highest peak's height
     let acc = hasher[0]; // free: the height-0 leaf is the pending Blob
-    var k : Nat32 = 1;
+    var k : Nat64 = 1;
     switch (self.pending) {
       case (?b) {
         // The pending txid is the lowest component — Bitcoin's odd node at
@@ -120,7 +120,7 @@ module {
         while (((count >> k) & 1) == 0) { k += 1 };
         // A single peak: the whole path is the left spine — every sibling
         // was captured during the build.
-        if (Nat32.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);
+        if (Nat64.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);
         // The lowest peak doubles — its level's node count is odd.
         let k0 = k.toNat();
         acc.combineState(hasher[k0], hasher[k0]);
@@ -143,9 +143,9 @@ module {
     // A single component — the lone txid (count == 1) or one peak: the whole
     // path is the left spine, captured during the build (empty for a lone
     // txid, which is its own root).
-    var k = Nat32.bitcountTrailingZero(count);
-    let kTop = (31 - Nat32.bitcountLeadingZero(count)).toNat(); // floor(log2 count)
-    if (Nat32.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);
+    var k = Nat64.bitcountTrailingZero(count);
+    let kTop = (63 - Nat64.bitcountLeadingZero(count)).toNat(); // floor(log2 count)
+    if (Nat64.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);
     let acc = hasher[hasher.size() - 1]; // the top slot — free below a full power of two
     // The lowest component doubles — its level's node count is odd.
     let k0 = k.toNat();

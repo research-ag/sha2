@@ -56,7 +56,7 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterStateBase";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 
 module {
   /// The MMR state — see `CounterStateBase.mo`, which holds the building
@@ -86,9 +86,9 @@ module {
     assert count >= 1;
     // A single component (a lone parked leaf, or one peak) is the root
     // outright — leave it untouched.
-    var k : Nat32 = 0;
+    var k : Nat64 = 0;
     while (((count >> k) & 1) == 0) { k += 1 };
-    if (Nat32.bitcountNonZero(count) == 1) {
+    if (Nat64.bitcountNonZero(count) == 1) {
       return hasher[k.toNat()].readSum();
     };
     // The top slot is free — its bit could only be set at the full power of

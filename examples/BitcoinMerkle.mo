@@ -67,7 +67,7 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterBase";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 
 module {
   /// The MMR state — see `CounterBase.mo`, which holds the building machinery
@@ -96,7 +96,7 @@ module {
     let count = self.count;
     assert count >= 1;
     let acc = hasher[0];
-    var k : Nat32 = 1;
+    var k : Nat64 = 1;
     switch (self.pending) {
       case (?b) {
         // count == 1: by Bitcoin's convention the root is the txid itself —
@@ -112,7 +112,7 @@ module {
         // A single peak (power-of-two count) is the root outright — leave it
         // untouched.
         while (((count >> k) & 1) == 0) { k += 1 };
-        if (Nat32.bitcountNonZero(count) == 1) {
+        if (Nat64.bitcountNonZero(count) == 1) {
           return hasher[k.toNat()].readSum();
         };
         // The lowest peak doubles — into the accumulator: its level's node

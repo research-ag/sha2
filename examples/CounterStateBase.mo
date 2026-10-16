@@ -15,7 +15,7 @@
 /// extraction and the verification.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 import Sha256 "mo:sha2/Sha256";
 import VarArray "mo:core/VarArray";
 
@@ -29,7 +29,7 @@ module {
   /// — it can be declared `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
-    var count : Nat32;
+    var count : Nat64;
     d : Sha256.Digest;
     wit : ?[var Blob];
   };
@@ -101,7 +101,7 @@ module {
     if (double) hasher[0].hashState(hasher[0]);
     // Carry: the rising node climbs the slots — the height-(k+1) node is
     // built in slot k by merging the peak there with the node from below.
-    var k : Nat32 = 1;
+    var k : Nat64 = 1;
     while (((self.count >> k) & 1) == 1) {
       let kk = k.toNat();
       // Witness hook 2 — first merge at height k (count == 2^(k+1) - 1): the

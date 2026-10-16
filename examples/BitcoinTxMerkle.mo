@@ -67,7 +67,7 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterStateBase";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 
 module {
   /// The MMR state — see `CounterStateBase.mo`, which holds the building
@@ -100,8 +100,8 @@ module {
     assert count >= 1;
     // A single component is the root outright: the lone txid (count == 1,
     // slot 0) or one peak (power-of-two count) — leave it untouched.
-    var k = Nat32.bitcountTrailingZero(count);
-    if (Nat32.bitcountNonZero(count) == 1) {
+    var k = Nat64.bitcountTrailingZero(count);
+    if (Nat64.bitcountNonZero(count) == 1) {
       return hasher[k.toNat()].readSum();
     };
     // The top slot is free — its bit could only be set at the full power of

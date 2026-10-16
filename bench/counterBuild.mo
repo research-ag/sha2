@@ -6,7 +6,7 @@
 /// reuse it across measurements, and the `double` flag selects single- vs
 /// double-SHA nodes.
 
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 import Hasher "../src/Hasher/Sha256";
 
 module {
@@ -21,7 +21,7 @@ module {
     var l = 0;
     var pow = 1;
     while (pow < n) { pow *= 2; l += 1 };
-    var count : Nat32 = 0; // bit 0 = "a leaf is pending", bit k>=1 = slot occupancy
+    var count : Nat64 = 0; // bit 0 = "a leaf is pending", bit k>=1 = slot occupancy
     var carry = carryCell[0];
     var pending : ?Blob = null; // the height-0 peak, held as a Blob (not a slot)
     for (leaf in leaves.values()) {
@@ -31,7 +31,7 @@ module {
           pending := null;
           carry.combineBlob32(leaf0, leaf); // fuse the two leaf Blobs (no loadBlob32)
           if (double) carry.hashState(carry);
-          var k : Nat32 = 1; // height-1 node; carry up the state slots
+          var k : Nat64 = 1; // height-1 node; carry up the state slots
           while (((count >> k) & 1) == 1) {
             carry.combineState(hasher[k.toNat()], carry);
             if (double) carry.hashState(carry);
@@ -65,7 +65,7 @@ module {
     var l = 0;
     var pow = 1;
     while (pow < n) { pow *= 2; l += 1 };
-    var count : Nat32 = 0;
+    var count : Nat64 = 0;
     var carry = carryCell[0];
     for (leaf in leaves.values()) {
       if ((count & 1) == 0) {
@@ -75,7 +75,7 @@ module {
         // height-0 occupied: combine the leaf directly from the input (no copy)
         carry.combineState(hasher[0], leaf);
         if (double) carry.hashState(carry);
-        var k : Nat32 = 1;
+        var k : Nat64 = 1;
         while (((count >> k) & 1) == 1) {
           carry.combineState(hasher[k.toNat()], carry);
           if (double) carry.hashState(carry);

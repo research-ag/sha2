@@ -60,7 +60,7 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterBase";
-import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
 
 module {
   /// The MMR state — see `CounterBase.mo`, which holds the building machinery
@@ -88,7 +88,7 @@ module {
     assert count >= 1;
     let l = hasher.size() - 1 : Nat;
     let acc = hasher[0];
-    var k : Nat32 = 1;
+    var k : Nat64 = 1;
     switch (self.pending) {
       case (?b) {
         // count == 1: the lone leaf is its own root — enforce the same 32-byte
@@ -100,7 +100,7 @@ module {
       case (null) {
         // A single peak is the root outright — leave it untouched.
         while (((count >> k) & 1) == 0) { k += 1 };
-        if (Nat32.bitcountNonZero(count) == 1) {
+        if (Nat64.bitcountNonZero(count) == 1) {
           return hasher[k.toNat()].readSum();
         };
         // Fuse the two lowest peaks straight into the accumulator.

@@ -15,7 +15,6 @@ Both use about `log2(n)` `Hasher`s for a tree with `n` leaves, roughly one for e
 The `Hasher`s store the current peaks at different levels of the MMR.
 When two peaks are merged then one `Hasher` holds the new higher peak and the other `Hasher` becomes free again.
 The examples assume that the tree depth is known in advance and pre-allocate the required number of `Hasher`s.
-The counter examples (3 to 7) count leaves in a `Nat32` and trap at 2^32 leaves; the stack examples (1 and 2) have no such limit.
 It is of course also possible to dynamically allocate more `Hasher`s as needed, but this was not in scope for the examples.
 The only allocations made by the code in the examples are the creation of the engines — the `Hasher`s, plus one reused `Digest` in the message-fed examples — and the final root hash Blob.
 
