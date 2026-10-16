@@ -10,7 +10,8 @@ The examples all build an MMR first and then "bag" the MMR peaks to obtain a sin
 
 The examples are designed to produce minimal allocations.
 `Hasher`s are used both to hash and to store intermediate hashes.
-Both algorithms use `log2(n)` `Hasher`s for a tree with `n` leaves, roughly one for each depth-level of the tree; the difference between the two is marginal (the exact formulas are given below the table).
+The examples organize their `Hasher`s in one of two ways, as a stack of peaks (Examples 1 and 2) or as an array indexed by a binary leaf counter (Examples 3 to 7).
+Both use about `log2(n)` `Hasher`s for a tree with `n` leaves, roughly one for each depth-level of the tree; the difference between the two is marginal (the exact formulas are given below the table).
 The `Hasher`s store the current peaks at different levels of the MMR.
 When two peaks are merged then one `Hasher` holds the new higher peak and the other `Hasher` becomes free again.
 The examples assume that the tree depth is known in advance and pre-allocate the required number of `Hasher`s.
