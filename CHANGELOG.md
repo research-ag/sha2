@@ -10,6 +10,7 @@
 - Replace precondition `assert`s with diagnostic trap messages (e.g. "Sha256: write to closed digest", "Hasher: hashBlob32 expects a 32-byte blob, got N bytes"); same trapping behavior, better error messages
 - Widen the Sha256 block counter to `Nat64` — removes a silent wrong-hash wraparound for cumulative inputs ≥ 256 GiB per digest (theoretical; costs ~10 instructions per hash)
 - Skip the block-processing call for sub-block writes in `writeArray`/`writeVarArray`/`writeAccessor`/`writeReader` (~670 fewer instructions per short write, ~5 fewer per block for accessor/reader on long inputs)
+- Document the message length limit of the SHA-512 family: shorter than 2^64 bits (the standard allows 2^128); a longer message gives a wrong hash without trapping
 
 ## 0.2.5
 
