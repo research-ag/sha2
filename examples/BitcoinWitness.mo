@@ -167,12 +167,17 @@ module {
     h.readSum();
   };
 
+  // Every witness element must be a 32-byte hash, or `foldUp` would trap.
+  func wellFormed(witness : [Blob]) : Bool = witness.all(func(sib : Blob) : Bool = sib.size() == 32);
+
   /// The RECEIVER side: verify a coinbase inclusion proof against the one
   /// 32-byte `root` the receiver holds, given the coinbase's `txid0` and the
   /// `witness` sent by the supplier. An empty witness asserts a
   /// single-transaction block: the txid must BE the root. Stateless — needs
-  /// no `Mmr`; allocates one hasher and the folded root.
+  /// no `Mmr`; allocates one hasher and the folded root. A malformed proof (a
+  /// `txid0` or witness element that is not 32 bytes) returns `false`.
   public func verifyTxid(txid0 : Blob, witness : [Blob], root : Blob) : Bool {
+    if (txid0.size() != 32 or not wellFormed(witness)) return false;
     let h = Hasher.new();
     h.loadBlob32(txid0);
     foldUp(h, witness) == root;
@@ -180,8 +185,11 @@ module {
 
   /// The same, but from the RAW coinbase transaction: the receiver computes
   /// the txid itself — the realistic SPV/mining check, since the coinbase's
-  /// CONTENT (height, payout, commitments) is what the proof is about.
+  /// CONTENT (height, payout, commitments) is what the proof is about. A
+  /// witness element that is not 32 bytes returns `false`; `tx0` may have any
+  /// length.
   public func verifyTx(tx0 : Blob, witness : [Blob], root : Blob) : Bool {
+    if (not wellFormed(witness)) return false;
     let d = Sha256.new();
     d.writeBlob(tx0);
     d.close();

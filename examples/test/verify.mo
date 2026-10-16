@@ -240,6 +240,9 @@ for (n in ns.values()) {
   // ... and reject a wrong coinbase or a wrong root.
   if (n >= 2) assert (not BitcoinWitness.verifyTxid(txids[1], w, root));
   assert (not BitcoinWitness.verifyTxid(txids[0], w, bytes(32)));
+  // A malformed proof is rejected, not trapped on.
+  assert (not BitcoinWitness.verifyTxid(bytes(31), w, root));
+  if (n >= 2) assert (not BitcoinWitness.verifyTxid(txids[0], Array.tabulate<Blob>(w.size(), func(j) = if (j == 0) bytes(33) else w[j]), root));
 };
 // Raw-transaction trees (Example 6 with capture on), used incrementally: the
 // witness must verify at both counts — the captured spine siblings stay
@@ -260,6 +263,7 @@ do {
   // witness cross the wire.
   assert (BitcoinWitness.verifyTx(txs[0], w, BitcoinTxMerkle.root(mmr)));
   assert (not BitcoinWitness.verifyTx(txs[1], w, BitcoinTxMerkle.root(mmr)));
+  assert (not BitcoinWitness.verifyTx(txs[0], Array.tabulate<Blob>(w.size(), func(j) = if (j == 0) bytes(16) else w[j]), BitcoinTxMerkle.root(mmr)));
 };
 
 // --- NFold against manual repeated fromBlob ---
