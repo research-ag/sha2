@@ -335,6 +335,16 @@ But the heap allocation does not increase with the message length.
 This is true for the Sha256 and Sha512 engines.
 It is also true for all different writer functions `writeBlob, writeArray, writeVarArray, writeReader, writeAccessor, writeIter`.
 
+### Benchmark history
+
+From 0.2.5 to 0.3.0 the benchmark numbers changed because the measurement setup changed, not the hashing code.
+0.2.5 was measured with moc 1.10.0 under legacy persistence (32-bit heap, copying GC) and without wasm-opt; 0.3.0 with moc 2.0.0 (64-bit heap, incremental GC) and wasm-opt.
+Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same for hashing with Sha256 and Sha512, for all input types and the whole `Digest` lifecycle (within 0.2%; some short writes are up to 4% faster).
+
+- Instructions: +9% to +35% for Sha256 hashing, −6% to +23% for Sha512 hashing. Creating a digest with `new()` costs about 3× as much: each heap allocation costs about 130 instructions more with the incremental GC.
+- Heap: the Heap table now shows what each cell allocates (0.2.5 reported its allocation in the Garbage Collection table). Allocations are about twice as large: words and pointers take 8 bytes on the 64-bit heap, and the incremental GC adds a forwarding pointer to every object.
+- The allocation-free Merkle build is 40% faster than in 0.2.5, because it now uses the `Hasher` engine.
+
 ## Implementation notes
 
 The round loops are unrolled.
