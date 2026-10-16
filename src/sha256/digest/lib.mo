@@ -128,7 +128,7 @@ module {
     // must have buf.i_msg == 0 and buf.high == true here
     // continue to try to read entire blocks at once from the iterator
 
-    state.process(data, buf);
+    state.process(data, buf); // _ProcessMsg.process (state/process/blocks/iter.mo)
   };
 
   /// Write SHA256 padding to the digest.

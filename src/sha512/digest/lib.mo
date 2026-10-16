@@ -78,7 +78,7 @@ module {
     // 16-word buffer fill (which would also box every Nat64 written).
     if (self.i_msg == 0 and self.i_byte == 8) {
       let n_bits : Nat64 = (self.i_block << 7) << 3; // i_block * 128 bytes * 8
-      self.s.process(n_bits);
+      self.s.process(n_bits); // Padding.process (sha512/padding.mo)
       return;
     };
     // calculate padding
