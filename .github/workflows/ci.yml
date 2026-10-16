@@ -62,6 +62,10 @@ jobs:
         working-directory: examples
         run: mops test --locked verify
 
+      - name: Check examples are allocation-free
+        working-directory: examples
+        run: mops test --locked allocation
+
   bench:
     name: Benchmarks
     runs-on: ubuntu-22.04
