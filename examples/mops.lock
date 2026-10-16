@@ -1,15 +1,15 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "206fcd948906cccdb3987de35018bfda20ad6697e205bba8d2214e830ffc31f2",
+  "mopsTomlDepsHash": "0cd8faf7b680ee7b12eaa72627d33623ae38719aa82bd051f1dc000be9c8c813",
   "localDepsHash": "ec8ea8359c38adf6385bea81699e06aa0f3123285ccd3a42eb490fccd8572efc",
   "deps": {
     "core": "2.6.2",
-    "prng": "0.2.0",
+    "prng": "0.3.1",
     "sha2": "../src"
   },
   "graph": {
     "core@2.6.2": {},
-    "prng@0.2.0": {}
+    "prng@0.3.1": {}
   },
   "hashes": {
     "core@2.6.2": {
@@ -71,15 +71,15 @@
       "core@2.6.2/src/pure/RealTimeQueue.mo": "1a80e071b0282c608ebaa26544dea6bd747915c8023d86b7da7614febf23c7a5",
       "core@2.6.2/src/pure/Set.mo": "a5317cfdf0b4aeaa19008d4d5dc3dc744cb631fc4de0d43f2d18360e56707e0a"
     },
-    "prng@0.2.0": {
-      "prng@0.2.0/LICENSE": "652886b75c8039f29c63219360acac1493efeeb370299e9cf48e447c94253f2b",
-      "prng@0.2.0/NOTICE": "ea56023d730b4adf25e49affaa29a1233b877373bdd79392e7e6badc70cb2034",
-      "prng@0.2.0/README.md": "6852d9ab82d9a9c7b2ca49a384545a7f02a49292b4d0c39e73cc82d97d5abcfd",
-      "prng@0.2.0/mops.toml": "86f6a689505aae09a73b2bff1c5398c58f5a9749c8590d8904f35e8f944ac8bc",
-      "prng@0.2.0/src/SFC32.mo": "244b84b2c8597312d1616c797e1d5f0fc4335f6ab8d3b4a228d653674b2e7416",
-      "prng@0.2.0/src/SFC64.mo": "cd6dbc27f6dcc77bf8a4f094716c5a9eb04e92bc746fd3095b4bccda5e902840",
-      "prng@0.2.0/src/Seiran128.mo": "1c0dee86931f53edae6dfa642c4334ab51481a2c861cfdf804bd9b92beb3e727",
-      "prng@0.2.0/src/lib.mo": "dad9ce9307b136cfe76e6abba1349bf3be6aa99b9c3ad73206aea65b55bcd4a2"
+    "prng@0.3.1": {
+      "prng@0.3.1/LICENSE": "652886b75c8039f29c63219360acac1493efeeb370299e9cf48e447c94253f2b",
+      "prng@0.3.1/NOTICE": "ea56023d730b4adf25e49affaa29a1233b877373bdd79392e7e6badc70cb2034",
+      "prng@0.3.1/README.md": "4361f5a9cf1a691e288f4df2b76f040f76a5008534b397d8e23d6b9412dda5d1",
+      "prng@0.3.1/mops.toml": "c870af8dba58a5b9c1eec56cfc674ac55c5fd438946fb941f27ebbb901238e2b",
+      "prng@0.3.1/src/SFC32.mo": "10fffb1f813bdf62cd500b47bf200447ee12a3a41dd3fff9db27d420faf11b63",
+      "prng@0.3.1/src/SFC64.mo": "4abac4f7c468a76fd129b32dfcc019cc1afbab0d5cbf95fe94326aa75a8b2d9a",
+      "prng@0.3.1/src/Seiran128.mo": "a33cd1be0ce31fffe61a2367bc63893aa2f46110dbc2b55a4baaa2b63aaa1de8",
+      "prng@0.3.1/src/lib.mo": "dad9ce9307b136cfe76e6abba1349bf3be6aa99b9c3ad73206aea65b55bcd4a2"
     }
   }
 }
