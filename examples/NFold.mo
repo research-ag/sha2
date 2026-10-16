@@ -40,7 +40,9 @@ import Hasher "mo:sha2/Hasher/Sha256";
 import Array "mo:core/Array";
 
 module {
-  /// H^n(message): apply SHA256 `n` times (n >= 1). Allocates only the result.
+  /// H^n(message): apply SHA256 `n` times (n >= 1). Allocates a `Digest`, for
+  /// n >= 2 a `Hasher`, and the result; the rounds allocate nothing. To hash many
+  /// messages, use `nfoldBatch`, which allocates the two engines only once.
   public func nfold(message : Blob, n : Nat) : Blob {
     assert n >= 1;
     let d = Sha256.new();

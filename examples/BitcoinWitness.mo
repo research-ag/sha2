@@ -98,8 +98,9 @@ module {
   /// (`BitcoinMerkle.new(_, true)`), over the txids added so far (>= 1):
   /// the sibling at each level, lowest first — `ceil(log2 count)` hashes.
   /// Empty for a single txid (it IS the root). Traps if the tree was built
-  /// without witness capture. Allocates only the returned array and the one
-  /// remainder Blob — the spine entries share the captured Blobs.
+  /// without witness capture. Allocates only the returned array, the closure
+  /// that builds it, and the one remainder Blob — the spine entries share the
+  /// captured Blobs.
   public func coinbaseWitness(self : CounterBase.Mmr) : [Blob] {
     let ?w = self.wit else Runtime.trap("BitcoinWitness: tree built without witness capture");
     let hasher = self.hasher;
