@@ -19,5 +19,3 @@ skills-lock.json
 # npm (prettier tooling) — do not commit
 package.json
 package-lock.json
-
-# mops lock (library)
