@@ -14,7 +14,7 @@ import Prim "mo:prim";
 
 import _Buffer "../buffer";
 import _State "../state";
-import _ProcessMsg "../state/process/blocks/iter"; // state.process_blocks
+import _ProcessMsg "../state/process/blocks/iter"; // state.process
 
 import { type Digest } "../types";
 import { type State } "../types";
