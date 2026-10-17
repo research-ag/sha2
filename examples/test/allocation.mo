@@ -169,11 +169,6 @@ for (n in ns.values()) {
   var wTx : [Blob] = [];
   check("coinbaseWitnessTx" # suffix, alloc(func() { wTx := t.coinbaseWitnessTx() }), witnessArray + lastHash + tabulate);
 
-  // Proof and root together: additionally only the root Blob (none for a
-  // lone txid, which is returned as is, in the txid tree).
-  check("coinbaseWitnessAndRoot" # suffix, alloc(func() { ignore b.coinbaseWitnessAndRoot() }), witnessArray + lastHash + tabulate + (if (n == 1) 0 else readout));
-  check("coinbaseWitnessTxAndRoot" # suffix, alloc(func() { ignore t.coinbaseWitnessTxAndRoot() }), witnessArray + lastHash + tabulate + readout);
-
   // Verification: one Hasher and the folded root (verifyTx also its Digest).
   let root = BitcoinMerkle.root(b);
   let hasherBytes = alloc(func() { ignore Hasher.new() });

@@ -235,9 +235,6 @@ for (n in ns.values()) {
   assert (root == BitcoinMerkle.bitcoinMerkleRoot(txids));
   let w = mmr.coinbaseWitness();
   assert (foldWitness(txids[0], w) == root);
-  // The combined function returns the same proof and root.
-  let (w2, root2) = mmr.coinbaseWitnessAndRoot();
-  assert (w2 == w and root2 == root);
   // The receiver side must accept the genuine proof ...
   assert (BitcoinWitness.verifyTxid(txids[0], w, root));
   // ... and reject a wrong coinbase or a wrong root.
@@ -248,7 +245,7 @@ for (n in ns.values()) {
   if (n >= 2) assert (not BitcoinWitness.verifyTxid(txids[0], Array.tabulate<Blob>(w.size(), func(j) = if (j == 0) bytes(33) else w[j]), root));
 };
 // Raw-transaction trees (Example 6 with capture on), every leaf count: the
-// proof agrees with the txid tree's, and the combined function with both.
+// proof agrees with the txid tree's and verifies against the root.
 for (n in ns.values()) {
   let txs = Array.tabulate<Blob>(n, func(j) = bytes((j * 37) % 200));
   let txids = txs.map<Blob, Blob>(func(tx) = Sha256.fromBlob(Sha256.fromBlob(tx)));
@@ -258,8 +255,7 @@ for (n in ns.values()) {
   for (t in txids.values()) { BitcoinMerkle.add(ref, t) };
   let w = mmr.coinbaseWitnessTx();
   assert (w == ref.coinbaseWitness());
-  let (w2, root2) = mmr.coinbaseWitnessTxAndRoot();
-  assert (w2 == w and root2 == BitcoinTxMerkle.root(mmr));
+  assert (BitcoinWitness.verifyTx(txs[0], w, BitcoinTxMerkle.root(mmr)));
 };
 // Raw-transaction trees (Example 6 with capture on), used incrementally: the
 // witness must verify at both counts — the captured hashes stay
