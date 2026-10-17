@@ -77,7 +77,7 @@ module {
 
   /// Create an empty MMR with capacity for at least `maxLeaves` txid leaves
   /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`). With
-  /// `witness` the stable part of the coinbase witness is captured as txids
+  /// `witness` the sibling hashes of the coinbase proof are captured as txids
   /// are added — extraction and verification live in `BitcoinWitness.mo`
   /// (Example 7).
   public func new(maxLeaves : Nat, witness : Bool) : Mmr = Base.new(maxLeaves, witness);

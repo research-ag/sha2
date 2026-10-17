@@ -2,7 +2,7 @@
 
 // Asserts the allocation claims of the examples: adding leaves allocates
 // nothing, a root readout allocates only the root Blob, the coinbase witness
-// costs one Blob per level of its stable part over the whole build, and the
+// costs one Blob per captured hash over the whole build, and the
 // N-fold rounds are allocation-free.
 //
 // `Prim.rts_total_allocation()` is a monotonic counter of all bytes ever
@@ -125,9 +125,9 @@ do {
 
 // --- Coinbase witness (Example 7) ---
 
-// Number of siblings in the stable part for n leaves: one per level k with
+// Number of captured sibling hashes for n leaves: one per level k with
 // 2^(k+1) <= n, i.e. floor(log2 n).
-func stableLevels(n : Nat) : Nat {
+func capturedLevels(n : Nat) : Nat {
   var k = 0;
   var p = 2;
   while (p <= n) { k += 1; p *= 2 };
@@ -145,17 +145,17 @@ func ceilLog2(n : Nat) : Nat {
 for (n in ns.values()) {
   let suffix = " (n = " # n.toText() # ")";
 
-  // Capture: one readout per stable level over the whole build, nothing per
+  // Capture: one readout per captured hash over the whole build, nothing per
   // leaf. In the Blob tree the level-0 sibling is the second leaf itself, kept
   // by reference; in the raw-transaction tree it exists only as hasher state.
   let b = BitcoinMerkle.new(maxN, true);
-  check("BitcoinMerkle.add with witness" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinMerkle.add(b, leaves[j]); j += 1 } }), (if (n < 2) 0 else (stableLevels(n) - 1 : Nat)) * readout);
+  check("BitcoinMerkle.add with witness" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinMerkle.add(b, leaves[j]); j += 1 } }), (if (n < 2) 0 else (capturedLevels(n) - 1 : Nat)) * readout);
   let t = BitcoinTxMerkle.new(maxN, true);
-  check("BitcoinTxMerkle.add with witness" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinTxMerkle.add(t, msgs[j]); j += 1 } }), stableLevels(n) * readout);
+  check("BitcoinTxMerkle.add with witness" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinTxMerkle.add(t, msgs[j]); j += 1 } }), capturedLevels(n) * readout);
 
-  // Extraction: the returned array plus the one Blob of the changing part (none
-  // for a power of two, where the stable part is the whole witness).
-  let changing = if (isPow2(n)) 0 else readout;
+  // Extraction: the returned array plus the Blob of the last hash (none for a
+  // power of two, where the captured hashes are the whole proof).
+  let lastHash = if (isPow2(n)) 0 else readout;
   // An empty witness (n = 1) is the static empty array: no allocation.
   let witnessArray = if (n == 1) 0 else arrayBytes(ceilLog2(n));
   // Plus the closure that builds the array: `VarArray.sliceToArray` for a
@@ -165,9 +165,14 @@ for (n in ns.values()) {
   // point is that this is a constant: nothing depends on the tree size.
   let tabulate = if (n == 1) 0 else if (isPow2(n)) 48 else 56;
   var w : [Blob] = [];
-  check("coinbaseWitness" # suffix, alloc(func() { w := b.coinbaseWitness() }), witnessArray + changing + tabulate);
+  check("coinbaseWitness" # suffix, alloc(func() { w := b.coinbaseWitness() }), witnessArray + lastHash + tabulate);
   var wTx : [Blob] = [];
-  check("coinbaseWitnessTx" # suffix, alloc(func() { wTx := t.coinbaseWitnessTx() }), witnessArray + changing + tabulate);
+  check("coinbaseWitnessTx" # suffix, alloc(func() { wTx := t.coinbaseWitnessTx() }), witnessArray + lastHash + tabulate);
+
+  // Proof and root together: additionally only the root Blob (none for a
+  // lone txid, which is returned as is, in the txid tree).
+  check("coinbaseWitnessAndRoot" # suffix, alloc(func() { ignore b.coinbaseWitnessAndRoot() }), witnessArray + lastHash + tabulate + (if (n == 1) 0 else readout));
+  check("coinbaseWitnessTxAndRoot" # suffix, alloc(func() { ignore t.coinbaseWitnessTxAndRoot() }), witnessArray + lastHash + tabulate + readout);
 
   // Verification: one Hasher and the folded root (verifyTx also its Digest).
   let root = BitcoinMerkle.root(b);

@@ -39,7 +39,7 @@ differ only in single vs double SHA256 — which for the digest-fed pair also
 decides how a leaf exits the digest: a `loadState` capture vs the free
 `hashState` bridge — and in the finalization code — bagging vs the Bitcoin
 collapse — which lives in the example files. Both bases can optionally
-capture the stable part of the coinbase witness as leaves are added (the
+keep the sibling hashes of the coinbase proof as leaves are added (the
 `witness` flag of `new`), consumed by Example 7.
 
 The exact pool sizes are:
@@ -48,7 +48,7 @@ The exact pool sizes are:
 - State stack (Example 2): `ceil(log2 n) + 1` — the parked leaf occupies a stack slot, and the pool is one larger than the maximal stack height so that the slot above the top stays free for the bagging accumulator.
 - Counter (Examples 3 and 5): `floor(log2 n) + 1` — the bit length of `n`, one slot per bit of the leaf count.
 - State counter (Examples 4 and 6): `ceil(log2 n) + 1` — the peak slots plus the top slot as the bagging accumulator, one level above the highest possible peak.
-- Witness capture (`new(_, true)` on Examples 5 and 6, extraction in Example 7): no additional `Hasher`s — only a pre-sized `[var Blob]` with one slot per level of the stable part of the coinbase proof, each written at its capture moment.
+- Witness capture (`new(_, true)` on Examples 5 and 6, extraction in Example 7): no additional `Hasher`s — only a pre-sized `[var Blob]` with one slot per sibling hash of the coinbase proof that the build produces, each written at its capture moment.
 
 None of them needs a dedicated accumulator `Hasher` for the bagging — a free
 slot always exists where it is needed: the stack always has a free slot just
@@ -90,13 +90,12 @@ what is stated above. Run them from this directory with `mops test verify` and
 
 ## Coinbase inclusion proof (Example 7)
 
-The coinbase is the first transaction of a block. Its inclusion proof is the list of sibling hashes along the path from the coinbase to the root, one 32-byte hash per level: at level `k`, the hash of the subtree over transactions `[2^k, 2^(k+1))`.
+The coinbase is the first transaction of a block. Its inclusion proof, the _merkle branch_, is the sequence of sibling hashes along the path from the coinbase to the root, one 32-byte hash per level: at level `k`, the hash of the subtree over transactions `[2^k, 2^(k+1))`.
 
-The trees of Examples 5 and 6 are MMRs that grow transaction by transaction, and a proof can be requested at any point, also while the number of transactions `n` is not a power of two. Then the tree consists of several peaks, and the proof has two parts. Let `2^K` be the largest power of two `≤ n`:
+- As the tree grows, the normal MMR computation produces these sibling hashes. If the number of transactions `n` is not a power of two, the last one appears only during the root computation, as its intermediate result just before the final step. Normally the hashes are discarded right away, and only the peaks are kept.
+- With the `witness` flag of `new` set, the MMR keeps them, in a pre-sized `[var Blob]`. That costs one small `Blob` per level over the whole build, nothing per leaf, and no extra `Hasher`s.
+- On request, the root computation is run up to that final step to get the last hash, and together they form the proof. When `n` is a power of two, no work is necessary, just as for the root.
 
-- **Stable part:** the siblings at levels `0` to `K − 1`, all inside the first complete subtree of `2^K` transactions. Each becomes final when its subtree is complete, at `n = 2, 4, 8, …`, and never changes after that.
-- **Changing part:** the sibling at level `K`, covering all transactions from `2^K` on. Bitcoin's duplication of the last node folds the remaining peaks into it. It changes with every new transaction, and there is none when `n` is a power of two. When `n` reaches the next power of two, it becomes a new stable entry.
+`BitcoinWitness.mo` contains the functions for the request. `coinbaseWitness` (Example 5 trees) and `coinbaseWitnessTx` (Example 6 trees) return the proof for the current `n`. `coinbaseWitnessAndRoot` and `coinbaseWitnessTxAndRoot` return the proof together with the root, from one computation: they finish the root computation for one more combine. None of them changes the tree, so it can keep growing.
 
-The tree captures the stable part itself while it is built, if it was created with the `witness` flag of `new` set. Each such sibling exists for only one step of the build and is copied into a pre-sized `[var Blob]` at that moment. That costs one small `Blob` per level over the whole build, nothing per leaf, and no extra `Hasher`s.
-
-`BitcoinWitness.mo` contains the rest. `coinbaseWitness` (Example 5 trees) and `coinbaseWitnessTx` (Example 6 trees) return the full proof for the current `n`, computing the changing part from the current peaks. On the receiving side, `verifyTxid` and `verifyTx`, which need no tree, check a coinbase txid or raw coinbase transaction plus its proof against the 32-byte root. A malformed proof returns `false`.
+Which one to use depends on who needs the root. The builder of a block needs both, the root for the block header and the proof for the miners. A verifier takes the root from elsewhere: an SPV client from the block header, a miner (Stratum) by computing it from its own variant of the coinbase. On the receiving side, `verifyTxid` and `verifyTx`, which need no tree, check a coinbase txid or raw coinbase transaction plus its proof against the 32-byte root. A malformed proof returns `false`.
