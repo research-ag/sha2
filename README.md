@@ -336,8 +336,8 @@ It is also true for all different writer functions `writeBlob, writeArray, write
 
 ### Benchmark history
 
-From 0.2.5 to 0.3.0 the benchmark numbers changed because the measurement setup changed, not the hashing code.
-0.2.5 was measured with moc 1.10.0 under legacy persistence (32-bit heap, copying GC) and without wasm-opt; 0.3.0 with moc 2.0.0 (64-bit heap, incremental GC) and wasm-opt.
+The benchmark history on mops.one shows changed numbers from 0.2.5 to 0.3.0 because the measurement setup changed, not the hashing code.
+The published 0.2.5 results were measured with moc 1.10.0 under legacy persistence (32-bit heap, copying GC) and without wasm-opt; the 0.3.0 results with moc 2.0.0 (64-bit heap, incremental GC) and wasm-opt.
 Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same for hashing with Sha256 and Sha512, for all input types and the whole `Digest` lifecycle (within 0.2%; some short writes are up to 4% faster).
 
 - Instructions: +9% to +35% for Sha256 hashing, −6% to +23% for Sha512 hashing. Creating a digest with `new()` costs about 3× as much: each heap allocation costs about 130 instructions more with the incremental GC.
