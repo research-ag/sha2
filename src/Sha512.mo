@@ -9,8 +9,8 @@
 /// * Output types: `Blob`
 ///
 /// Messages must be shorter than 2^64 bits (2^61 bytes); the SHA-512 standard
-/// allows up to 2^128 bits. A longer message, for example one written to a
-/// `Digest` piecewise over many executions, gives a wrong hash without trapping.
+/// allows up to 2^128 bits. A longer message would give a wrong hash without
+/// trapping.
 ///
 /// ```motoko name=import
 /// import Sha512 "mo:sha2/Sha512";
