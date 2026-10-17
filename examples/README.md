@@ -57,8 +57,7 @@ height, the counter's slot 0 is vacant by construction (the height-0 leaf
 waits as a pending `Blob`), and the state counters' top slot can only be
 occupied at a full power of two — a single peak, which short-circuits without
 bagging. The blob-leaf sizes (Ex. 1 vs 3) differ only when `n` is an exact power of two,
-where the counter uses one `Hasher` more. The digest-fed sizes agree with
-each other for every `n`, and exceed the blob stack by exactly one: a Blob
+where the counter uses one `Hasher` more. The digest-fed sizes (Ex. 2 and 4) agree with each other for every `n`, and exceed the blob stack (Ex. 1) by exactly one: a Blob
 leaf can wait out of band as a borrowed reference at no slot cost, while a
 leaf that exists only as the digest's state — about to be overwritten by the
 next message — must be captured into a slot the moment it arrives. The extra
