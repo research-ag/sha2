@@ -23,8 +23,7 @@ This allows hashing very large messages over multiple executions of the canister
 
 Message length: SHA-256 and SHA-224 support the full range of the standard, messages shorter than 2^64 bits.
 The SHA-512 family (sha512, sha384, sha512-256, sha512-224) supports messages shorter than 2^64 bits (2^61 bytes, 2 EiB), while the standard allows up to 2^128 bits.
-A longer message gives a wrong hash without trapping.
-This limit can matter even though such a message never fits in memory: a `Digest` can be fed incrementally, over many executions, and the data can be generated on the fly.
+A longer message would give a wrong hash without trapping.
 
 For fixed-length inputs (32-byte values and pairs of them, e.g. Merkle trees) there is additionally a single-shot, allocation-free `Hasher` engine (SHA-256 only) — see the [Hasher section](#5-single-shot-hashing-with-the-hasher-engine) below.
 
