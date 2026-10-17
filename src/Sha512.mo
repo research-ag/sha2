@@ -125,11 +125,11 @@ module {
     };
   };
 
-  // Load the algorithm's initial hash value (IV) into the state.
+  // Load the algorithm's initial hash value (IV) into `s`.
   // Unrolled copy avoids allocating the `[0..7]` index array and its iterator
   // on every reset (cf. the Sha256 reset optimization).
-  func loadIV(self : Digest) {
-    let i = switch (self.algo) {
+  func loadIV(s : [var Nat64], algo : Algorithm) {
+    let i = switch (algo) {
       case (#sha512_224) 0;
       case (#sha512_256) 1;
       case (#sha384) 2;
@@ -138,8 +138,8 @@ module {
     let v = ivs[i];
     // prettier-ignore
     do {
-      self.s[0] := v[0]; self.s[1] := v[1]; self.s[2] := v[2]; self.s[3] := v[3];
-      self.s[4] := v[4]; self.s[5] := v[5]; self.s[6] := v[6]; self.s[7] := v[7];
+      s[0] := v[0]; s[1] := v[1]; s[2] := v[2]; s[3] := v[3];
+      s[4] := v[4]; s[5] := v[5]; s[6] := v[6]; s[7] := v[7];
     };
   };
 
@@ -159,7 +159,7 @@ module {
     self.i_msg := 0;
     self.i_byte := 8;
     self.i_block := 0;
-    loadIV(self);
+    loadIV(self.s, self.algo);
     self.closed := false;
   };
 
@@ -321,10 +321,11 @@ module {
   };
 
   func stateBlob(x : Digest) : Blob {
-    let (d0, d1, d2, d3, d4, d5, d6, d7) = explodeNat64(x.s[0]);
-    let (d8, d9, d10, d11, d12, d13, d14, d15) = explodeNat64(x.s[1]);
-    let (d16, d17, d18, d19, d20, d21, d22, d23) = explodeNat64(x.s[2]);
-    let (d24, d25, d26, d27, d28, d29, d30, d31) = explodeNat64(x.s[3]);
+    let s = x.s;
+    let (d0, d1, d2, d3, d4, d5, d6, d7) = explodeNat64(s[0]);
+    let (d8, d9, d10, d11, d12, d13, d14, d15) = explodeNat64(s[1]);
+    let (d16, d17, d18, d19, d20, d21, d22, d23) = explodeNat64(s[2]);
+    let (d24, d25, d26, d27, d28, d29, d30, d31) = explodeNat64(s[3]);
 
     // `switch` (not `== #...`) because variant `==` allocates per call. Longer
     // digests explode the extra state words lazily inside their cases.
@@ -349,8 +350,8 @@ module {
         ]);
       };
       case (#sha384) {
-        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
-        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(s[5]);
         // prettier-ignore
         arrayToBlob([
           d0, d1, d2, d3, d4, d5, d6, d7,
@@ -362,10 +363,10 @@ module {
         ]);
       };
       case (#sha512) {
-        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(x.s[4]);
-        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(x.s[5]);
-        let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(x.s[6]);
-        let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(x.s[7]);
+        let (d32, d33, d34, d35, d36, d37, d38, d39) = explodeNat64(s[4]);
+        let (d40, d41, d42, d43, d44, d45, d46, d47) = explodeNat64(s[5]);
+        let (d48, d49, d50, d51, d52, d53, d54, d55) = explodeNat64(s[6]);
+        let (d56, d57, d58, d59, d60, d61, d62, d63) = explodeNat64(s[7]);
         // prettier-ignore
         arrayToBlob([
           d0, d1, d2, d3, d4, d5, d6, d7,

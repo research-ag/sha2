@@ -17,6 +17,7 @@ This entry describes the changes since 0.2.4 and skips over 0.2.5. 0.2.5 was an 
 - Replace precondition `assert`s with diagnostic trap messages (e.g. "Sha256: write to closed digest", "Hasher: hashBlob32 expects a 32-byte blob, got N bytes"); same trapping behavior, better error messages
 - Widen the Sha256 block counter to `Nat64` — removes a silent wrong-hash wraparound for cumulative inputs ≥ 256 GiB per digest (theoretical; costs ~10 instructions per hash)
 - Skip the block-processing call for sub-block writes in `writeArray`/`writeVarArray`/`writeAccessor`/`writeReader` (~670 fewer instructions per short write, ~5 fewer per block for accessor/reader on long inputs)
+- Optimize Sha512: `reset()` 24% fewer instructions (994 → 756), and every hash ~240 fewer (the state array is loaded from the digest once instead of per word)
 - Document the message length limit of the SHA-512 family: shorter than 2^64 bits (the standard allows 2^128); a longer message gives a wrong hash without trapping
 - Benchmarks, compared with the published 0.2.5 results (what mops.one compares against): +25% (Sha256) and +4% (Sha512) instructions, and about 3× for `new()`, due to the compiler switch to the incremental GC and the 64-bit heap; the hashing code itself costs the same. The Merkle build is 40% faster with the `Hasher` engine.
 
