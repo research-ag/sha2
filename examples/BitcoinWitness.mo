@@ -19,9 +19,9 @@
 ///
 /// The counter keeps only ~log n peaks, and SHA256 is one-way — a peak
 /// cannot be reopened into its children. The coinbase's siblings split into
-/// two kinds, and each is available at exactly one time:
+/// two parts, and each is available at exactly one time:
 ///
-///   * LEFT-SPINE SIBLINGS (levels 0 .. K-1, K = floor(log2 n)): the node
+///   * THE STABLE PART (levels 0 .. K-1, K = floor(log2 n)): the node
 ///     over txs [2^k, 2^(k+1)) exists in the machine for exactly ONE carry
 ///     step — it is the rising node of the FIRST merge at height k, consumed
 ///     by that very merge. Two O(1) hooks in the bases copy it out in that
@@ -29,12 +29,12 @@
 ///     pre-allocated hasher pool): the level-0 sibling is the partner of the
 ///     first fuse (`count >> 1 == 0`), and the level-k sibling is the rising
 ///     node when the carry runs at an all-ones count (`count >> (k+1) == 0`,
-///     i.e. count = 2^(k+1) - 1). Cost: ceil(log2 n) small Blob allocations
-///     over the WHOLE build — not per leaf — and no extra `Hasher`s; the
-///     Blobs ARE the witness output, produced once, final on capture (the
-///     subtree over [2^k, 2^(k+1)) never changes again), and shared into
-///     every proof.
-///   * THE RIGHT REMAINDER (level K, absent when n is a power of two): the
+///     i.e. count = 2^(k+1) - 1). Cost: at most floor(log2 n) small Blob
+///     allocations over the WHOLE build — not per leaf — and no extra
+///     `Hasher`s; the Blobs ARE the witness output, produced once, final on
+///     capture (the subtree over [2^k, 2^(k+1)) never changes again), and
+///     shared into every proof.
+///   * THE CHANGING PART (level K, absent when n is a power of two): the
 ///     sibling of the highest peak is everything else, collapsed to level K
 ///     with Bitcoin's self-pairing. It depends on all later transactions, so
 ///     it CANNOT be captured early — and need not be: it is exactly the
@@ -47,7 +47,7 @@
 /// keep adding, take root and witness any time.
 ///
 /// The capture hooks are finalization-agnostic — the single-SHA trees of
-/// Examples 3 and 4 could capture the same spine — but extraction is
+/// Examples 3 and 4 could capture the same stable part — but extraction is
 /// finalization-specific, and only the Bitcoin variants are provided here.
 ///
 /// Caveats as in `BitcoinMerkle.mo`: txids, root and witness are in
@@ -69,7 +69,7 @@ module {
   // The collapse of the components BELOW the top peak — `root()`'s collapse
   // stopped one step early — continuing on `acc` (already holding the
   // doubled lowest component, risen to level `k`) up to level `kTop`; then
-  // assemble spine ++ remainder.
+  // assemble stable part ++ changing part.
   func assemble(
     w : [var Blob],
     hasher : [var Hasher.Hasher],
@@ -99,8 +99,8 @@ module {
   /// the sibling at each level, lowest first — `ceil(log2 count)` hashes.
   /// Empty for a single txid (it IS the root). Traps if the tree was built
   /// without witness capture. Allocates only the returned array, the closure
-  /// that builds it, and the one remainder Blob — the spine entries share the
-  /// captured Blobs.
+  /// that builds it, and the one Blob of the changing part — the entries of
+  /// the stable part share the captured Blobs.
   public func coinbaseWitness(self : CounterBase.Mmr) : [Blob] {
     let ?w = self.wit else Runtime.trap("BitcoinWitness: tree built without witness capture");
     let hasher = self.hasher;
@@ -119,7 +119,7 @@ module {
       };
       case (null) {
         while (((count >> k) & 1) == 0) { k += 1 };
-        // A single peak: the whole path is the left spine — every sibling
+        // A single peak: the whole proof is the stable part — every sibling
         // was captured during the build.
         if (Nat64.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);
         // The lowest peak doubles — its level's node count is odd.
@@ -142,7 +142,7 @@ module {
     let count = self.count;
     assert count >= 1;
     // A single component — the lone txid (count == 1) or one peak: the whole
-    // path is the left spine, captured during the build (empty for a lone
+    // proof is the stable part, captured during the build (empty for a lone
     // txid, which is its own root).
     var k = Nat64.bitcountTrailingZero(count);
     let kTop = (63 - Nat64.bitcountLeadingZero(count)).toNat(); // floor(log2 count)

@@ -77,8 +77,9 @@ module {
 
   /// Create an empty MMR with capacity for at least `maxLeaves` txid leaves
   /// (`floor(log2 maxLeaves) + 1` hashers — see `CounterBase.mo`). With
-  /// `witness` the coinbase witness spine is captured as txids are added —
-  /// extraction and verification live in `BitcoinWitness.mo` (Example 7).
+  /// `witness` the stable part of the coinbase witness is captured as txids
+  /// are added — extraction and verification live in `BitcoinWitness.mo`
+  /// (Example 7).
   public func new(maxLeaves : Nat, witness : Bool) : Mmr = Base.new(maxLeaves, witness);
 
   /// Add one 32-byte txid leaf to the MMR (double SHA256 per node). Traps (on

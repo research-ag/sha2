@@ -39,8 +39,8 @@ differ only in single vs double SHA256 — which for the digest-fed pair also
 decides how a leaf exits the digest: a `loadState` capture vs the free
 `hashState` bridge — and in the finalization code — bagging vs the Bitcoin
 collapse — which lives in the example files. Both bases can optionally
-capture the coinbase witness spine as leaves are added (the `witness` flag
-of `new`), consumed by Example 7.
+capture the stable part of the coinbase witness as leaves are added (the
+`witness` flag of `new`), consumed by Example 7.
 
 The exact pool sizes are:
 
@@ -48,7 +48,7 @@ The exact pool sizes are:
 - State stack (Example 2): `ceil(log2 n) + 1` — the parked leaf occupies a stack slot, and the pool is one larger than the maximal stack height so that the slot above the top stays free for the bagging accumulator.
 - Counter (Examples 3 and 5): `floor(log2 n) + 1` — the bit length of `n`, one slot per bit of the leaf count.
 - State counter (Examples 4 and 6): `ceil(log2 n) + 1` — the peak slots plus the top slot as the bagging accumulator, one level above the highest possible peak.
-- Witness capture (`new(_, true)` on Examples 5 and 6, extraction in Example 7): no additional `Hasher`s — only a pre-sized `[var Blob]` of `ceil(log2 n)` slots holding the coinbase's left-spine siblings, written at their capture moments.
+- Witness capture (`new(_, true)` on Examples 5 and 6, extraction in Example 7): no additional `Hasher`s — only a pre-sized `[var Blob]` with one slot per level of the stable part of the coinbase proof, each written at its capture moment.
 
 None of them needs a dedicated accumulator `Hasher` for the bagging — a free
 slot always exists where it is needed: the stack always has a free slot just

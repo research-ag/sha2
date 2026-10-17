@@ -78,9 +78,9 @@ module {
 
   /// Create an empty MMR with capacity for at least `maxTxs` transactions
   /// (`ceil(log2 maxTxs) + 1` hashers plus the one scratch `Digest` — see
-  /// `CounterStateBase.mo`). With `witness` the coinbase witness spine is
-  /// captured as transactions are added — extraction and verification live
-  /// in `BitcoinWitness.mo` (Example 7).
+  /// `CounterStateBase.mo`). With `witness` the stable part of the coinbase
+  /// witness is captured as transactions are added — extraction and
+  /// verification live in `BitcoinWitness.mo` (Example 7).
   public func new(maxTxs : Nat, witness : Bool) : Mmr = Base.new(maxTxs, witness);
 
   /// Add one RAW (arbitrary-length) transaction to the MMR; its txid — the

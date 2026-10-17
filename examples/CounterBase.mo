@@ -7,11 +7,11 @@
 /// the leaf count, the delayed slot-0 write, the rising carry) are described
 /// in `MerkleCounter.mo`.
 ///
-/// Optionally (the `witness` flag of `new`) the base captures the COINBASE
-/// WITNESS SPINE — the first leaf's sibling at each level, each of which
-/// exists only transiently during a carry — into a pre-sized `[var Blob]`,
-/// slot k = level k. See `BitcoinWitness.mo` (Example 7) for the theory, the
-/// extraction and the verification.
+/// Optionally (the `witness` flag of `new`) the base captures the STABLE
+/// PART OF THE COINBASE WITNESS — the first leaf's sibling at each level,
+/// each of which exists only transiently during a carry — into a pre-sized
+/// `[var Blob]`, slot k = level k. See `BitcoinWitness.mo` (Example 7) for
+/// the theory, the extraction and the verification.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Nat64 "mo:core/Nat64";
@@ -20,10 +20,10 @@ import VarArray "mo:core/VarArray";
 module {
   /// The MMR state: the height-indexed peak slots, the leaf count (whose bits
   /// are the occupancy flags), the pending height-0 leaf and the optional
-  /// witness spine (`wit[k]` = the first leaf's sibling at level k, written
-  /// exactly when `count` reaches 2^(k+1); "" until then — and provably
-  /// never read before its write). A static record — it can be declared
-  /// `stable`.
+  /// stable witness part (`wit[k]` = the first leaf's sibling at level k,
+  /// written exactly when `count` reaches 2^(k+1); "" until then — and
+  /// provably never read before its write). A static record — it can be
+  /// declared `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
     var count : Nat64;
@@ -36,11 +36,11 @@ module {
   /// `maxLeaves`: one slot per bit of the count, slot k holding the height-k
   /// peak that bit k asserts. (Slot 0's write is delayed — the height-0 leaf
   /// waits as the pending `Blob` — leaving slot 0 free as the accumulator for
-  /// the finalization.) With `witness` the coinbase witness spine is captured
-  /// as leaves are added, into `floor(log2 maxLeaves)` pre-allocated Blob
-  /// slots — one per level at which a capture can occur (2^(k+1) <=
-  /// maxLeaves). Exceeding the capacity traps on the witness array just as
-  /// it does on the hasher array.
+  /// the finalization.) With `witness` the stable part of the coinbase witness
+  /// is captured as leaves are added, into `floor(log2 maxLeaves)`
+  /// pre-allocated Blob slots — one per level at which a capture can occur
+  /// (2^(k+1) <= maxLeaves). Exceeding the capacity traps on the witness array
+  /// just as it does on the hasher array.
   public func new(maxLeaves : Nat, witness : Bool) : Mmr {
     var l = 0;
     var pow = 1;

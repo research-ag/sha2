@@ -245,7 +245,7 @@ for (n in ns.values()) {
   if (n >= 2) assert (not BitcoinWitness.verifyTxid(txids[0], Array.tabulate<Blob>(w.size(), func(j) = if (j == 0) bytes(33) else w[j]), root));
 };
 // Raw-transaction trees (Example 6 with capture on), used incrementally: the
-// witness must verify at both counts — the captured spine siblings stay
+// witness must verify at both counts — the captured stable part stays
 // valid as transactions keep arriving.
 do {
   let txs = Array.tabulate<Blob>(23, func(j) = bytes(8 + (j * 53) % 250));
