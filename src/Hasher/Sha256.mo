@@ -14,10 +14,10 @@
 /// `Sha256`/`Sha512` `Digest` modules, a `Hasher` is tied to one concrete
 /// algorithm, so there is no `Algorithm` argument and `new()` takes none.
 ///
-/// Every function follows one uniform contract:
-///
-///   `f(self, ...operands)` overwrites `self` with `SHA256(operands...)`,
-///   starting from the IV.
+/// Every function follows one uniform contract: `f(self, ...operands)`
+/// overwrites `self`. The `hash…` and `combine…` functions overwrite it with
+/// `SHA256(operands...)`, starting from the IV; the `load…` functions with the
+/// operand itself, unchanged.
 ///
 /// So `self` is always a pure destination, fully overwritten — there is no
 /// "closed" state, no `reset`, and the value held at any time simply IS the most
@@ -25,12 +25,15 @@
 /// locals before `self` is written), which is what makes the in-place
 /// `hashState(h, h)` fold and Merkle-style `combineState(h, h, sib)` safe.
 ///
-/// The verbs come in three families, each over a `Blob` operand or a state
-/// operand: `hash…` (one operand), `combine…` (a pair — all four Blob/state
-/// operand combinations: `combineBlob32`, `combineState`, and the mixed
-/// `combineStateBlob32`/`combineBlob32State`), and `load…` (copy a finished
-/// 32-byte hash in verbatim, no hashing — the inverse of `readSum`, used to
-/// park a precomputed leaf/peak or transfer one from a `Digest`).
+/// The functions come in three families, each with a 32-byte `Blob` operand
+/// (`…Blob32`) or a `Hasher` state operand (`…State`):
+///
+/// - `hash…` hashes one operand: `hashBlob32`, `hashState`.
+/// - `combine…` hashes a pair, in all four combinations: `combineBlob32`,
+///   `combineState`, `combineStateBlob32`, `combineBlob32State`.
+/// - `load…` copies a finished 32-byte hash in as it is, without hashing:
+///   `loadBlob32`, `loadState`. It is the inverse of `readSum`, used to park a
+///   precomputed leaf or peak, or to take one over from a `Digest`.
 ///
 /// ```motoko name=import
 /// import Hasher "mo:sha2/Hasher/Sha256";
