@@ -86,7 +86,8 @@ instead.
 straightforward references (including real mainnet Bitcoin block vectors), and
 [`test/allocation.mo`](./test/allocation.mo) checks that they allocate only
 what is stated above. Run them from this directory with `mops test verify` and
-`mops test allocation`; CI runs both on every PR.
+`mops test allocation`; CI runs both on every PR, the allocation test also on
+the 32-bit heap (moc 1.16.1 with `--legacy-persistence`).
 
 ## Coinbase inclusion proof (Example 7)
 

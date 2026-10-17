@@ -13,7 +13,10 @@
 //
 // Sizes are those of the 64-bit heap (moc 2.0.0): an object header is 3 words
 // (tag, forwarding pointer, length), so a 32-byte Blob takes 56 bytes and an
-// array of n elements 24 + 8 * n bytes. The harness checks below pin this.
+// array of n elements 24 + 8 * n bytes. The harness checks below pin this. On
+// the 32-bit heap (moc 1.x with `--legacy-persistence`, run in CI) objects are
+// smaller, so there the expected sizes are upper bounds (`<=`); an expected 0
+// stays exact on both heaps.
 
 import MerkleStack "../MerkleStack";
 import MerkleStackState "../MerkleStackState";
@@ -42,9 +45,12 @@ func alloc(f : () -> ()) : Nat {
   Prim.rts_total_allocation() - before;
 };
 
+// The word size of the heap: an array element takes one word.
+let heap64 = alloc(func() { ignore Prim.Array_init<Nat>(2, 0) }) == alloc(func() { ignore Prim.Array_init<Nat>(1, 0) }) + 8;
+
 func check(name : Text, actual : Nat, expected : Nat) {
-  if (actual != expected) {
-    Prim.debugPrint(name # ": allocated " # actual.toText() # " bytes, expected " # expected.toText());
+  if (if heap64 actual != expected else actual > expected) {
+    Prim.debugPrint(name # ": allocated " # actual.toText() # " bytes, expected " # (if heap64 "" else "at most ") # expected.toText());
     assert false;
   };
 };
