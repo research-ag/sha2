@@ -2,35 +2,51 @@
 
 ## 0.3.0
 
-This entry describes the changes since 0.2.4 and skips over 0.2.5. 0.2.5 was an intermediate release: its `fold()`, `combineLeaves()` and `combineNodes()` (Sha256) are not part of 0.3.0, replaced by the `Hasher/Sha256` engine (`hashState`, `combineBlob32`, `combineState`). Code that uses them must switch to the `Hasher` when upgrading from 0.2.5.
+- Added:
+  - `Digest.closeDouble()` (Sha256 only): finalize as a double SHA256 in place without returning the hash
+  - `Hasher/Sha256`: a reusable, bufferless, allocation-free SHA-256 hash engine for short, fixed-length messages.
+    - Single-shot API: `hashBlob32`, `hashState`, `combineBlob32`, `combineState`, `combineStateBlob32`, `combineBlob32State`, `loadBlob32`, `loadState`, `readSum`.
+    - Improves Merkle-tree performance by 40%
 
-- Migrate to moc 2.0.0 (toolchain, dot notation, deprecated `core` calls); bump `core` to 2.6.2. The minimum moc version stays 1.0.0.
-- **Breaking:** remove `peekSum()` (Sha256, Sha512). To re-read a closed digest use `readSum()`; for an intermediate hash of an open digest use `clone().sum()`.
-- **Breaking:** the stable type of `Sha256.Digest` changes: its `buffer.i_block` is now a `Nat64` (was `Nat32`). A canister that keeps a `Sha256.Digest` in a stable variable must migrate it, or reset and recreate it, when upgrading. `Sha512.Digest` is unchanged.
-- Add `close()` and `readSum()` (Sha256, Sha512) — finalize a digest without returning a `Blob`, then read the closed digest idempotently (any number of times)
-- Add `closeDouble()` (Sha256) — finalize as a double SHA256 in place without returning a `Blob` (the non-returning counterpart of `sumDouble`); read it with `readSum()`
-- Add `Hasher/Sha256` — a single-shot, allocation-free SHA-256 hash engine for short, fixed-length messages (`hashBlob32`, `hashState`, `combineBlob32`, `combineState`, `combineStateBlob32`, `combineBlob32State`, `loadBlob32`, `loadState`, `readSum`). It is the bufferless engine for allocation-free Merkle trees and hash chains: `combineBlob32`/`combineState` combine two 32-byte leaves or two child states in place, the mixed `combineStateBlob32`/`combineBlob32State` complete the Blob/state operand matrix (e.g. folding a stored sibling `Blob` onto a running node with no staging copy), `hashState(h, h)` folds for double-SHA, and `loadBlob32`/`loadState` park a precomputed hash into the engine verbatim (no re-hash — the inverse of `readSum`)
-- Optimize `close()` with a block-boundary fast path that compresses the all-constant padding block directly for block-aligned messages
-- Make `writeBlob()` allocation-free (drop the per-call accessor closures)
-- Reduce per-call allocations across the API (use `switch` instead of variant `==`)
-- Add `examples/` — seven allocation-free Merkle-tree examples forming a progression (peak stack and binary counter, each over Blob leaves and over real messages fed through an embedded `Digest`; Bitcoin double-SHA tree from txids and from raw variable-length transactions; coinbase inclusion proof with build-time witness capture and receiver-side verification) and N-fold hashing (`NFold.mo`), with tests including real-block Merkle-root vectors
-- Replace precondition `assert`s with diagnostic trap messages (e.g. "Sha256: write to closed digest", "Hasher: hashBlob32 expects a 32-byte blob, got N bytes"); same trapping behavior, better error messages
-- Widen the Sha256 block counter to `Nat64` — removes a silent wrong-hash wraparound for cumulative inputs ≥ 256 GiB per digest (theoretical; costs ~10 instructions per hash)
-- Skip the block-processing call for sub-block writes in `writeArray`/`writeVarArray`/`writeAccessor`/`writeReader` (~670 fewer instructions per short write, ~5 fewer per block for accessor/reader on long inputs)
-- Optimize Sha512: `reset()` 31% fewer instructions (994 → 683; the state array is loaded from the digest once, and the IV is stored from literals instead of copied from a table), and every hash ~240 fewer (the state array is loaded once instead of per word)
-- Document the message length limit of the SHA-512 family: shorter than 2^64 bits (the standard allows 2^128); a longer message would give a wrong hash without trapping
-- Benchmarks, compared with the published 0.2.5 results (what mops.one compares against): +25% (Sha256) and +4% (Sha512) instructions, and about 3× for `new()`, due to the compiler switch to the incremental GC and the 64-bit heap; the hashing code itself costs the same. The Merkle build is 40% faster with the `Hasher` engine.
+- Removed (**Breaking**):
+  - `Digest.fold()`, `combineLeaves()`, `combineNodes()`: replaced by `Hasher/Sha256` (`hashState`, `combineBlob32`, `combineState`)
+
+- Changed:
+  - **Breaking:** stable type of `Sha256.Digest` changes its `buffer.i_block` from Nat32 to Nat64. `Sha512.Digest` is unchanged.
+  - **Bugfix:** removes a silent wrong-hash wraparound in Sha256 for cumulative inputs ≥ 256 GiB per digest.
+  - Optimized short writes in `Digest.writeArray`/`writeVarArray`/`writeAccessor`/`writeReader`
+
+- Maintenance:
+  - Migrate to moc 2.0.0 (minimum moc version stays 1.0.0)
+  - Bump `core` to 2.6.2.
+  - Diagnostic trap messages (same behavior, better messages)
+
+- Documentation:
+  - Allocation-free Merkle-tree examples based on the new `Hasher`s.
+    - Two different approaches to manage pool of `Hasher`s: stack and binary counter.
+    - Two different inputs: `Blob` leaves and variable-length messages.
+    - Intermediate mountain ranges (MMRs)
+    - Bitcoin-style double-SHA trees
+    - Bitcoin-style root computation
+    - Coinbase inclusion proof building and verifying
 
 ## 0.2.5
 
-- **Breaking:** remove `peekSum()` (Sha256, Sha512). To re-read a closed digest use `readSum()`; for an intermediate hash of an open digest use `clone().sum()`.
-- Add `close()` and `readSum()` (Sha256, Sha512) — finalize a digest without returning a `Blob`, then read the closed digest idempotently (any number of times)
-- Add `fold()` (Sha256) — fold a finished digest back in as the next message, for N-fold hashing and double-SHA chains (`combine… + fold`)
-- Add `combineLeaves()` and `combineNodes()` (Sha256) — single-SHA256 primitives for allocation-free Merkle trees: hash two 32-byte leaves, or combine two child digests in place, with no intermediate `Blob`
-- Optimize `close()` with a block-boundary fast path that compresses the all-constant padding block directly for block-aligned messages
-- Make `writeBlob()` allocation-free (drop the per-call accessor closures)
-- Reduce per-call allocations across the API (use `switch` instead of variant `==`)
-- Add `examples/` — an allocation-free Bitcoin-style Merkle tree (any leaf count) and N-fold hashing, with tests including real-block Merkle-root vectors
+- New functions added:
+  - `close()`: finalize a digest without returning it
+  - `readSum()`: read a closed digest idempotently (any number of times)
+  - `fold()` (Sha256 only): fold a finalized digest back in as the next message, for N-fold hashing
+  - `combineLeaves()` (Sha256 only): hash two 32-byte `Blob` in place, without message buffers
+  - `combineNodes()` (Sha256 only): hash two 32-byte child digests in place, without message buffer
+- Optimizations:
+  - `close()`: fast path for block-aligned input
+  - `writeBlob()`: allocation-free (dropped the per-call accessor closures)
+  - Per-call allocations reduced across the API (using `switch` instead of variant `==`)
+- Removed (**Breaking**):
+  - `peekSum()`: use `clone().sum()` instead, and `readSum()` for re-reading.
+- New examples added:
+  - allocation-free Bitcoin-style Merkle tree
+  - allocation-free N-fold hashing
 
 ## 0.2.4
 
