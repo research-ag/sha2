@@ -201,8 +201,8 @@ module {
   /// let hash = digest.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, or if `at` traps for any index in `[start, start + len)`.
-  public func writeAccessor(self : Digest, at : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, at, start, len);
+  /// Traps if `self` is closed, or if `data` traps for any index in `[start, start + len)`.
+  public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, data, start, len);
 
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
@@ -219,8 +219,8 @@ module {
   /// let hash = digest.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, or if `next` traps during any of the `len` calls.
-  public func writeReader(self : Digest, next : () -> Nat8, len : Nat) : () = _Digest.writeReader(self, next, len);
+  /// Traps if `self` is closed, or if `data` traps during any of the `len` calls.
+  public func writeReader(self : Digest, data : () -> Nat8, len : Nat) : () = _Digest.writeReader(self, data, len);
 
   /// Write data from an `Iter<Nat8>` to the digest. Consumes the entire iterator.
   ///
@@ -358,10 +358,10 @@ module {
   /// ```
   ///
   /// Never traps.
-  public func fromBlob(algo : (implicit : Algorithm), b : Blob) : Blob {
-    let d = new(algo);
-    d.writeBlob(b);
-    return sum(d);
+  public func fromBlob(algo : (implicit : Algorithm), data : Blob) : Blob {
+    let digest = new(algo);
+    digest.writeBlob(data);
+    return sum(digest);
   };
 
   /// Calculate the SHA2 hash digest from a `[Nat8]` array.
@@ -380,10 +380,10 @@ module {
   /// ```
   ///
   /// Never traps.
-  public func fromArray(algo : (implicit : Algorithm), arr : [Nat8]) : Blob {
-    let d = new(algo);
-    d.writeArray(arr);
-    return sum(d);
+  public func fromArray(algo : (implicit : Algorithm), data : [Nat8]) : Blob {
+    let digest = new(algo);
+    digest.writeArray(data);
+    return sum(digest);
   };
 
   /// Calculate the SHA2 hash digest from a `[var Nat8]` array.
@@ -402,10 +402,10 @@ module {
   /// ```
   ///
   /// Never traps.
-  public func fromVarArray(algo : (implicit : Algorithm), arr : [var Nat8]) : Blob {
-    let d = new(algo);
-    d.writeVarArray(arr);
-    return sum(d);
+  public func fromVarArray(algo : (implicit : Algorithm), data : [var Nat8]) : Blob {
+    let digest = new(algo);
+    digest.writeVarArray(data);
+    return sum(digest);
   };
 
   /// Calculate the SHA2 hash digest from an entire `Iter<Nat8>`.
@@ -424,10 +424,10 @@ module {
   /// ```
   ///
   /// Never traps.
-  public func fromIter(algo : (implicit : Algorithm), iter : Iter<Nat8>) : Blob {
-    let d = new(algo);
-    _Digest.writeIter(d, iter.next);
-    return sum(d);
+  public func fromIter(algo : (implicit : Algorithm), data : Iter<Nat8>) : Blob {
+    let digest = new(algo);
+    _Digest.writeIter(digest, data.next);
+    return sum(digest);
   };
 
   /// Calculate the SHA2 hash digest from a positional accessor function.
@@ -451,9 +451,9 @@ module {
   ///
   /// Does not trap unless user-provided accessor function `data` traps.
   public func fromAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
-    let d = new(algo);
-    d.writeAccessor(data, start, len);
-    return sum(d);
+    let digest = new(algo);
+    digest.writeAccessor(data, start, len);
+    return sum(digest);
   };
 
   /// Calculate the SHA2 hash digest from a reader function.
@@ -476,10 +476,10 @@ module {
   /// let hash = Sha512.fromReader(#sha384, reader, 5);
   /// ```
   ///
-  /// Does not trap unless user-provided reader function `next` traps.
-  public func fromReader(algo : (implicit : Algorithm), next : () -> Nat8, len : Nat) : Blob {
-    let d = new(algo);
-    d.writeReader(next, len);
-    return sum(d);
+  /// Does not trap unless user-provided reader function `data` traps.
+  public func fromReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
+    let digest = new(algo);
+    digest.writeReader(data, len);
+    return sum(digest);
   };
 };
