@@ -1,5 +1,53 @@
 # Sha2 changelog
 
+## 0.3.0
+
+- Added:
+  - `Digest.closeDouble()` (Sha256 only): finalize as a double SHA256 in place without returning the hash
+  - `Hasher/Sha256`: a reusable, bufferless, allocation-free SHA-256 hash engine for short, fixed-length messages.
+    - Single-shot API: `hashBlob32`, `hashState`, `combineBlob32`, `combineState`, `combineStateBlob32`, `combineBlob32State`, `loadBlob32`, `loadState`, `readSum`.
+    - Improves Merkle-tree performance by 40%
+
+- Removed (**Breaking**):
+  - `Digest.fold()`, `combineLeaves()`, `combineNodes()`: replaced by `Hasher/Sha256` (`hashState`, `combineBlob32`, `combineState`)
+
+- Changed:
+  - **Breaking:** stable type of `Sha256.Digest` changes its `buffer.i_block` from Nat32 to Nat64. `Sha512.Digest` is unchanged.
+  - **Bugfix:** removes a silent wrong-hash wraparound in Sha256 for cumulative inputs ≥ 256 GiB per digest.
+  - Optimized short writes in `Digest.writeArray`/`writeVarArray`/`writeAccessor`/`writeReader`
+
+- Maintenance:
+  - Migrate to moc 2.0.0 (minimum moc version stays 1.0.0)
+  - Bump `core` to 2.6.2.
+  - Diagnostic trap messages (same behavior, better messages)
+
+- Documentation:
+  - Allocation-free Merkle-tree examples based on the new `Hasher`s.
+    - Two different approaches to manage pool of `Hasher`s: stack and binary counter.
+    - Two different inputs: `Blob` leaves and variable-length messages.
+    - Merkle mountain ranges (MMRs)
+    - Bitcoin-style double-SHA trees
+    - Bitcoin-style root computation
+    - Coinbase inclusion proof building and verifying
+
+## 0.2.5
+
+- New functions added:
+  - `close()`: finalize a digest without returning it
+  - `readSum()`: read a closed digest idempotently (any number of times)
+  - `fold()` (Sha256 only): fold a finalized digest back in as the next message, for N-fold hashing
+  - `combineLeaves()` (Sha256 only): hash two 32-byte `Blob`s in place, without message buffers
+  - `combineNodes()` (Sha256 only): hash two 32-byte child digests in place, without message buffer
+- Optimizations:
+  - `close()`: fast path for block-aligned input
+  - `writeBlob()`: allocation-free (dropped the per-call accessor closures)
+  - Per-call allocations reduced across the API (using `switch` instead of variant `==`)
+- Removed (**Breaking**):
+  - `peekSum()`: use `clone().sum()` instead, and `readSum()` for re-reading.
+- New examples added:
+  - allocation-free Bitcoin-style Merkle tree
+  - allocation-free N-fold hashing
+
 ## 0.2.4
 
 - Fix `Sha512.reset()` not clearing the `closed` flag (reusing a digest after `sum()` trapped)

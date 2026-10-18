@@ -12,7 +12,7 @@ module {
 
   /// Consume bytes from the iterator `data` in 64-byte chunks, running the SHA256 compression on each full block and updating the 16 half-word state `self` in place. Stops when `data` returns `null`; any trailing partial block is left in `buf` for the digest finalizer to flush.
   public func process(self : [var Nat16], data : () -> ?Nat8, buf : Buffer) {
-    var blocks : Nat32 = 0;
+    var blocks : Nat64 = 0;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
     var b = nat16To32(self[2]) << 16 | nat16To32(self[3]);

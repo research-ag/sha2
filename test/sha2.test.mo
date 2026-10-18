@@ -9,11 +9,11 @@ import Sha256 "../src/Sha256";
 import Sha512 "../src/Sha512";
 
 func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
-  let h = Blob.fromArray(hash);
+  let h = hash.toBlob();
   assert (Sha256.fromArray(algo, data) == h);
-  assert (Sha256.fromVarArray(algo, Array.toVarArray(data)) == h);
-  assert (Sha256.fromBlob(algo, Blob.fromArray(data)) == h);
-  assert (Sha256.fromIter(algo, data.vals()) == h);
+  assert (Sha256.fromVarArray(algo, data.toVarArray()) == h);
+  assert (Sha256.fromBlob(algo, data.toBlob()) == h);
+  assert (Sha256.fromIter(algo, data.values()) == h);
   assert (Sha256.fromAccessor(algo, func(i) = data[i], 0, data.size()) == h);
   var i = 0;
   func next() : Nat8 { let r = data[i]; i += 1; r };
@@ -21,19 +21,19 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
   do {
     let d = Sha256.new(algo);
     d.writeArray(data);
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha256.new(algo);
-    d.writeVarArray(Array.toVarArray(data));
-    assert (d.peekSum() == h);
+    d.writeVarArray(data.toVarArray());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha256.new(algo);
-    d.writeBlob(Blob.fromArray(data));
-    assert (d.peekSum() == h);
+    d.writeBlob(data.toBlob());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
@@ -41,29 +41,29 @@ func compare(data : [Nat8], algo : Sha256.Algorithm, hash : [Nat8]) {
     var i = 0;
     func next() : Nat8 { let r = data[i]; i += 1; r };
     d.writeReader(next, data.size());
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha256.new(algo);
     d.writeAccessor(func(i) = data[i], 0, data.size());
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha256.new(algo);
-    d.writeIter(data.vals());
-    assert (d.peekSum() == h);
+    d.writeIter(data.values());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
 };
 
 func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
-  let h = Blob.fromArray(hash);
+  let h = hash.toBlob();
   assert (Sha512.fromArray(algo, data) == h);
-  assert (Sha512.fromBlob(algo, Blob.fromArray(data)) == h);
-  assert (Sha512.fromIter(algo, data.vals()) == h);
-  assert (Sha512.fromVarArray(algo, Array.toVarArray(data)) == h);
+  assert (Sha512.fromBlob(algo, data.toBlob()) == h);
+  assert (Sha512.fromIter(algo, data.values()) == h);
+  assert (Sha512.fromVarArray(algo, data.toVarArray()) == h);
   assert (Sha512.fromAccessor(algo, func(i) = data[i], 0, data.size()) == h);
   var i = 0;
   func next() : Nat8 { let r = data[i]; i += 1; r };
@@ -71,31 +71,31 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
   do {
     let d = Sha512.new(algo);
     d.writeArray(data);
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
-    d.writeVarArray(Array.toVarArray(data));
-    assert (d.peekSum() == h);
+    d.writeVarArray(data.toVarArray());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
-    d.writeBlob(Blob.fromArray(data));
-    assert (d.peekSum() == h);
+    d.writeBlob(data.toBlob());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
-    d.writeIter(data.vals());
-    assert (d.peekSum() == h);
+    d.writeIter(data.values());
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
     let d = Sha512.new(algo);
     d.writeAccessor(func(i) = data[i], 0, data.size());
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
   do {
@@ -103,7 +103,7 @@ func compare512(data : [Nat8], algo : Sha512.Algorithm, hash : [Nat8]) {
     var i = 0;
     func next() : Nat8 { let r = data[i]; i += 1; r };
     d.writeReader(next, data.size());
-    assert (d.peekSum() == h);
+    assert (d.clone().sum() == h);
     assert (d.sum() == h);
   };
 };
@@ -196,7 +196,7 @@ for (l in range(0, 65)) {
 do {
   let d = Sha256.new();
   for (l in range(0, 65)) {
-    assert (d.peekSum() == Blob.fromArray(digests[l]));
+    assert (d.clone().sum() == digests[l].toBlob());
     d.writeArray([0xa5]);
   };
 };
@@ -345,7 +345,7 @@ for (l in range(0, digests512.size())) {
 do {
   let d = Sha512.new();
   for (l in range(0, digests512.size())) {
-    assert (d.peekSum() == Blob.fromArray(digests512[l]));
+    assert (d.clone().sum() == digests512[l].toBlob());
     d.writeArray([0xa5]);
   };
 };
@@ -354,12 +354,12 @@ do {
 do {
   let h : Blob = "\21\58\1F\AD\8A\C6\FB\3F\3D\9D\E2\3C\2E\16\3D\CA\AB\BE\10\7E\E8\4C\26\A1\DF\F8\98\60\33\D7\2F\31\73\10\B4\88\9B\53\B5\F1\A5\7B\E8\01\CE\24\1F\A2\7B\5B\98\3F\B0\8D\9B\E3\E2\E2\DC\84\23\D7\F4\50";
   let b : Blob = "\89\50\4e\47\0d\0a\1a\0a\00\00\00\0d\49\48\44\52\00\00\0d\70\00\00\05\a0\08\06\00\00\00\4d\72\8a\c4\00\00\00\20\63\48\52\4d\00\00\7a\25\00\00\80\83\00\00\f9\ff\00\00\80\e9\00\00\75\30\00\00\ea\60\00\00\3a\98\00\00\17\6f\92\5f\c5\46\00\30\fd\d5\49\44\41\54\78\da\dc\fd\5b\96\25\b9\aa\04\8a\02\1e\ab\bb\a7\03\b7\db\f7\af\c2\e1\7c\08\49\06\42\ee\3e\1f\99\55\fb\e4\1e\b5\57\3e\22\62\fa\43\42\60";
-  compare512(Blob.toArray(b), #sha512, Blob.toArray(h));
+  compare512(b.toArray(), #sha512, h.toArray());
 };
 
 // string of 640,000 zero bytes
 do {
-  let data = Blob.fromVarArray(VarArray.repeat<Nat8>(0, 128));
+  let data = (VarArray.repeat<Nat8>(0, 128)).toBlob();
   let (digest256, digest512) = (
     Sha256.new(),
     Sha512.new(),
@@ -370,8 +370,8 @@ do {
     digest256.writeBlob(data);
     digest512.writeBlob(data);
   };
-  let h256 = Blob.fromArray([61, 0, 237, 134, 182, 99, 205, 27, 138, 200, 43, 16, 82, 87, 205, 16, 148, 18, 249, 45, 202, 68, 32, 72, 83, 36, 57, 249, 32, 167, 246, 69]);
-  let h512 = Blob.fromArray([185, 210, 89, 99, 251, 49, 143, 153, 12, 142, 84, 169, 249, 148, 175, 61, 145, 199, 69, 11, 148, 254, 140, 119, 61, 28, 58, 131, 83, 32, 14, 171, 33, 173, 242, 36, 122, 71, 210, 182, 28, 141, 145, 66, 148, 64, 86, 232, 73, 25, 31, 130, 115, 13, 234, 231, 152, 183, 217, 138, 153, 112, 120, 205]);
+  let h256 = Array.toBlob([61, 0, 237, 134, 182, 99, 205, 27, 138, 200, 43, 16, 82, 87, 205, 16, 148, 18, 249, 45, 202, 68, 32, 72, 83, 36, 57, 249, 32, 167, 246, 69]);
+  let h512 = Array.toBlob([185, 210, 89, 99, 251, 49, 143, 153, 12, 142, 84, 169, 249, 148, 175, 61, 145, 199, 69, 11, 148, 254, 140, 119, 61, 28, 58, 131, 83, 32, 14, 171, 33, 173, 242, 36, 122, 71, 210, 182, 28, 141, 145, 66, 148, 64, 86, 232, 73, 25, 31, 130, 115, 13, 234, 231, 152, 183, 217, 138, 153, 112, 120, 205]);
   assert (digest256.sum() == h256);
   assert (digest512.sum() == h512);
 };
@@ -384,14 +384,14 @@ do {
   let hash512_arr = Sha512.new();
   for (l in range(0, 11)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
-    let b = Blob.fromArray(arr);
+    let b = arr.toBlob();
     hash256_b.writeBlob(b);
     hash512_b.writeBlob(b);
     hash256_arr.writeArray(arr);
     hash512_arr.writeArray(arr);
   };
-  let h256 = Blob.fromArray(digests[55]);
-  let h512 = Blob.fromArray(digests512[55]);
+  let h256 = digests[55].toBlob();
+  let h512 = digests512[55].toBlob();
   assert (hash256_b.sum() == h256);
   assert (hash512_b.sum() == h512);
   assert (hash256_arr.sum() == h256);
@@ -405,7 +405,7 @@ do {
   let hash512_arr = Sha512.new();
   for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
-    let b = Blob.fromArray(arr);
+    let b = arr.toBlob();
     hash256_b.writeBlob(b);
     hash512_b.writeBlob(b);
     hash256_arr.writeArray(arr);
@@ -413,14 +413,14 @@ do {
   };
   for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
-    let b = Blob.fromArray(arr);
+    let b = arr.toBlob();
     hash256_b.writeBlob(b);
     hash512_b.writeBlob(b);
     hash256_arr.writeArray(arr);
     hash512_arr.writeArray(arr);
   };
-  let h256 = Blob.fromArray(digests[30]);
-  let h512 = Blob.fromArray(digests512[30]);
+  let h256 = digests[30].toBlob();
+  let h512 = digests512[30].toBlob();
   assert (hash256_b.sum() == h256);
   assert (hash512_b.sum() == h512);
   assert (hash256_arr.sum() == h256);
@@ -434,7 +434,7 @@ do {
   let hash512_arr = Sha512.new();
   for (l in range(0, 6)) {
     let arr = Array.tabulate<Nat8>(l, func(i) { 0xa5 });
-    let b = Blob.fromArray(arr);
+    let b = arr.toBlob();
     hash256_b.writeBlob(b);
     hash256_b.writeBlob(b);
     hash512_b.writeBlob(b);
@@ -444,8 +444,8 @@ do {
     hash512_arr.writeArray(arr);
     hash512_arr.writeArray(arr);
   };
-  let h256 = Blob.fromArray(digests[30]);
-  let h512 = Blob.fromArray(digests512[30]);
+  let h256 = digests[30].toBlob();
+  let h512 = digests512[30].toBlob();
   assert (hash256_b.sum() == h256);
   assert (hash512_b.sum() == h512);
   assert (hash256_arr.sum() == h256);

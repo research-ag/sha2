@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Make sure moc is installed
+        run: mops toolchain bin moc
+
+      - name: Show versions
+        run: |
+          mops --version
+          $(mops toolchain bin moc) --version
+
+      - name: Install dependencies
+        run: mops install --locked
+
+      - name: Run tests
+        run: mops test --locked
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Install dependencies
+        working-directory: examples
+        run: mops install --locked
+
+      - name: Verify examples
+        working-directory: examples
+        run: mops test --locked verify
+
+      - name: Check examples are allocation-free
+        working-directory: examples
+        run: mops test --locked allocation
+
+  allocation-32bit:
+    name: Allocation (32-bit heap)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Install dependencies
+        run: |
+          mops install --locked
+          cd examples && mops install --locked
+
+      # moc 2.0.0 has only the 64-bit heap. The 32-bit heap needs moc 1.x with
+      # legacy persistence, which the library still supports.
+      - name: Install moc 1.16.1
+        run: |
+          mops toolchain use moc 1.16.1
+          $(mops toolchain bin moc) --version
+
+      - name: Check the library allocations
+        run: |
+          $(mops toolchain bin moc) $(mops sources) -wasi-system-api --legacy-persistence test/allocation.test.mo -o lib.wasm
+          $(mops toolchain bin wasmtime) lib.wasm
+
+      - name: Check examples are allocation-free
+        run: |
+          MOC=$(mops toolchain bin moc)
+          WASMTIME=$(mops toolchain bin wasmtime)
+          cd examples
+          $MOC $(mops sources) -wasi-system-api --legacy-persistence test/allocation.mo -o ex.wasm
+          $WASMTIME ex.wasm
+
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+      - name: Install mops
+        uses: caffeinelabs/setup-mops@v1
+
+      - name: Install dependencies
+        run: mops install --locked
+
+      - name: Make sure pocket-ic is installed
+        run: mops toolchain bin pocket-ic
+
+      - name: Make sure wasm-opt is installed
+        run: mops toolchain bin wasm-opt
+
+      - name: Run benchmarks
+        run: mops bench --locked
+
+  fmt:
+    name: Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: latest
+
+      - name: Prettier Check
+        run: |
+          npm install prettier prettier-plugin-motoko --no-save
+          npx -y prettier --plugin prettier-plugin-motoko --check '**/*.{mo,json,md}'

@@ -6,7 +6,7 @@ module {
   /// `word`: current word being built.
   /// `i_msg`: current word index in `msg`.
   /// `i_byte`: current byte index in `word`.
-  /// `i_block`: total number of bits hashed so far.
+  /// `i_block`: number of 128-byte blocks processed so far.
   /// `s`: current hash state (8 words of 64 bits).
   /// `closed`: whether the digest has been finalized.
   public type Digest = {

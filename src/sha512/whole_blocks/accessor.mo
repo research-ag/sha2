@@ -21,7 +21,7 @@ module {
     var g = state[6];
     var h = state[7];
     var t = 0 : Nat64;
-    var i_max : Nat = i + ((sz - i) / 128) * 128;
+    let i_max : Nat = i + ((sz - i) / 128) * 128;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;

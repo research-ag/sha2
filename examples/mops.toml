@@ -1,0 +1,10 @@
+[dependencies]
+sha2 = "../src/"
+# Replace with:
+# sha2 = "0.3.0"
+core = "2.6.2"
+prng = "0.3.1"
+
+[toolchain]
+moc = "2.0.0"
+wasmtime = "49.0.2"

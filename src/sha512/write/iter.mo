@@ -29,8 +29,8 @@ module {
 
     if (x.i_msg != 0 or x.i_byte != 8) return;
 
-    // must have buf.i_msg == 0 and buf.high == true here
-    // continue to try to read entire blocks at once from the iterator
+    // At a block boundary here (x.i_msg == 0 and x.i_byte == 8):
+    // continue by reading entire blocks at once from the iterator.
 
     Process.process_blocks(x, data);
   };

@@ -22,7 +22,7 @@ prt(Sha256.fromAccessor(func(i : Nat) : Nat8 = 0, 0, 0));
 
 do {
   let l = List.empty<Nat8>();
-  prt(Sha256.fromIter(List.values(l)));
+  prt(Sha256.fromIter(l.values()));
   prt(Sha256.fromReader(l.reader(0), l.size()));
 };
 
@@ -32,15 +32,6 @@ do {
   prt(Sha256.fromReader(l.reader(0), l.size()));
   prt(Sha256.fromReader(l.reader(6), 5));
   prt(Sha256.fromBlob("world"));
-  func at(i : Nat) : Nat8 = List.at(l, i);
+  func at(i : Nat) : Nat8 = l.at(i);
   prt(Sha256.fromAccessor(at, 6, 5));
 };
-/*
-do {
-  let digest = Sha256.new(); // default algo #sha256
-  digest.writeBlob("hello");
-  prt (digest.peekSum());
-  digest.writeBlob(" world!");
-  prt (digest.sum());
-};
-*/

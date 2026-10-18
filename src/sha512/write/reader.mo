@@ -30,7 +30,8 @@ module {
     ignore write_data_to_buffer(x, data, sz, end);
   };
 
-  // Write blob to buffer until either the block is full or the end of the blob is reached
+  // Read bytes from the reader into the buffer until either the block is full
+  // or `sz` bytes have been read in total.
   // The return value refers to the interval that was written in the form [start,end)
   func write_data_to_buffer(x : Digest, data : () -> Nat8, sz : Nat, start : Nat) : (end : Nat) {
     if (start >= sz) return start;
@@ -46,7 +47,7 @@ module {
     let msg = x.msg;
     while (i < i_max) {
       // prettier-ignore
-      msg[Nat8.toNat(i_msg)] :=
+      msg[i_msg.toNat()] :=
       Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 56
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 48
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data()))) << 40

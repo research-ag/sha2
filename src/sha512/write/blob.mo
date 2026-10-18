@@ -26,9 +26,15 @@ module {
     if (x.i_msg > 0 or x.i_byte < 8) {
       pos := write_data_to_buffer(x, data, pos);
     };
-    let end = Process.process_blocks(x.s, data, pos);
-    x.i_block +%= Nat64.fromIntWrap(end - pos) / 128;
-    ignore write_data_to_buffer(x, data, end);
+    // Run whole blocks directly only when at least one full block remains, so a
+    // sub-block input skips process_blocks — which would otherwise write the
+    // 8-word state back (8 Nat64 boxes) for zero blocks.
+    if (pos + 128 <= sz) {
+      let end = Process.process_blocks(x.s, data, pos);
+      x.i_block +%= Nat64.fromIntWrap(end - pos) / 128;
+      pos := end;
+    };
+    ignore write_data_to_buffer(x, data, pos);
   };
 
   // Write blob to buffer until either the block is full or the end of the blob is reached
@@ -48,7 +54,7 @@ module {
     let msg = x.msg;
     while (i < i_max) {
       // prettier-ignore
-      msg[Nat8.toNat(i_msg)] :=
+      msg[i_msg.toNat()] :=
       Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i]))) << 56
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+1]))) << 48
       ^ Prim.nat32ToNat64(Prim.nat16ToNat32(Prim.nat8ToNat16(data[i+2]))) << 40

@@ -11,6 +11,8 @@ module {
   /// Run the SHA256 compression on every full 64-byte block in `data` from index `start` to the end, updating the 16 half-word state `self` in place. Returns the index just past the last block consumed (i.e. `start + 64 * blocks`).
   public func process(self : [var Nat16], data : [Nat8], start : Nat) : Nat {
     let sz = data.size();
+    // Early out if no full block remains — skips the load/store of all 8 state registers.
+    if (start + 64 > sz) return start;
     var i = start;
     // load state registers
     var a = nat16To32(self[0]) << 16 | nat16To32(self[1]);
@@ -22,7 +24,7 @@ module {
     var g = nat16To32(self[12]) << 16 | nat16To32(self[13]);
     var h = nat16To32(self[14]) << 16 | nat16To32(self[15]);
     var t = 0 : Nat32;
-    var i_max : Nat = i + ((sz - i) / 64) * 64;
+    let i_max : Nat = i + ((sz - i) / 64) * 64;
     while (i < i_max) {
       let a_0 = a;
       let b_0 = b;
