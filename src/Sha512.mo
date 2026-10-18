@@ -2,11 +2,11 @@
 ///
 /// Features:
 ///
-/// * Algorithms: `sha512_224`, `sha512_256`, `sha384`, `sha512`
-/// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`,
-/// *   `at : Nat -> Nat8` (unchecked accessor),
-/// *   `next : () -> Nat8` (unchecked reader)
-/// * Output types: `Blob`
+/// * Algorithms: `#sha512` (default), `#sha384`, `#sha512_256`, `#sha512_224`
+/// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, an accessor
+///   function `Nat -> Nat8` and a reader function `() -> Nat8` (both unchecked:
+///   the caller guarantees that the requested bytes exist)
+/// * Output type: `Blob`
 ///
 /// Messages must be shorter than 2^64 bits (2^61 bytes); the SHA-512 standard
 /// allows up to 2^128 bits. A longer message would give a wrong hash without
@@ -189,7 +189,7 @@ module {
 
   /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
-  /// It it the responsibility of the caller to ensure that the accessor function
+  /// It is the responsibility of the caller to ensure that the accessor function
   /// can provide valid data for all requested indices.
   ///
   /// ```motoko include=import
@@ -206,7 +206,7 @@ module {
 
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
-  /// It it the responsibility of the caller to ensure that the reader function
+  /// It is the responsibility of the caller to ensure that the reader function
   /// can provide valid data for all requested bytes.
   ///
   /// ```motoko include=import
@@ -235,8 +235,9 @@ module {
   public func writeIter(self : Digest, data : Iter<Nat8>) : () = _Digest.writeIter(self, data.next);
 
   /// Finalize the digest and return the hash as a `Blob`.
-  /// This closes the digest. It cannot be used for anything again unless it is reset with the `reset()` function.
-  /// For example, attempting to write more data to it or finalizing it a second time will trap.
+  /// This closes the digest: writing more data to it or finalizing it a second
+  /// time traps. The hash can be read again with `readSum()`, and `reset()`
+  /// makes the digest reusable for a new message.
   ///
   /// ```motoko include=import
   /// let digest = Sha512.new();
@@ -431,7 +432,7 @@ module {
 
   /// Calculate the SHA2 hash digest from a positional accessor function.
   /// Takes `len` bytes counting from the `start` index.
-  /// It it the responsibility of the caller to ensure that the accessor function
+  /// It is the responsibility of the caller to ensure that the accessor function
   /// can provide valid data for all requested indices.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
@@ -457,7 +458,7 @@ module {
 
   /// Calculate the SHA2 hash digest from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
-  /// It it the responsibility of the caller to ensure that the reader function
+  /// It is the responsibility of the caller to ensure that the reader function
   /// can provide valid data for all requested bytes.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.

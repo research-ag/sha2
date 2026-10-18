@@ -56,7 +56,7 @@
 ///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
 ///     order (the raw double-SHA256 output). Block explorers and RPC display
 ///     them byte-REVERSED — reverse the 32 bytes to compare (see the mainnet
-///     vectors in `test/verify.test.mo`).
+///     vectors in `test/verify.mo`).
 ///   * Duplicating the last node is the source of Bitcoin's CVE-2012-2459 (two
 ///     distinct leaf lists can yield the same root); callers must reject blocks
 ///     with duplicate txids in that position.

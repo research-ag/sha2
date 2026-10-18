@@ -16,8 +16,7 @@ import fromPadding "process/padding";
 import fromFold "process/fold";
 
 module {
-  /// SHA256 internal state — 8 state words split into 16 `Nat16` half-words (even indices hold the high byte, odd indices the low byte).
-  // indices 0,2,4,6,8,10,12,14 = high bytes, indices 1,3,5,7,9,11,13,15 = low bytes
+  /// SHA256 internal state — 8 state words split into 16 `Nat16` half-words (even indices hold the high half, odd indices the low half of each 32-bit word).
   public type State = [var Nat16];
 
   /// Overwrite the 16 half-words of `self` with the first 16 entries of `vals`.

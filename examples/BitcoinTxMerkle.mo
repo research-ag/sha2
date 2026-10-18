@@ -58,7 +58,7 @@
 ///
 ///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
 ///     order; explorers display them byte-REVERSED (see the mainnet vectors in
-///     `test/verify.test.mo`).
+///     `test/verify.mo`).
 ///   * SEGWIT: a txid hashes the transaction serialized WITHOUT witness data.
 ///     Feeding full segwit bytes (marker/flag and witnesses) yields the wtxid
 ///     instead. Pre-segwit and stripped serializations are fine as-is.

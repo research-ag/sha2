@@ -31,7 +31,7 @@ module {
     ignore write_data_to_buffer(x, data, end);
   };
 
-  // Write blob to buffer until either the block is full or the end of the blob is reached
+  // Write array to buffer until either the block is full or the end of the array is reached
   // The return value refers to the interval that was written in the form [start,end)
   func write_data_to_buffer(x : Digest, data : [Nat8], start : Nat) : (end : Nat) {
     let sz = data.size();

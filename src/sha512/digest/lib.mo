@@ -104,9 +104,9 @@ module {
       p -%= 1;
     };
 
-    // write length (16 bytes)
-    // Note: this exactly fills the block buffer, hence process_block will get
-    // triggered by the last writeByte
+    // write length (16 bytes): the high 8 bytes are zero (messages are shorter
+    // than 2^64 bits). This fills the block exactly, so the last writeWord
+    // processes it.
     writeWord(self, 0);
     writeWord(self, n_bits);
   };

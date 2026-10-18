@@ -5,9 +5,9 @@ import Sha512 "../src/Sha512";
 
 let rng = Random.seed(0x5077);
 
-// Sha256.writeBlob now dispatches internally: word-aligned -> the closure-free
-// word path, otherwise the generic path. Split a message at odd offsets to
-// force the misaligned (closure) branch on the second write, and check the
+// Sha256.writeBlob fills a partial half-word and partial block before running
+// whole blocks directly from the Blob. Split a message at odd and sub-block
+// offsets so the second write starts mid-word and mid-block, and check the
 // result against fromArray (an independent code path) regardless of the split.
 for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
   let total = 200;
@@ -18,7 +18,7 @@ for (algo in ([#sha256, #sha224] : [Sha256.Algorithm]).values()) {
     let part2 = (Array.tabulate<Nat8>(total - k, func(i) = data[k + i])).toBlob();
     let d = Sha256.new(algo);
     d.writeBlob(part1); // length k; odd k leaves the buffer mid-word
-    d.writeBlob(part2); // starts mid-word for odd k -> misaligned branch
+    d.writeBlob(part2); // starts mid-word for odd k
     assert (d.sum() == reference);
   };
 };

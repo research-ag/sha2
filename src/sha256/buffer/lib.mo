@@ -34,24 +34,6 @@ module {
   let nat8To16 = Prim.nat8ToNat16;
   let nat8ToNat = Prim.nat8ToNat;
 
-  /*
-  private func writeByte(x : Digest, val : Nat8) : () {
-    if (x.high) {
-      x.word := nat8To16(val) << 8;
-      x.high := false;
-    } else {
-      x.msg[nat8ToNat(x.i_msg)] := x.word ^ nat8To16(val);
-      x.i_msg +%= 1;
-      x.high := true;
-    };
-    if (x.i_msg == 32) {
-      x.state.process_block_from_msg_buffer(x.msg);
-      x.i_msg := 0;
-      x.i_block +%= 1;
-    };
-  };
-  */
-
   /// Load bytes obtained via `at(i)` for `i` in `[start, sz)` into the SHA256 message buffer, stopping when the buffer fills (32 words) or when `i` reaches `sz`.
   /// Returns the index just past the last byte consumed.
   public func load_chunk(self : Buffer, at : Nat -> Nat8, sz : Nat, start : Nat) : (end : Nat) {
@@ -69,8 +51,9 @@ module {
         return i;
       };
     };
+    // Read whole half-words (byte pairs) up to i_max; a trailing odd byte is
+    // handled by the loop below.
     let i_max : Nat = i + ((sz - i) / 2) * 2;
-    // Note: setting i_max always to sz - 1 also works (only for multiples of 2).
     while (i < i_max) {
       msg[nat8ToNat(i_msg)] := nat8To16(at(i)) << 8 ^ nat8To16(at(i + 1));
       i_msg +%= 1;

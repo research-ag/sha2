@@ -2,11 +2,11 @@
 ///
 /// Features:
 ///
-/// * Algorithms: `sha256`, `sha224`
-/// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`,
-/// *   `at : Nat -> Nat8` (unchecked accessor),
-/// *   `next : () -> Nat8` (unchecked reader)
-/// * Output types: `Blob`
+/// * Algorithms: `#sha256` (default), `#sha224`
+/// * Input types: `Blob`, `[Nat8]`, `[var Nat8]`, `Iter<Nat8>`, an accessor
+///   function `Nat -> Nat8` and a reader function `() -> Nat8` (both unchecked:
+///   the caller guarantees that the requested bytes exist)
+/// * Output type: `Blob`
 ///
 /// ```motoko name=import
 /// import Sha256 "mo:sha2/Sha256";
@@ -174,7 +174,7 @@ module {
 
   /// Write data from a positional accessor function.
   /// Takes `len` bytes starting from the `start` index.
-  /// It it the responsibility of the caller to ensure that the accessor function
+  /// It is the responsibility of the caller to ensure that the accessor function
   /// can provide valid data for all requested indices.
   ///
   /// ```motoko include=import
@@ -191,7 +191,7 @@ module {
 
   /// Write data from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
-  /// It it the responsibility of the caller to ensure that the reader function
+  /// It is the responsibility of the caller to ensure that the reader function
   /// can provide valid data for all requested bytes.
   ///
   /// ```motoko include=import
@@ -229,8 +229,9 @@ module {
   func stateBlob(x : Digest) : Blob = arrayToBlob(stateNat8(x));
 
   /// Finalize the digest and return the hash as a `Blob`.
-  /// This closes the digest. It cannot be used for anything again unless it is reset with the `reset()` function.
-  /// For example, attempting to write more data to it or finalizing it a second time will trap.
+  /// This closes the digest: writing more data to it or finalizing it a second
+  /// time traps. The hash can be read again with `readSum()`, and `reset()`
+  /// makes the digest reusable for a new message.
   ///
   /// ```motoko include=import
   /// let digest = Sha256.new();
@@ -410,7 +411,7 @@ module {
 
   /// Calculate the SHA2 hash digest from a positional accessor function.
   /// Takes `len` bytes counting from the `start` index.
-  /// It it the responsibility of the caller to ensure that the accessor function
+  /// It is the responsibility of the caller to ensure that the accessor function
   /// can provide valid data for all requested indices.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
@@ -436,7 +437,7 @@ module {
 
   /// Calculate the SHA2 hash digest from a reader function.
   /// Takes exactly `len` bytes by calling the reader function `len` times.
-  /// It it the responsibility of the caller to ensure that the reader function
+  /// It is the responsibility of the caller to ensure that the reader function
   /// can provide valid data for all requested bytes.
   /// This is a convenience function that creates a digest, writes the data,
   /// and returns the final hash in one step.
@@ -454,7 +455,7 @@ module {
   /// let hash = Sha256.fromReader(#sha224, reader, 5);
   /// ```
   ///
-  /// Does not trap unless user-provided reader function `next` traps.
+  /// Does not trap unless user-provided reader function `data` traps.
   public func fromReader(algo : (implicit : Algorithm), data : () -> Nat8, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeReader(data, len);

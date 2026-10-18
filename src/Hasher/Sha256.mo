@@ -16,8 +16,8 @@
 ///
 /// Every function follows one uniform contract: `f(self, ...operands)`
 /// overwrites `self`. The `hash…` and `combine…` functions overwrite it with
-/// `SHA256(operands...)`, starting from the IV; the `load…` functions with the
-/// operand itself, unchanged.
+/// `SHA256(operands...)`, starting from the initial value (IV) of SHA-256; the
+/// `load…` functions with the operand itself, unchanged.
 ///
 /// So `self` is always a pure destination, fully overwritten — there is no
 /// "closed" state, no `reset`, and the value held at any time simply IS the most

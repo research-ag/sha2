@@ -17,7 +17,6 @@ import _State "../state";
 import _ProcessMsg "../state/process/blocks/iter"; // state.process
 
 import { type Digest } "../types";
-import { type State } "../types";
 
 module {
   let natToNat64 = Prim.natToNat64;
@@ -39,7 +38,6 @@ module {
         buf.i_block +%= 1;
       };
     };
-    // if (buf.i_msg != 0) return;
     let end = process_blocks(pos);
     buf.i_block +%= natToNat64(end - pos) / 64;
     ignore buf.load_chunk(data, sz, end);
@@ -125,8 +123,8 @@ module {
 
     if (buf.i_msg > 0 or not buf.high) return;
 
-    // must have buf.i_msg == 0 and buf.high == true here
-    // continue to try to read entire blocks at once from the iterator
+    // At a block boundary here (buf.i_msg == 0 and buf.high):
+    // continue by reading entire blocks at once from the iterator.
 
     state.process(data, buf); // _ProcessMsg.process (state/process/blocks/iter.mo)
   };
@@ -162,25 +160,23 @@ module {
         msg[nat8ToNat(i_msg)] := 0;
         i_msg +%= 1;
       };
-      state.process_block_from_msg(msg); // Note: function does not rely on buf.i_msg
+      state.process_block_from_msg(msg);
       i_msg := 0;
-      // skipping here because we won't use buf.i_block anymore: x.i_block +%= 1;
+      // buf.i_block is not incremented: it is not used again after the padding.
     };
     // zero padding in last block
     while (i_msg < 28) {
       msg[nat8ToNat(i_msg)] := 0;
       i_msg +%= 1;
     };
-    // 8 length bytes
-    // Note: this exactly fills the block buffer, hence process_block will get
-    // triggered by the last writeByte
+    // 8 length bytes (big-endian) fill the last block exactly.
     let (l0, l1, l2, l3, l4, l5, l6, l7) = Prim.explodeNat64(n_bits);
     msg[28] := nat8To16(l0) << 8 | nat8To16(l1);
     msg[29] := nat8To16(l2) << 8 | nat8To16(l3);
     msg[30] := nat8To16(l4) << 8 | nat8To16(l5);
     msg[31] := nat8To16(l6) << 8 | nat8To16(l7);
-    state.process_block_from_msg(msg); // Note: function does not rely on buf.i_msg
-    // skipping here because we won't use x anymore: buf.i_msg := 0;
+    state.process_block_from_msg(msg);
+    // buf.i_msg is left as is: the buffer is not used again after the padding.
   };
 
   /// Finalize the digest by writing padding.
@@ -190,22 +186,4 @@ module {
     self.closed := true;
     writePadding(self);
   };
-
-  /*
-  public func clone(self : Digest) : Digest {
-    assert not self.closed;
-    {
-      buffer = self.buffer.clone();
-      state = self.state.clone();
-      var closed = false;
-    };
-  };
-
-  public func peek(self : Digest) : State {
-    if (self.closed) return self.state;
-    let new = clone(self);
-    close(new);
-    return new.state;
-  };
-  */
 };

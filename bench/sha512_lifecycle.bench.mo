@@ -7,8 +7,8 @@ import Sha512 "../src/Sha512";
 module {
   public func init() : Bench.V1 {
     let rows = [
-      "new()", // create a fresh hasher
-      "reset()", // reset an existing hasher
+      "new()", // create a fresh digest
+      "reset()", // reset an existing digest
       "sum()", // finalize and return the hash (allocates a Blob)
       "close() partial", // finalize without returning, mid-block
       "close() @block", // finalize at a block boundary (fast path)
@@ -29,8 +29,8 @@ module {
     let input : Blob = (Array.tabulate<Nat8>(80, func(_) = rng.nat8())).toBlob();
     let block : Blob = (Array.tabulate<Nat8>(128, func(_) = rng.nat8())).toBlob();
 
-    // Pre-built hashers for the non-creation rows. Each cell runs exactly
-    // once per measurement, so a single finalize per hasher is safe.
+    // Pre-built digests for the non-creation rows. Each cell runs exactly
+    // once per measurement, so a single finalize per digest is safe.
     let resetLocal = Sha512.new();
     resetLocal.writeBlob(input);
     let sumLocal = Sha512.new();

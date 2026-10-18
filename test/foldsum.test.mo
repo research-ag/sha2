@@ -9,7 +9,7 @@ func bytes(n : Nat) : Blob = (Array.tabulate<Nat8>(n, func(_) = rng.nat8())).toB
 
 // --- Sha256 sumDouble (sha256 only; double SHA256 traps on sha224) ---
 // (N-fold beyond double is exercised via the NFold example in
-// examples/test/verify.test.mo, which bridges a Digest into a Hasher.)
+// examples/test/verify.mo, which bridges a Digest into a Hasher.)
 for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
   let msg = bytes(len);
 
@@ -33,10 +33,10 @@ for (len in ([0, 1, 32, 55, 56, 64, 100] : [Nat]).values()) {
   assert (f.readSum() == once);
 };
 
-// Sha512 has close/readSum for symmetry with Sha256, but no fold/combine
-// primitives (single-/double-SHA512 Merkle trees aren't supported — see
-// Sha512.mo). Check close/readSum for every variant, including lengths that
-// straddle the 128-byte block boundary and the extra-padding-block threshold.
+// Sha512 has close/readSum for symmetry with Sha256, but no sumDouble and no
+// Hasher (the Hasher engine is SHA-256 only). Check close/readSum for every
+// variant, including lengths that straddle the 128-byte block boundary and
+// the extra-padding-block threshold.
 for (algo in ([#sha512, #sha384, #sha512_224, #sha512_256] : [Sha512.Algorithm]).values()) {
   for (len in ([0, 1, 100, 111, 112, 128, 200, 256] : [Nat]).values()) {
     let msg = bytes(len);

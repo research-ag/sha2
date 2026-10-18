@@ -7,8 +7,8 @@ import Sha256 "../src/Sha256";
 module {
   public func init() : Bench.V1 {
     let rows = [
-      "new()", // create a fresh hasher
-      "reset()", // reset an existing hasher
+      "new()", // create a fresh digest
+      "reset()", // reset an existing digest
       "close() partial", // finalize without returning, mid-block
       "close() @block", // finalize at a block boundary (fast path)
       "readSum()", // read a closed digest's state out as a Blob
@@ -35,8 +35,8 @@ module {
     let input : Blob = (Array.tabulate<Nat8>(40, func(_) = rng.nat8())).toBlob();
     let block : Blob = (Array.tabulate<Nat8>(64, func(_) = rng.nat8())).toBlob();
 
-    // Pre-built hashers for the non-creation rows. Each cell runs exactly once
-    // per measurement, so a single finalize per hasher is safe. 'partial' rows
+    // Pre-built digests for the non-creation rows. Each cell runs exactly once
+    // per measurement, so a single finalize per digest is safe. 'partial' rows
     // get the 40-byte sub-block message, '@block' rows the 64-byte one.
     let resetLocal = Sha256.new();
     resetLocal.writeBlob(input);
