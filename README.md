@@ -44,7 +44,7 @@ The package is published on [MOPS](https://mops.one/sha2) and [GitHub](https://g
 Please refer to the README on GitHub where it renders properly with tables.
 
 The API documentation can be found [here](https://mops.one/sha2/docs/lib) on Mops.
-Changes between versions are listed in the [CHANGELOG](CHANGELOG.md).
+Changes between versions are listed in the [CHANGELOG](https://github.com/research-ag/sha2/blob/main/CHANGELOG.md).
 
 For updates, help, questions, feedback and other requests related to this package join us on:
 
@@ -293,7 +293,7 @@ actor {
 
 With `moc` 1.x declare the actor as `persistent actor` to get the same default; with `moc` 2.0 that keyword is implied.
 
-The stable type of `Sha256.Digest` changed in version 0.3.0 (see the [CHANGELOG](CHANGELOG.md)).
+The stable type of `Sha256.Digest` changed in version 0.3.0 (see the [CHANGELOG](https://github.com/research-ag/sha2/blob/main/CHANGELOG.md)).
 A canister that keeps a digest from an earlier version in a stable variable has to migrate it, or reset and recreate it, when upgrading.
 
 ### 5. Fixed-length hashing with the Hasher engine
@@ -357,7 +357,7 @@ Pass `d.state` only as a source, never as the hasher that is written to.
 - The `Hasher` type is a raw `[var Nat16]` of length 16; the type system does not enforce the length. Treat it as opaque and only operate on values created by `Hasher.new()`.
 
 The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, and iterated hashing.
-See its [README](examples/README.md).
+See its [README](https://github.com/research-ag/sha2/blob/main/examples/README.md).
 
 ### Message length limits
 
@@ -450,7 +450,7 @@ mops install
 mops test
 ```
 
-The examples are their own mops project with their own tests; see [examples/README.md](examples/README.md).
+The examples are their own mops project with their own tests; see [examples/README.md](https://github.com/research-ag/sha2/blob/main/examples/README.md).
 
 Benchmarks:
 
