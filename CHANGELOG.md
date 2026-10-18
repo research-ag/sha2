@@ -25,7 +25,7 @@
   - Allocation-free Merkle-tree examples based on the new `Hasher`s.
     - Two different approaches to manage pool of `Hasher`s: stack and binary counter.
     - Two different inputs: `Blob` leaves and variable-length messages.
-    - Intermediate mountain ranges (MMRs)
+    - Merkle mountain ranges (MMRs)
     - Bitcoin-style double-SHA trees
     - Bitcoin-style root computation
     - Coinbase inclusion proof building and verifying
@@ -36,7 +36,7 @@
   - `close()`: finalize a digest without returning it
   - `readSum()`: read a closed digest idempotently (any number of times)
   - `fold()` (Sha256 only): fold a finalized digest back in as the next message, for N-fold hashing
-  - `combineLeaves()` (Sha256 only): hash two 32-byte `Blob` in place, without message buffers
+  - `combineLeaves()` (Sha256 only): hash two 32-byte `Blob`s in place, without message buffers
   - `combineNodes()` (Sha256 only): hash two 32-byte child digests in place, without message buffer
 - Optimizations:
   - `close()`: fast path for block-aligned input
