@@ -30,7 +30,7 @@ Each file's header comment is a how-to: it spells out exactly what to do to keep
 
 A **Merkle tree** hashes pairs of nodes up to a single root: the leaves are hashes, every inner node is the hash of its two children, and the root commits to all leaves.
 Done the obvious way, every inner node produces an intermediate hash `Blob`, so a tree over `n` leaves allocates about `n` `Blob`s.
-On the Internet Computer that garbage costs cycles.
+Every allocation costs instructions, once when it is made and again when the garbage collector runs.
 
 The examples instead build a **Merkle mountain range** (MMR).
 Leaves are added one at a time.

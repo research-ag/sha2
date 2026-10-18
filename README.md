@@ -23,8 +23,9 @@ The hash of a message is returned as a `Blob` of the output length.
 In the standard this value is called the _digest_.
 In this package the word `Digest` also names the engine that accumulates a message, see below; the text says _hash_ for the output to keep the two apart.
 
-The package is written for canisters on the Internet Computer, where instructions and heap allocations both cost cycles.
-It is optimized for both: the hashing itself makes no heap allocation at all, and the instruction count per block is kept low by unrolled round loops (see [Implementation notes](#implementation-notes)).
+The implementation is optimized for a low instruction count and makes no heap allocations while hashing.
+The two go together: an allocation costs instructions when it is made and again when the garbage collector runs.
+The instruction count per block is kept low by unrolled round loops (see [Implementation notes](#implementation-notes)).
 
 There are three ways to hash, from the simplest to the most specialized:
 
@@ -86,14 +87,14 @@ In your `dfx.json` make sure you have the entry:
 
 ### Which API to use
 
-| You want to                                            | Use                                            |
-| ------------------------------------------------------ | ---------------------------------------------- |
-| hash a message that is already complete in memory      | `fromBlob`, `fromArray`, … (section 1)         |
-| hash a message that arrives in pieces                  | a `Digest`: `new`, `write…`, `sum` (section 2) |
-| take an intermediate hash and keep writing             | `clone()` (section 3)                          |
-| hash across canister messages or upgrades              | a `Digest` in a stable variable (section 4)    |
-| hash 32-byte values or pairs of them, e.g. Merkle tree | a `Hasher` (section 5)                         |
-| compute SHA256(SHA256(m)), the Bitcoin hash            | `sumDouble()` on a `Digest` (section 2)        |
+| You want to                                                                | Use                                            |
+| -------------------------------------------------------------------------- | ---------------------------------------------- |
+| hash a message that is already complete in memory                          | `fromBlob`, `fromArray`, … (section 1)         |
+| hash a message that arrives in pieces                                      | a `Digest`: `new`, `write…`, `sum` (section 2) |
+| take an intermediate hash and keep writing                                 | `clone()` (section 3)                          |
+| hash across canister messages or upgrades                                  | a `Digest` in a stable variable (section 4)    |
+| hash 32-byte values or pairs of them with SHA-256 only, e.g. a Merkle tree | a `Hasher` (section 5)                         |
+| compute SHA256(SHA256(m)), the Bitcoin hash                                | `sumDouble()` on a `Digest` (section 2)        |
 
 ### 1. One-shot hashing with the convenience functions
 
