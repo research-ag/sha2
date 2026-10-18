@@ -428,6 +428,8 @@ Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same fo
 
 - The round loops of the compression function are unrolled, for both SHA-256 and SHA-512. This was mainly motivated by reducing the heap allocations but it also reduced the instructions significantly.
 - SHA-256 keeps its state and message buffer in 16-bit half-words (`Nat16`), which Motoko never boxes, so hashing allocates nothing. SHA-512 needs 64-bit words, which are boxed when large; that is the bounded per-call allocation noted above.
+  - On the 64-bit heap `Nat32` is never boxed either, so the state could be kept in 8 `Nat32` words instead of 16 `Nat16` half-words. We measured this. It saves the joining and splitting of half-words only where a call reads and writes back the state, so the improvement is per call, not per byte: long messages are unaffected. The largest visible impact is on Merkle-tree hashing, with about 3.5% fewer instructions.
+  - We don't make this change because the package also supports the 32-bit heap (moc 1.x with legacy persistence), where large `Nat32` values are boxed. There the state words would allocate, and the package is meant to stay allocation-free on the 32-bit heap as well.
 - Whole blocks are compressed directly from the input (`Blob`, arrays, accessor, reader, iterator) without passing through the message buffer. Only the partial block at the start and at the end of a write goes through the buffer.
 - `writeBlob` reads the `Blob` directly rather than through an accessor closure, so it allocates nothing.
 - When a message ends on a block boundary, the padding block is compressed directly from constants instead of being assembled in the buffer.
