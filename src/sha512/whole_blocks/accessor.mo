@@ -26,8 +26,8 @@ module {
     // The block offset is kept in Nat32 and converted for every index: a `Nat`
     // addition is a runtime call of about 50 instructions, a Nat32 one a single
     // wasm instruction, and unlike `nat64ToNat` the conversion `nat32ToNat`
-    // needs no range check. This assumes `data` is smaller than 4 GiB;
-    // `natToNat32` traps otherwise.
+    // needs no range check. The positions must be below 4 GiB: `natToNat32`
+    // traps otherwise (documented on `writeAccessor` and `fromAccessor`).
     var o : Nat32 = natToNat32(start);
     let o_max : Nat32 = natToNat32(i_max);
     while (o < o_max) {
