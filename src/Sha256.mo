@@ -186,7 +186,9 @@ module {
   /// let hash = digest.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, or if `data` traps for any index in `[start, start + len)`.
+  /// Traps if `self` is closed or if `data` traps for any index in `[start, start + len)`,
+  /// and may trap if `start + len` is 4 GiB (2^32) or more: the block routine
+  /// indexes with 32-bit arithmetic once it processes whole blocks.
   public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, data, start, len);
 
   /// Write data from a reader function.
@@ -428,7 +430,9 @@ module {
   /// let hash = Sha256.fromAccessor(#sha224, accessor, 0, 5);
   /// ```
   ///
-  /// Does not trap unless user-provided accessor function `data` traps.
+  /// Does not trap unless the user-provided accessor function `data` traps, or
+  /// `start + len` is 4 GiB (2^32) or more (the block routine indexes with 32-bit
+  /// arithmetic).
   public func fromAccessor(algo : (implicit : Algorithm), data : Nat -> Nat8, start : Nat, len : Nat) : Blob {
     let digest = new(algo);
     digest.writeAccessor(data, start, len);

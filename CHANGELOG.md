@@ -1,5 +1,10 @@
 # Sha2 changelog
 
+## 0.3.2
+
+- Changed:
+  - `Digest` writes of whole blocks are cheaper for `Blob`, `[Nat8]`, `[var Nat8]` and accessor inputs (`writeBlob`, `writeArray`, `writeVarArray`, `writeAccessor` and the `from…` functions): the block routines index the input with `Nat32` arithmetic instead of `Nat`, whose addition is a runtime call of about 50 instructions. Per 64-byte SHA-256 block 1,940 instructions less (−15% on long messages), per 128-byte SHA-512 block 3,857 less (−24%); on the 32-bit heap −17% and −21%. Reader and iterator inputs are unchanged. Inputs must be smaller than 4 GiB (a `Blob` cannot be larger on the IC anyway).
+
 ## 0.3.1
 
 - Changed:
