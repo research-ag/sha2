@@ -431,7 +431,7 @@ Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same fo
 - Whole blocks are compressed directly from the input (`Blob`, arrays, accessor, reader, iterator) without passing through the message buffer. Only the partial block at the start and at the end of a write goes through the buffer.
 - `writeBlob` reads the `Blob` directly rather than through an accessor closure, so it allocates nothing.
 - When a message ends on a block boundary, the padding block is compressed directly from constants instead of being assembled in the buffer.
-- The `Hasher` operations are specialized compressions for 32- and 64-byte messages: the message words come straight from the operands, and the padding block of a 64-byte message has its whole message schedule computed at compile time.
+- The `Hasher` operations are specialized compressions for 32- and 64-byte messages: the message words come straight from the operands, and the padding block of a 64-byte message uses a precomputed message schedule.
 
 ## Correctness
 

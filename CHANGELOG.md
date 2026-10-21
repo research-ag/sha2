@@ -3,7 +3,7 @@
 ## 0.3.1
 
 - Changed:
-  - `Hasher` combines (`combineBlob32`, `combineState`, `combineStateBlob32`, `combineBlob32State`) are about 10% cheaper: their padding block, the second compression of the 64-byte message, now uses a schedule that is computed at compile time (the message length is fixed to 512 bits). The gain applies in programs that also use a `Digest`; in a program using only the `Hasher`, wasm-opt already specialized the padding block. A Bitcoin Merkle root over 6467 txids drops from 169M to 158M instructions.
+  - `Hasher` combines (`combineBlob32`, `combineState`, `combineStateBlob32`, `combineBlob32State`) are about 10% cheaper: their padding block, the second compression of the 64-byte message, now uses a precomputed message schedule (all 16 message words of that block are fixed, so the 48 expanded words and the per-round `K + w` sums are inlined constants). The gain applies in programs that also use a `Digest` (in a program using only the `Hasher`, wasm-opt already specialized the padding block) and in builds without wasm-opt. A Bitcoin Merkle root over 6467 txids drops from 169M to 158M instructions with wasm-opt, and from 310M to 285M without.
 
 ## 0.3.0
 
