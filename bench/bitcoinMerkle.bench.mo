@@ -14,10 +14,8 @@ module {
   // it, including the allocation of its hasher pool (about 5k instructions).
   //
   // Every node of the tree costs three SHA-256 compressions (combine plus the
-  // double-SHA fold). A tree over n leaves has n - 1 inner nodes, however it
-  // is built (the carries of the binary counter amortize to one merge per
-  // leaf), plus about log2 n hashes for the root, so the cost is about 24.4k
-  // instructions per leaf. Real mainnet blocks measured the same way: 6467 txids
+  // double-SHA fold), and a tree over n leaves has about n nodes, so the cost
+  // is linear in n. Real mainnet blocks measured the same way: 6467 txids
   // (block 972281) 158.3M, 8281 txids (block 970240, the largest count of the
   // two years before October 2026) 202.7M instructions.
 
@@ -27,7 +25,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Bitcoin Merkle root by transaction count";
-      description = "bitcoinMerkleRoot over n random 32-byte txids, one call per run. A tree over n leaves has n - 1 inner nodes plus about log2 n for the root, at about 24.4k instructions per node.";
+      description = "bitcoinMerkleRoot over n random 32-byte txids, one call per run. Linear in n: about 24.4k instructions per node.";
       rows = rows;
       cols = ["bitcoinMerkleRoot"];
     };
