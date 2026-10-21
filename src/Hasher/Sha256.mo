@@ -126,7 +126,7 @@ module {
   public func combineBlob32(self : Hasher, b1 : Blob, b2 : Blob) {
     if (b1.size() != 32 or b2.size() != 32) Prim.trap("Hasher: combineBlob32 expects two 32-byte blobs, got " # debug_show (b1.size()) # " and " # debug_show (b2.size()) # " bytes");
     self.process_leaf_block(b1, b2); // data block (b1 ++ b2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine the 32-byte states of two `Hasher`s: `self := SHA256(s1 ++ s2)` (a
@@ -145,7 +145,7 @@ module {
   /// ```
   public func combineState(self : Hasher, s1 : Hasher, s2 : Hasher) {
     self.process_merge_block(s1, s2); // data block (s1 ++ s2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine a `Hasher` state with a 32-byte `Blob`: `self := SHA256(s1 ++ b2)`
@@ -167,7 +167,7 @@ module {
   public func combineStateBlob32(self : Hasher, s1 : Hasher, b2 : Blob) {
     if (b2.size() != 32) Prim.trap("Hasher: combineStateBlob32 expects a 32-byte blob, got " # debug_show (b2.size()) # " bytes");
     self.process_state_blob_block(s1, b2); // data block (s1 ++ b2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine a 32-byte `Blob` with a `Hasher` state: `self := SHA256(b1 ++ s2)`
@@ -188,7 +188,7 @@ module {
   public func combineBlob32State(self : Hasher, b1 : Blob, s2 : Hasher) {
     if (b1.size() != 32) Prim.trap("Hasher: combineBlob32State expects a 32-byte blob, got " # debug_show (b1.size()) # " bytes");
     self.process_blob_state_block(b1, s2); // data block (b1 ++ s2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Load a 32-byte hash into `self` VERBATIM — no hashing. The inverse of

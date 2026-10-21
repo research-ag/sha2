@@ -13,6 +13,7 @@ import fromAccessor "process/blocks/accessor";
 import fromReader "process/blocks/reader";
 import fromMsg "process/msg_buffer";
 import fromPadding "process/padding";
+import fromPadding512 "process/padding512";
 import fromFold "process/fold";
 
 module {
@@ -47,6 +48,8 @@ module {
   public let process_block_from_msg = fromMsg.process;
   /// Run the SHA256 compression on the all-constant final padding block for a block-aligned message, encoding only the bit length (see `process/padding`).
   public let process_padding_block = fromPadding.process;
+  /// Run the SHA256 compression on the padding block of a 64-byte message (bit length 512) with a compile-time constant schedule; the second block of every `Hasher` combine (see `process/padding512`).
+  public let process_padding_block_512 = fromPadding512.process;
   /// Hash the 32-byte digest held in `src` as a fresh message in one specialized block, overwriting `self` with `SHA256(src)`; `src` may alias `self` (see `process/fold`).
   public let process_fold_block = fromFold.process;
 
