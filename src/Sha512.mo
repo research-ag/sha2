@@ -201,9 +201,9 @@ module {
   /// let hash = digest.sum();
   /// ```
   ///
-  /// Traps if `self` is closed, if `data` traps for any index in `[start, start + len)`,
-  /// or if `start + len` is 4 GiB (2^32) or more: the block routine indexes with
-  /// 32-bit arithmetic.
+  /// Traps if `self` is closed or if `data` traps for any index in `[start, start + len)`,
+  /// and may trap if `start + len` is 4 GiB (2^32) or more: the block routine
+  /// indexes with 32-bit arithmetic once it processes whole blocks.
   public func writeAccessor(self : Digest, data : Nat -> Nat8, start : Nat, len : Nat) : () = _Digest.writeAccessor(self, data, start, len);
 
   /// Write data from a reader function.
