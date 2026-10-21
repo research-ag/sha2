@@ -407,7 +407,15 @@ The ranges for `close()` span a message ending on a block boundary (cheaper) and
 Hashing from an array costs about the same as from a `Blob`.
 The accessor, reader and iterator inputs cost 13%, 29% and 63% more per byte for Sha256, because every byte goes through a function call; the figures for Sha512 are similar.
 
-A `Hasher` operation on a reused engine costs 13,100 instructions for a single 32-byte hash and 15,200 to 16,200 for a combine of two 32-byte values, against 15,200 and 26,800 for the same hashes through a reused `Digest`.
+The `Hasher` against the same hashes computed through a reused `Digest` (`reset`, `writeBlob`, `close`):
+
+| Operation                        | `Hasher` | `Digest` |
+| -------------------------------- | -------: | -------: |
+| hash of one 32-byte value        |   13,100 |   15,200 |
+| combine of two 32-byte values    |   15,200 |   26,800 |
+| double hash of one 32-byte value |   21,400 |   23,600 |
+
+A combine is two compressions (the data block and the constant padding block), a single hash one compression; the `Digest` adds its buffer handling on top.
 
 ### Measuring
 
