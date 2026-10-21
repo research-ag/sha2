@@ -390,14 +390,14 @@ mops bench
 or look at the [benchmarks on mops](https://mops.one/sha2/benchmarks).
 The benchmarks cover every convenience function over message lengths from 0 bytes to 1 MB, the cost of each step of the `Digest` lifecycle, the `Hasher` operations against the equivalent `Digest` calls, and a Merkle build.
 
-For orientation, measured with moc 2.0.0 and wasm-opt on the 0.3.0 code:
+For orientation, measured with moc 2.0.0 and wasm-opt on the 0.3.2 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
 | `fromBlob`, empty message  |       12,100 |       12,900 |
 | `fromBlob`, one block      |       31,000 |       42,000 |
-| `fromBlob`, 1 MB           |  201,000,000 |  125,000,000 |
-| per byte of a long message |          200 |          120 |
+| `fromBlob`, 1 MB           |  171,000,000 |   95,000,000 |
+| per byte of a long message |          170 |           90 |
 | `new()`                    |        1,500 |        1,400 |
 | `reset()`                  |          700 |          700 |
 | `close()`                  | 8,500–10,100 | 7,700–13,200 |
@@ -405,7 +405,7 @@ For orientation, measured with moc 2.0.0 and wasm-opt on the 0.3.0 code:
 
 The ranges for `close()` span a message ending on a block boundary (cheaper) and one ending mid-block.
 Hashing from an array costs about the same as from a `Blob`.
-The accessor, reader and iterator inputs cost 13%, 29% and 63% more per byte for Sha256, because every byte goes through a function call; the figures for Sha512 are similar.
+The accessor, reader and iterator inputs cost 16%, 52% and 92% more per byte for Sha256, because every byte goes through a function call; the figures for Sha512 are similar.
 
 The `Hasher` against the same hashes computed through a reused `Digest` (`reset`, `writeBlob`, `close`):
 
@@ -436,7 +436,7 @@ Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same fo
 
 - The round loops of the compression function are unrolled, for both SHA-256 and SHA-512. This was mainly motivated by reducing the heap allocations but it also reduced the instructions significantly.
 - SHA-256 keeps its state and message buffer in 16-bit half-words (`Nat16`), which Motoko never boxes, so hashing allocates nothing. SHA-512 needs 64-bit words, which are boxed when large; that is the bounded per-call allocation noted above.
-- Whole blocks are compressed directly from the input (`Blob`, arrays, accessor, reader, iterator) without passing through the message buffer. Only the partial block at the start and at the end of a write goes through the buffer.
+- Whole blocks are compressed directly from the input (`Blob`, arrays, accessor, reader, iterator) without passing through the message buffer. Only the partial block at the start and at the end of a write goes through the buffer. The block routines index the input with `Nat32` arithmetic: a `Nat` addition is a runtime call of about 50 instructions, which for the 64 index computations of a block cost a quarter of the hashing.
 - `writeBlob` reads the `Blob` directly rather than through an accessor closure, so it allocates nothing.
 - When a message ends on a block boundary, the padding block is compressed directly from constants instead of being assembled in the buffer.
 - The `Hasher` operations are specialized compressions for 32- and 64-byte messages: the message words come straight from the operands, and the padding block of a 64-byte message uses a precomputed message schedule.
