@@ -208,4 +208,4 @@ mops test verify
 mops test allocation
 ```
 
-CI runs both on every PR, the allocation test also on the 32-bit heap (moc 1.16.1 with `--legacy-persistence`).
+CI runs both on every PR, the allocation test also on the 32-bit heap (moc 1.16.2 with `--legacy-persistence`).

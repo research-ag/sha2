@@ -390,7 +390,7 @@ mops bench
 or look at the [benchmarks on mops](https://mops.one/sha2/benchmarks).
 The benchmarks cover every convenience function over message lengths from 0 bytes to 1 MB, the cost of each step of the `Digest` lifecycle, the `Hasher` operations against the equivalent `Digest` calls, and a Merkle build.
 
-For orientation, measured with moc 2.0.0 and wasm-opt on the 0.3.2 code:
+For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
