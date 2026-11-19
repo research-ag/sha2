@@ -65,9 +65,9 @@
 /// `mutated` tests for that a priori, on the txids alone, before any hashing:
 /// it compares the last txid with the txids 1, 2, 4, 8, ... places before it.
 /// That catches every mutation (one place back is not enough, as the second
-/// example shows), so of all lists of TXIDS with a given root at most one
-/// passes (inner nodes passed off as txids are another matter: see "What
-/// this does NOT establish" in `BitcoinChunks.mo`). A
+/// example shows), so among lists of GENUINE transaction ids with a given
+/// root at most one passes (a whole level of inner nodes passed off as txids
+/// passes too: see "What this does NOT establish" in `BitcoinChunks.mo`). A
 /// list that is flagged without being a mutation still repeats a txid, which
 /// a valid block never does, so nothing valid is rejected. The test costs at
 /// most log2(n) `Blob` comparisons and allocates nothing. (It is not a search

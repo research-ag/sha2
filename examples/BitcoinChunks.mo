@@ -126,8 +126,11 @@ module {
     };
   };
 
-  /// Whether all leaves of the block have been verified: the last accepted
-  /// chunk came with an empty proof. Then `count` is the block's N.
+  /// Whether the upload is complete: the last accepted chunk came with an
+  /// empty proof, so no leaf can follow. Then `count` is the number of leaves
+  /// uploaded. It is the block's transaction count only if the leaves are
+  /// transaction ids and not the nodes of a whole level, which this verifier
+  /// cannot tell (see "What this does NOT establish" above).
   public func complete(self : Verifier) : Bool = self.count > 0 and self.proof.size() == 0;
 
   func wellFormed(tiles : [Blob]) : Bool {
