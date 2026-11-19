@@ -38,8 +38,8 @@
 ///
 /// Every leaf of the chunk is absorbed into a compared tile and every
 /// compared tile was itself verified down to the root, so a wrong leaf, a
-/// wrong or missing tile, and a wrong root are all caught. Neither N nor n is
-/// needed: alignment is a property of the position alone. The forward MMR of
+/// wrong or missing tile, and a wrong root are all caught. The check needs
+/// neither N nor the depth: alignment is a property of the position alone. The forward MMR of
 /// Examples 5-6 is never built; the state between chunks is M and P_M.
 ///
 /// === Completeness and mutation ===
@@ -49,10 +49,30 @@
 /// which consensus forbids, or a collision), so the check never rejects a
 /// valid block, and it buys two things: a proof may not contain the tiles
 /// that Bitcoin's rule would duplicate (so proofs are minimal, and the LAST
-/// chunk is recognised by an EMPTY P_M', after which N = M' is known), and a
+/// chunk is recognised by an EMPTY P_M', after which the number of uploaded
+/// leaves is M'), and a
 /// mutated block — a tail of the block uploaded twice, CVE-2012-2459 — is
 /// rejected at the merge of the two copies, which Bitcoin Core detects the
 /// same way.
+///
+/// === What this does NOT establish: that the leaves are transactions ===
+///
+/// Bitcoin's tree does not mark leaves apart from inner nodes, and the header
+/// commits to neither the depth nor the transaction count. So the nodes of
+/// any whole level, uploaded as "txids", verify just as well as a shorter
+/// block: the root's two children as a block of two, the root itself as a
+/// block of one. No check on the hashes can tell. `verifyChunk` therefore
+/// proves "these leaves, in this order and no others, hash to the root", and
+/// the caller must know from elsewhere that they are transaction ids.
+///
+/// With raw transactions (`verifyChunkTx`) every leaf is hashed here, and an
+/// inner node can only pose as a transaction in the form of a 64-byte one,
+/// the concatenation of its two children (CVE-2017-12842). A caller who needs
+/// the count and the completeness of the block takes raw transactions and
+/// refuses any of exactly 64 bytes (non-standard for relay, but consensus has
+/// not excluded them), or authenticates the depth of the tree by other means,
+/// such as the Merkle branch of the coinbase transaction (Example 7). This
+/// example does neither.
 ///
 /// === Cost ===
 ///

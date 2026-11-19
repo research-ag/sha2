@@ -357,6 +357,28 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
   };
 };
 
+// A known limit (security notes, "Leaves and inner nodes"): the tree does not
+// mark leaves apart from inner nodes, so a whole level uploaded as txids
+// verifies as a shorter block, down to the root itself as a block of one, and
+// as raw transactions in the form of 64-byte ones. The examples do not guard
+// against it; this pins the behaviour the documentation describes.
+do {
+  let txids = Array.tabulate<Blob>(8, func(_) = bytes(32));
+  let root = refBitcoin(txids);
+  let level1 = Array.tabulate<Blob>(4, func(i) = refBitcoin([txids[2 * i], txids[2 * i + 1]]));
+  assert (BitcoinMerkle.bitcoinMerkleRoot(level1) == root);
+  let v = BitcoinChunks.new(root, 12);
+  assert (v.verifyChunk(slice(level1, 2, 4), BitcoinChunks.proof(level1, 2)) == false); // chunks go left to right
+  assert (v.verifyChunk(slice(level1, 0, 2), BitcoinChunks.proof(level1, 2)));
+  assert (v.verifyChunk(slice(level1, 2, 4), []) and v.complete() and v.count == 4);
+  let w = BitcoinChunks.new(root, 12);
+  assert (w.verifyChunk([root], []) and w.complete() and w.count == 1);
+  let pairs = Array.tabulate<Blob>(4, func(i) = txids[2 * i].toArray().concat(txids[2 * i + 1].toArray()).toBlob()); // 64-byte "transactions"
+  assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(pairs) == root);
+  let x = BitcoinChunks.new(root, 12);
+  assert (x.verifyChunkTx(pairs, []) and x.complete() and x.count == 4);
+};
+
 // --- Mutated blocks (Examples 5 and 6): `BitcoinMerkle.mutated` ---
 // The a-priori test on the leaves must flag every list in which the last two
 // nodes of some level are equal siblings (the written-out duplicate), so that
