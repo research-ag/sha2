@@ -51,15 +51,42 @@
 /// The extra cost is one dSHA per clear bit — bagging spends one compression
 /// per SET bit of n, the collapse one per bit position up to the highest.
 ///
-/// === Caveats (byte order, CVE) ===
+/// === Mutated blocks (CVE-2012-2459) ===
 ///
-///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
-///     order (the raw double-SHA256 output). Block explorers and RPC display
-///     them byte-REVERSED — reverse the 32 bytes to compare (see the mainnet
-///     vectors in `test/verify.mo`).
-///   * Duplicating the last node is the source of Bitcoin's CVE-2012-2459 (two
-///     distinct leaf lists can yield the same root); callers must reject blocks
-///     with duplicate txids in that position.
+/// Duplicating the last node means that two distinct txid lists can have the
+/// same root: `[1,2,3]` and `[1,2,3,3]`, `[1..6]` and `[1,2,3,4,5,6,5,6]`,
+/// `[1..5]` and `[1,2,3,4,5,5,5]`. A root alone therefore does not pin down
+/// the transaction list. Every such list other than the block itself writes
+/// out what the rule would have duplicated: it ENDS with a second copy,
+/// complete or cut off, of the subtree right before it, on some level k. Each
+/// txid of the copy equals the one 2^k places before it, and so does the
+/// LAST txid of the list.
+///
+/// `mutated` tests for that a priori, on the txids alone, before any hashing:
+/// it compares the last txid with the txids 1, 2, 4, 8, ... places before it.
+/// That catches every mutation (one place back is not enough, as the second
+/// example shows), so of all lists with a given root at most one passes. A
+/// list that is flagged without being a mutation still repeats a txid, which
+/// a valid block never does, so nothing valid is rejected. The test costs at
+/// most log2(n) `Blob` comparisons and allocates nothing. (It is not a search
+/// for repeated txids in general, which is left to block validation, and it
+/// flags fewer lists than Bitcoin Core's check, which compares all sibling
+/// hashes while building the tree.)
+///
+/// The one-shot `bitcoinMerkleRoot` runs the test first and TRAPS on a
+/// flagged list, so a caller who passes one gets its call rejected. The
+/// incremental API (`new`, `add`, `root`) hashes what it is given: whoever
+/// uses it for a whole block runs `mutated` over the complete list. The tree
+/// machinery itself (`CounterBase.mo`) knows nothing of this. For a block
+/// that arrives in chunks, see `BitcoinChunks.mo`, which rejects equal
+/// siblings at every merge instead, as Bitcoin Core does.
+///
+/// === Byte order ===
+///
+/// Txids and the returned root are in Bitcoin's INTERNAL byte order (the raw
+/// double-SHA256 output). Block explorers and RPC display them byte-REVERSED:
+/// reverse the 32 bytes to compare (see the mainnet vectors in
+/// `test/verify.mo`).
 ///
 /// For raw (variable-length) transactions instead of ready txids, see
 /// `BitcoinTxMerkle.mo`, which adds the `Digest` -> `Hasher` bridge in front of
@@ -68,6 +95,7 @@
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterBase";
 import Nat64 "mo:core/Nat64";
+import Runtime "mo:core/Runtime";
 
 module {
   /// The MMR state — see `CounterBase.mo`, which holds the building machinery
@@ -138,11 +166,37 @@ module {
     acc.readSum();
   };
 
+  /// Whether `leaves` may be a MUTATED list (CVE-2012-2459): true if the
+  /// last leaf equals the one 1, 2, 4, 8, ... places before it. That holds for
+  /// every list that shares its root with another one by writing out a
+  /// duplicated tail (it ends with a copy of the 2^k leaves before it, or with
+  /// the beginning of one), and otherwise only for lists that repeat a leaf,
+  /// which a valid block never does. Works on txids and on raw transactions
+  /// alike (equal transactions, equal txids). Allocation-free; at most
+  /// log2(n) `Blob` comparisons.
+  public func mutated(leaves : [Blob]) : Bool {
+    let n = leaves.size();
+    // Fewer comparisons would do: only the 2^k at the 1-bits of n - 1 (a copy
+    // can only have been written out on a level where this list ends in a
+    // right-hand subtree), and of those not the highest (the top level always
+    // has the root's two children, in the block as in this list). The other
+    // comparisons cost little and do no harm: a match there is a repeated
+    // leaf all the same.
+    var back = 1; // 2^k
+    while (back < n) {
+      if (leaves[n - 1 - back] == leaves[n - 1]) return true;
+      back *= 2;
+    };
+    false;
+  };
+
   /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,
   /// in internal byte order), for ANY leaf count (>= 1), in one shot.
-  /// Allocation-free except the returned root `Blob`.
+  /// Allocation-free except the returned root `Blob`. Traps if the list is
+  /// flagged by `mutated` (CVE-2012-2459), up front, before the tree is built.
   public func bitcoinMerkleRoot(txids : [Blob]) : Blob {
     assert txids.size() >= 1;
+    if (mutated(txids)) Runtime.trap("BitcoinMerkle: mutated transaction list (CVE-2012-2459)");
     let mmr = new(txids.size(), false);
     for (leaf in txids.values()) {
       mmr.add(leaf);

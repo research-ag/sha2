@@ -5,6 +5,8 @@
 - Added:
   - `Hasher.equalsBlob32(data)` and `Hasher.equalsState(other)`: compare a hasher's state with a 32-byte `Blob` or with another hasher, allocation-free (no readout).
   - Example 8, `examples/BitcoinChunks.mo`: verify a Bitcoin block's transactions against the header's Merkle root chunk by chunk. The verifier stores only the leaf count and the "right-hand MMR" of the leaves not yet received (at most log N hashes, initially the root); each chunk comes with the uploader's right-hand MMR for the rest and is checked by growing it leftward through the chunk until it reaches the stored one, `[M, M') + P_M' -> P_M`. No chunk is trusted, neither N nor the depth is a parameter, the last chunk is recognised by its empty proof, equal siblings are rejected (minimal proofs; CVE-2012-2459 mutations caught), and verification allocates nothing. With the prover for the uploader side.
+- Changed:
+  - Examples 5 and 6 (`BitcoinMerkle`, `BitcoinTxMerkle`) reject a mutated block (CVE-2012-2459, a tail of the block written out twice, which has the block's root). The new `BitcoinMerkle.mutated(leaves)` tests a complete list up front, on the txids or raw transactions alone: it flags a list whose last leaf equals the one 1, 2, 4, 8, ... places before it (at most log2(n) comparisons), which covers every mutation and otherwise only lists that repeat a transaction. The one-shot roots `bitcoinMerkleRoot` and `bitcoinTxMerkleRoot` trap on a flagged list. The incremental API and the shared tree machinery are unchanged and do not check.
 - Maintenance:
   - Bump `core` from 2.6.2 to 2.7.0. No source changes; tests and benchmarks are unchanged.
 

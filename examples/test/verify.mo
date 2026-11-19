@@ -13,6 +13,7 @@ import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import List "mo:core/List";
+import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
@@ -354,4 +355,109 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
     let u = BitcoinChunks.new(root, 12);
     assert (not u.verifyChunk(slice(txids, 0, n - 1), []));
   };
+};
+
+// --- Mutated blocks (Examples 5 and 6): `BitcoinMerkle.mutated` ---
+// The a-priori test on the leaves must flag every list in which the last two
+// nodes of some level are equal siblings (the written-out duplicate), so that
+// among all lists with the same root at most one passes it; beyond those it
+// may only flag lists that repeat a leaf. The one-shot roots trap on a flagged
+// list, which the harness cannot observe, so roots of mutated lists are taken
+// with the incremental API, which does not check.
+
+// Reference: the root level by level, and whether on some level with an even
+// number of nodes the last two were equal.
+func refMutated(leaves : [Blob]) : (Blob, Bool) {
+  var level = leaves;
+  var equal = false;
+  while (level.size() > 1) {
+    let m = level.size();
+    if (m % 2 == 0 and level[m - 2] == level[m - 1]) equal := true;
+    level := Array.tabulate<Blob>(
+      (m + 1) / 2,
+      func(i) {
+        let h = Sha256.new();
+        h.writeBlob(level[2 * i]);
+        h.writeBlob(if (2 * i + 1 < m) level[2 * i + 1] else level[2 * i]);
+        h.sumDouble();
+      },
+    );
+  };
+  (level[0], equal);
+};
+func uncheckedRoot(leaves : [Blob]) : Blob {
+  let mmr = BitcoinMerkle.new(leaves.size(), false);
+  for (l in leaves.values()) BitcoinMerkle.add(mmr, l);
+  BitcoinMerkle.root(mmr);
+};
+
+// Exhaustive: every list of 1 to 8 leaves over three values.
+do {
+  let abc = [bytes(32), bytes(32), bytes(32)];
+  let clean = Map.empty<Blob, Nat>(); // roots of the lists that pass, with their length
+  var passed = 0;
+  for (n in Nat.range(1, 9)) {
+    var total = 1;
+    for (_ in Nat.range(0, n)) total *= 3;
+    for (code in Nat.range(0, total)) {
+      var c = code;
+      let leaves = Array.tabulate<Blob>(n, func(_) { let l = abc[c % 3]; c /= 3; l });
+      let (root, equal) = refMutated(leaves);
+      let flagged = BitcoinMerkle.mutated(leaves);
+      if (equal) assert flagged;
+      if (not flagged) {
+        assert (clean.get(Blob.compare, root) == null); // no second clean list with this root
+        clean.add(Blob.compare, root, n);
+        passed += 1;
+      };
+    };
+  };
+  assert (passed == 2937); // the lists that pass: a fixed count, whatever the three values
+};
+
+// Honest blocks pass; their mutations, the same root from a longer list, are
+// flagged, also where the last two txids differ or the count is odd.
+for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 23, 31, 33, 100] : [Nat]).values()) {
+  let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
+  let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
+  let root = refBitcoin(txids);
+  assert (not BitcoinMerkle.mutated(txids));
+  assert (not BitcoinMerkle.mutated(txs));
+  assert (BitcoinMerkle.bitcoinMerkleRoot(txids) == root);
+  assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(txs) == root);
+  // Repeat the last 2^k leaves when they are the lone last node of level k
+  // (n = 2^k mod 2^(k+1)): the same root. Any other repeated tail changes it.
+  var width = 1;
+  while (width <= n) {
+    let m = txids.concat(slice(txids, n - width, n));
+    if (n % (2 * width) == width and n > width) {
+      assert (uncheckedRoot(m) == root);
+      assert (BitcoinMerkle.mutated(m));
+      assert (BitcoinMerkle.mutated(txs.concat(slice(txs, n - width, n))));
+    } else {
+      assert (uncheckedRoot(m) != root);
+    };
+    width *= 2;
+  };
+};
+do {
+  let t = Array.tabulate<Blob>(11, func(_) = bytes(32));
+  // [1..5] and [1,2,3,4,5,5,5]: an odd count
+  let five = slice(t, 0, 5);
+  let seven = five.concat([t[4], t[4]]);
+  assert (uncheckedRoot(seven) == refBitcoin(five) and BitcoinMerkle.mutated(seven));
+  // [1..6] and [1,2,3,4,5,6,5,6]: the last two differ
+  let six = slice(t, 0, 6);
+  let eight = six.concat([t[4], t[5]]);
+  assert (uncheckedRoot(eight) == refBitcoin(six) and BitcoinMerkle.mutated(eight));
+  // [1..8,a,b,c] and [1..8,a,b,c,c,a,b,c]: odd count, the last two differ, and
+  // the only equal pair (c,c) is not the last complete pair of its level
+  let fifteen = t.concat([t[10], t[8], t[9], t[10]]);
+  assert (uncheckedRoot(fifteen) == refBitcoin(t) and BitcoinMerkle.mutated(fifteen));
+  // Flagged beyond the mutations: the last txid repeated 2^k places back,
+  // though the root differs from every honest one ([a,b,a]). Not a search for
+  // repeats in general: [a,b,c,a] and [a,a,b] pass.
+  assert (BitcoinMerkle.mutated([t[0], t[1], t[0]]));
+  assert (not BitcoinMerkle.mutated([t[0], t[1], t[2], t[0]]));
+  assert (not BitcoinMerkle.mutated([t[0], t[0], t[1]]));
 };

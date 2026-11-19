@@ -50,8 +50,9 @@
 /// valid block, and it buys two things: a proof may not contain the tiles
 /// that Bitcoin's rule would duplicate (so proofs are minimal, and the LAST
 /// chunk is recognised by an EMPTY P_M', after which N = M' is known), and a
-/// mutated block — the last leaf uploaded twice, CVE-2012-2459 — is rejected
-/// at the merge of the two copies, which Bitcoin Core detects the same way.
+/// mutated block — a tail of the block uploaded twice, CVE-2012-2459 — is
+/// rejected at the merge of the two copies, which Bitcoin Core detects the
+/// same way.
 ///
 /// === Cost ===
 ///

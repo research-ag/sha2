@@ -134,6 +134,7 @@ The pool is `ceil(log2 n) + 1`, the same as in Example 2.
 The same as Example 3, but for Bitcoin's Merkle tree over transaction ids (txids), given as 32-byte `Blob`s.
 It differs from Example 3 in two ways: every node is a double SHA-256 (`combineState` followed by `hashState` of the node itself), and instead of bagging, the peaks are combined the way Bitcoin does it: at a level with an odd number of nodes, the last node is paired with itself.
 As in Example 3, slot 0 serves as the accumulator and the peaks are left unchanged.
+The one-shot `bitcoinMerkleRoot` first tests the list with `mutated` and traps on a mutated block (see the [security notes](#security-notes)).
 
 **Example 6, [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo).**
 Examples 5 and 4 combined: Bitcoin's Merkle tree over the raw transactions, of any length, instead of precomputed txids.
@@ -209,14 +210,14 @@ A chunk brings the leaves [M, M′) and the uploader's P_M′; the verifier grow
 
 Every leaf is absorbed into a compared tile and every compared tile was verified down to the root, so wrong leaves, wrong or missing tiles and a wrong root are all caught.
 Neither N nor the depth is a parameter.
-Equal siblings are rejected before every merge: a valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then N = M′), and the mutated block of CVE-2012-2459, the last leaf uploaded twice, is rejected at the merge of the two copies.
+Equal siblings are rejected before every merge: a valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then N = M′), and the mutated blocks of CVE-2012-2459, a tail of the block uploaded twice, are rejected at the merge of the two copies.
 The hashing is one node per leaf, as for building the tree once, with no ripple to the root per chunk, and verification allocates nothing: a pool of log N hashers holds the working tiles.
 `proof(txids, m)` is the uploader's side, from all leaves.
 
 ## Security notes
 
 - **The bagged root does not commit to the leaf count.** In Examples 1 to 4 the same root arises from the same peak hashes at different heights, and a leaf equal to an inner node value is trivially constructible, since leaves are arbitrary 32-byte values. Verifiers must be given `n` out of band; the peak heights are exactly its bits. RFC 6962 closes this with domain separation (`0x00` before leaf data, `0x01` before node inputs), which these fixed 64-byte combiners do not produce.
-- **Bitcoin's duplication rule** (Examples 5 to 7) is the source of CVE-2012-2459: two distinct transaction lists can yield the same root. Callers must reject blocks with duplicate txids in the vulnerable position.
+- **Bitcoin's duplication rule** (Examples 5 to 8) is the source of CVE-2012-2459: distinct transaction lists can yield the same root, for example `[1,2,3]` and `[1,2,3,3]`, or `[1..6]` and `[1,2,3,4,5,6,5,6]`. Every such list other than the block itself ends with a second copy, complete or cut off, of the subtree right before it on some level k, so its last txid equals the one 2^k places before it. `BitcoinMerkle.mutated` tests a complete list for that up front, on the txids (or raw transactions) alone: it compares the last txid with the ones 1, 2, 4, 8, ... places before it. That catches every mutation, so of all lists with a given root at most one passes, and whatever else it flags repeats a txid, which a valid block never does. At most log2(n) `Blob` comparisons, no hashing, no allocation. The one-shot roots of Examples 5 and 6 run it first and trap on a flagged list, so a caller who submits one gets its call rejected. The incremental API (`new`, `add`, `root`) and the shared tree machinery do not check; run `mutated` over the complete list yourself. Example 8, which never sees the whole list, rejects equal siblings at every merge instead, as Bitcoin Core does.
 - **Byte order.** Txids, roots and proofs are in Bitcoin's internal byte order, the raw double-SHA-256 output. Block explorers and RPC display them byte-reversed; reverse the 32 bytes to compare (see the mainnet vectors in `test/verify.mo`).
 - **Segwit.** A txid hashes the transaction serialized without witness data. Feeding full segwit bytes to Example 6 yields the wtxid instead.
 

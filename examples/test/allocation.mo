@@ -121,6 +121,23 @@ for (n in ns.values()) {
   check("BitcoinTxMerkle.root" # suffix, alloc(func() { ignore BitcoinTxMerkle.root(b) }), readout);
 };
 
+// The a-priori mutation test of the one-shot Bitcoin roots (CVE-2012-2459)
+// compares leaves in place: no allocation, whether it passes or finds the
+// last leaf repeated, on txids and raw transactions alike.
+for (n in ns.values()) {
+  let suffix = " (n = " # n.toText() # ")";
+  let txids = Array.tabulate<Blob>(n, func(j) = leaves[j]);
+  let txs = Array.tabulate<Blob>(n, func(j) = msgs[j]);
+  check("BitcoinMerkle.mutated" # suffix, alloc(func() { assert not BitcoinMerkle.mutated(txids) }), 0);
+  check("BitcoinMerkle.mutated, raw" # suffix, alloc(func() { assert not BitcoinMerkle.mutated(txs) }), 0);
+  let twice = Array.tabulate<Blob>(2 * n, func(j) = leaves[j % n]);
+  // the block twice: flagged exactly when n is a power of two (the last leaf n places back)
+  var p = 1;
+  while (p < n) p *= 2;
+  let expected = p == n;
+  check("BitcoinMerkle.mutated, block twice" # suffix, alloc(func() { assert (BitcoinMerkle.mutated(twice) == expected) }), 0);
+};
+
 // Incremental use: a second root after more leaves again allocates only the root.
 do {
   let c = MerkleCounter.new(maxN);
