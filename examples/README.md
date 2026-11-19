@@ -18,6 +18,7 @@ To reuse an example, copy the file unchanged into your project and point `sha2` 
 | 5   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)           | 32-byte txid                                               | double SHA-256 | a counter     | Bitcoin's collapse |
 | 6   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)       | raw transaction                                            | double SHA-256 | a counter     | Bitcoin's collapse |
 | 7   | [`BitcoinWitness.mo`](./BitcoinWitness.mo)         | coinbase inclusion proof for the trees of Examples 5 and 6 |                |               |                    |
+| 8   | [`BitcoinChunks.mo`](./BitcoinChunks.mo)           | chunked verification of a block against its Merkle root    | double SHA-256 | mirrored      | the stored proof   |
 |     | [`NFold.mo`](./NFold.mo)                           | N-fold hashing `H^N(msg)`                                  |                |               |                    |
 
 Examples 3 and 5 share their tree-building code in [`CounterBase.mo`](./CounterBase.mo), Examples 4 and 6 share theirs, including the embedded `Digest`, in [`CounterStateBase.mo`](./CounterStateBase.mo).
@@ -144,6 +145,10 @@ As in Example 4, the top slot serves as the accumulator.
 An add-on to Examples 5 and 6, not a tree of its own: it produces and checks the coinbase inclusion proof, the "merkle branch" used by SPV proofs and mining protocols, for a tree built with Example 5 or 6, at any number of transactions.
 See [Coinbase inclusion proof](#coinbase-inclusion-proof-example-7).
 
+**Example 8, [`BitcoinChunks.mo`](./BitcoinChunks.mo).**
+Not a tree either: a verifier that receives a block's transactions in chunks and checks each chunk against the header's Merkle root, holding only the leaf count and the mirrored peaks of the leaves not yet received.
+See [Chunked verification](#chunked-verification-example-8).
+
 **[`NFold.mo`](./NFold.mo).**
 N-fold hashing, `H^N(msg)`: a `Digest` absorbs the message, then its state is passed straight to a `Hasher` (`hashState(d.state)`), which runs the remaining rounds with no intermediate `Blob`.
 A batch variant reuses one `Digest` and one `Hasher` across many messages.
@@ -189,6 +194,24 @@ Neither changes the tree, so it can keep growing.
 The root is computed separately, with `root` of Example 5 or 6.
 On the receiving side, `verifyTxid` and `verifyTx`, which need no tree, check a coinbase txid or raw coinbase transaction plus its proof against the 32-byte root.
 A malformed proof returns `false`.
+
+## Chunked verification (Example 8)
+
+A canister receives the N transactions of a block in chunks and knows only the header's Merkle root.
+It wants to reject a bad chunk on arrival, within one message's instruction budget, and to know when the last chunk has arrived.
+
+For a prefix of M leaves, the aligned blocks that tile the rest, [M, 2^n), are the right siblings of leaf M−1's ancestors; their hashes are the peaks of an MMR grown from the right, P_M.
+Blocks entirely beyond the real leaves are duplicates by Bitcoin's rule and are left out, so P_0 is the root alone and P_N is empty.
+The verifier stores M and P_M.
+A chunk brings the leaves [M, M′) and the uploader's P_M′; the verifier grows P_M′ leftward through the chunk, prepending the leaves last first with the mirrored carry rule (a left child merges with the tile to its right, or with its own duplicate when there is none; a right child waits as a tile), and the tiles left after leaf M must equal the stored P_M:
+
+    [M, M′) + P_M′ → P_M
+
+Every leaf is absorbed into a compared tile and every compared tile was verified down to the root, so wrong leaves, wrong or missing tiles and a wrong root are all caught.
+Neither N nor the depth is a parameter.
+Equal siblings are rejected before every merge: a valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then N = M′), and the mutated block of CVE-2012-2459, the last leaf uploaded twice, is rejected at the merge of the two copies.
+The hashing is one node per leaf, as for building the tree once, with no ripple to the root per chunk, and verification allocates nothing: a pool of log N hashers holds the working tiles.
+`proof(txids, m)` is the uploader's side, from all leaves.
 
 ## Security notes
 

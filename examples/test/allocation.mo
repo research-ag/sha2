@@ -26,6 +26,7 @@ import BitcoinMerkle "../BitcoinMerkle";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
 import NFold "../NFold";
+import BitcoinChunks "../BitcoinChunks";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
@@ -196,4 +197,29 @@ do {
   // The batch reuses one Digest and one Hasher: one result Blob per message.
   let batch20 = Array.tabulate<Blob>(20, func(_) = bytes(50));
   check("nfoldBatch per message", alloc(func() { ignore NFold.nfoldBatch(batch20, 5) }) - b2, 10 * readout + arrayBytes(20) - arrayBytes(10));
+};
+
+// --- Example 8: chunked verification ---
+
+// Verifying a chunk allocates nothing: the pool and the digest are allocated
+// once by `new`, the uploader's proof is kept by reference, and the merges and
+// comparisons work on hasher states. Txid and raw-transaction chunks alike.
+do {
+  let n = 1000;
+  let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
+  let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
+  let root = BitcoinMerkle.bitcoinMerkleRoot(txids);
+  let bounds : [Nat] = [1, 2, 300, 617, 999, 1000];
+  let v = BitcoinChunks.new(root, 12);
+  let vTx = BitcoinChunks.new(root, 12);
+  var m = 0;
+  for (m2 in bounds.values()) {
+    let chunk = Array.tabulate<Blob>(m2 - m, func(i) = txids[m + i]);
+    let chunkTx = Array.tabulate<Blob>(m2 - m, func(i) = txs[m + i]);
+    let p = BitcoinChunks.proof(txids, m2);
+    check("BitcoinChunks.verifyChunk to " # m2.toText(), alloc(func() { assert v.verifyChunk(chunk, p) }), 0);
+    check("BitcoinChunks.verifyChunkTx to " # m2.toText(), alloc(func() { assert vTx.verifyChunkTx(chunkTx, p) }), 0);
+    m := m2;
+  };
+  assert v.complete() and vTx.complete();
 };

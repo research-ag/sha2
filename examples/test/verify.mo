@@ -8,10 +8,12 @@ import BitcoinMerkle "../BitcoinMerkle";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
 import NFold "../NFold";
+import BitcoinChunks "../BitcoinChunks";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
 import List "mo:core/List";
+import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Seiran128 "mo:prng/Seiran128";
@@ -292,3 +294,64 @@ let out = NFold.nfoldBatch([msg, m0, m100], 3);
 assert (out[0] == NFold.nfold(msg, 3));
 assert (out[1] == NFold.nfold(m0, 3));
 assert (out[2] == NFold.nfold(m100, 3));
+
+// --- Example 8: chunked verification against the Merkle root ---
+// Random chunk sequences over random txids verify chunk by chunk against the
+// root of the whole block, both as txids and as raw transactions; the last
+// chunk is recognised by its empty proof; a forged leaf, a dropped tile, a
+// tile that should have been left out, a duplicated last leaf (CVE-2012-2459),
+// a wrong root and a chunk after completion are rejected, and a rejected chunk
+// leaves the verifier unchanged.
+func flip(b : Blob) : Blob {
+  let a = b.toArray();
+  Array.tabulate<Nat8>(a.size(), func(i) = if (i == 5) a[5] ^ 0x01 else a[i]).toBlob();
+};
+func slice(a : [Blob], from : Nat, to : Nat) : [Blob] = Array.tabulate<Blob>(to - from, func(i) = a[from + i]);
+for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 257] : [Nat]).values()) {
+  let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
+  let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
+  let root = refBitcoin(txids);
+  // chunk boundaries: a pseudo-random walk from 0 to n, repeated with different steps
+  for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
+    let v = BitcoinChunks.new(root, 12);
+    let vTx = BitcoinChunks.new(root, 12);
+    var m = 0;
+    var s = step;
+    while (m < n) {
+      let m2 = if (m + s >= n) n else m + s;
+      s := 1 + (s * 7 + m) % (2 * step); // vary the chunk length
+      let p = BitcoinChunks.proof(txids, m2);
+      assert (p == BitcoinChunks.proofTx(txs, m2));
+      // rejections first; the verifier must stay at m
+      assert (not v.verifyChunk(slice(txids, m, m2), p.concat([txids[n - 1]]))); // a tile Bitcoin would duplicate, or junk
+      if (p.size() > 0) {
+        assert (not v.verifyChunk(slice(txids, m, m2), slice(p, 1, p.size()))); // dropped tile
+        assert (not v.verifyChunk(slice(txids, m, m2), Array.tabulate<Blob>(p.size(), func(i) = if (i == 0) flip(p[0]) else p[i])));
+      };
+      let forged = Array.tabulate<Blob>(m2 - m, func(i) = if (i == 0) flip(txids[m]) else txids[m + i]);
+      assert (not v.verifyChunk(forged, p));
+      assert (v.count == Nat.toNat64(m));
+      // the honest chunk
+      assert (v.verifyChunk(slice(txids, m, m2), p));
+      assert (vTx.verifyChunkTx(slice(txs, m, m2), p));
+      assert (v.count == Nat.toNat64(m2));
+      assert (v.complete() == (m2 == n));
+      m := m2;
+    };
+    assert (v.complete() and vTx.complete());
+    assert (not v.verifyChunk([txids[0]], [])); // nothing after completion
+  };
+  // the whole block at once, and the mutated block: the last txid uploaded twice
+  let w = BitcoinChunks.new(root, 12);
+  assert (not w.verifyChunk(txids.concat([txids[n - 1]]), []));
+  assert (w.count == 0);
+  assert (w.verifyChunk(txids, []) and w.complete());
+  // wrong root
+  let bad = BitcoinChunks.new(flip(root), 12);
+  assert (not bad.verifyChunk(txids, []));
+  // a prefix is not the whole block
+  if (n > 1) {
+    let u = BitcoinChunks.new(root, 12);
+    assert (not u.verifyChunk(slice(txids, 0, n - 1), []));
+  };
+};

@@ -2,6 +2,9 @@
 
 ## 0.3.3
 
+- Added:
+  - `Hasher.equalsBlob32(data)` and `Hasher.equalsState(other)`: compare a hasher's state with a 32-byte `Blob` or with another hasher, allocation-free (no readout).
+  - Example 8, `examples/BitcoinChunks.mo`: verify a Bitcoin block's transactions against the header's Merkle root chunk by chunk. The verifier stores only the leaf count and the "right-hand MMR" of the leaves not yet received (at most log N hashes, initially the root); each chunk comes with the uploader's right-hand MMR for the rest and is checked by growing it leftward through the chunk until it reaches the stored one, `[M, M') + P_M' -> P_M`. No chunk is trusted, neither N nor the depth is a parameter, the last chunk is recognised by its empty proof, equal siblings are rejected (minimal proofs; CVE-2012-2459 mutations caught), and verification allocates nothing. With the prover for the uploader side.
 - Maintenance:
   - Bump `core` from 2.6.2 to 2.7.0. No source changes; tests and benchmarks are unchanged.
 

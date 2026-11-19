@@ -239,6 +239,46 @@ module {
     };
   };
 
+  /// Compare the current 32-byte digest with a `Blob`, without reading it out:
+  /// `true` iff `data` is exactly the 32 bytes of the state. Allocation-free,
+  /// unlike `readSum() == data`. A `Blob` of another length compares `false`.
+  ///
+  /// ```motoko include=import
+  /// let hasher = Hasher.new();
+  /// let leaf : Blob = "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f";
+  /// hasher.loadBlob32(leaf);
+  /// assert hasher.equalsBlob32(leaf);
+  /// ```
+  public func equalsBlob32(self : Hasher, data : Blob) : Bool {
+    if (data.size() != 32) return false;
+    var i = 0;
+    while (i < 16) {
+      if (self[i] != (nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]))) return false;
+      i += 1;
+    };
+    true;
+  };
+
+  /// Compare the states of two `Hasher`s: `true` iff they hold the same
+  /// 32-byte digest. Allocation-free. Used to detect the equal siblings that
+  /// Bitcoin's duplication rule produces and a mutated block would forge.
+  ///
+  /// ```motoko include=import
+  /// let a = Hasher.new();
+  /// let b = Hasher.new();
+  /// a.hashBlob32("\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f");
+  /// b.loadState(a);
+  /// assert a.equalsState(b);
+  /// ```
+  public func equalsState(self : Hasher, other : Hasher) : Bool {
+    var i = 0;
+    while (i < 16) {
+      if (self[i] != other[i]) return false;
+      i += 1;
+    };
+    true;
+  };
+
   /// Read the current 32-byte digest as a `Blob`. Non-mutating — the state is
   /// always final, so this can be called any number of times. This is the only
   /// allocation in the API.

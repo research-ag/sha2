@@ -356,7 +356,7 @@ Pass `d.state` only as a source, never as the hasher that is written to.
 - Inputs are fixed-length only: 32-byte blobs or 256-bit states. A blob of another length traps with a message such as `Hasher: hashBlob32 expects a 32-byte blob, got 20 bytes`.
 - The `Hasher` type is a raw `[var Nat16]` of length 16; the type system does not enforce the length. Treat it as opaque and only operate on values created by `Hasher.new()`.
 
-The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, and iterated hashing.
+The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, chunked verification of a Bitcoin block against its Merkle root, and iterated hashing.
 See its [README](https://github.com/research-ag/sha2/blob/main/examples/README.md).
 
 ### Message length limits
