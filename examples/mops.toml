@@ -7,4 +7,4 @@ prng = "0.3.1"
 
 [toolchain]
 moc = "2.2.3"
-wasmtime = "49.0.2"
+wasmtime = "50.0.2"

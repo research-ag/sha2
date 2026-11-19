@@ -18,7 +18,7 @@ moc = "1.0.0"
 
 [toolchain]
 moc = "2.2.3"
-wasmtime = "49.0.2"
+wasmtime = "50.0.2"
 pocket-ic = "15.0.0"
 wasm-opt = "133"
 
