@@ -13,13 +13,13 @@
 /// === Mirrored peaks: the right-hand MMR ===
 ///
 /// The Bitcoin tree over N leaves is padded to a depth n. For a prefix of M
-/// leaves, consider the aligned blocks that tile the REST, [M, 2^n), walking
-/// right from M: their sizes grow, they are the 1-bits of 2^n - M, and they
-/// are the right siblings of leaf M - 1's ancestors. Their hashes are the
-/// peaks of an MMR grown from the RIGHT instead of the left — call it P_M.
-/// Blocks that lie entirely beyond the real leaves are, by Bitcoin's rule,
-/// duplicates of the node to their left and are left out, so P_M holds only
-/// the tiles that contain real leaves; P_0 is the root alone, P_N is empty.
+/// leaves, consider the aligned subtrees that tile the REST, [M, 2^n), walking
+/// right from M: their sizes grow, they are the 1-bits of 2^n - M, and they are
+/// the right siblings of leaf M - 1's ancestors. Their hashes are the peaks of
+/// an MMR grown from the RIGHT instead of the left — call it P_M. Subtrees that
+/// lie entirely beyond the real leaves are, by Bitcoin's rule, duplicates of
+/// the node to their left and are left out, so P_M holds only the tiles that
+/// contain real leaves; P_0 is the root alone, P_N is empty.
 ///
 /// === The check: close the gap from both sides ===
 ///

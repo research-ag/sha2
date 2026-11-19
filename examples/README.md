@@ -201,8 +201,8 @@ A malformed proof returns `false`.
 A canister receives the N transactions of a block in chunks and knows only the header's Merkle root.
 It wants to reject a bad chunk on arrival, within one message's instruction budget, and to know when the last chunk has arrived.
 
-For a prefix of M leaves, the aligned blocks that tile the rest, [M, 2^n), are the right siblings of leaf M−1's ancestors; their hashes are the peaks of an MMR grown from the right, P_M.
-Blocks entirely beyond the real leaves are duplicates by Bitcoin's rule and are left out, so P_0 is the root alone and P_N is empty.
+For a prefix of M leaves, the aligned subtrees that tile the rest, [M, 2^n), are the right siblings of leaf M−1's ancestors; their hashes are the peaks of an MMR grown from the right, P_M.
+Subtrees entirely beyond the real leaves are duplicates by Bitcoin's rule and are left out, so P_0 is the root alone and P_N is empty.
 The verifier stores M and P_M.
 A chunk brings the leaves [M, M′) and the uploader's P_M′; the verifier grows P_M′ leftward through the chunk, prepending the leaves last first with the mirrored carry rule (a left child merges with the tile to its right, or with its own duplicate when there is none; a right child waits as a tile), and the tiles left after leaf M must equal the stored P_M:
 
