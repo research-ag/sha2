@@ -14,46 +14,47 @@
 ///
 /// The Bitcoin tree over N leaves is padded to a depth n. For a prefix of M
 /// leaves, consider the aligned subtrees that tile the REST, [M, 2^n), walking
-/// right from M: their sizes grow, they are the 1-bits of 2^n - M, and they are
-/// the right siblings of leaf M - 1's ancestors. Their hashes are the peaks of
-/// an MMR grown from the RIGHT instead of the left — call it P_M. Subtrees that
-/// lie entirely beyond the real leaves are, by Bitcoin's rule, duplicates of
-/// the node to their left and are left out, so P_M holds only the tiles that
-/// contain real leaves; P_0 is the root alone, P_N is empty.
+/// right from M. These are the TILES of M: their sizes grow, they are the
+/// 1-bits of 2^n - M, and they are the right siblings of leaf M - 1's
+/// ancestors. Their hashes are the peaks of an MMR grown from the RIGHT instead
+/// of the left — call it P_M. (Where a tile is stored or compared, its hash is
+/// meant.) Tiles that lie entirely beyond the real leaves are, by Bitcoin's
+/// rule, duplicates of the node to their left and are left out, so P_M holds
+/// only the tiles that contain real leaves; P_0 is the root alone, P_N is
+/// empty.
 ///
 /// === The check: close the gap from both sides ===
 ///
-/// The verifier stores M and P_M (at most log N hashes; initially 0 and the
-/// root). A chunk brings the leaves [M, M') and the uploader's P_M'. The
-/// verifier grows P_M' leftward through the chunk, prepending the leaves
-/// M' - 1, ..., M with the mirrored carry rule: a block at level k whose
-/// position has bit k clear is a LEFT child and merges with its right sibling,
-/// `dSHA(block ++ sibling)`, where the sibling is the tile of P_M' at that
-/// level, or — if there is none — the block's own duplicate; a block whose
-/// position has bit k set is a RIGHT child and waits as a tile for a left
-/// sibling that lies further left. After leaf M the tiles are P_M again and
-/// must equal the stored ones. Then M' and P_M' replace M and P_M.
+/// The verifier stores M, the number of leaves uploaded so far, and P_M (at
+/// most log N hashes; initially 0 and the root). A chunk brings the leaves
+/// [M, M') and the uploader's P_M'. The verifier grows P_M' leftward through
+/// the chunk, prepending the leaves M' - 1, ..., M with the mirrored carry
+/// rule: a node at level k whose position has bit k clear is a LEFT child and
+/// merges with its right sibling, `dSHA(node ++ sibling)`, where the sibling
+/// is the tile of P_M' at that level, or — if there is none — the node's own
+/// duplicate; a node whose position has bit k set is a RIGHT child and waits
+/// as a tile for a left sibling that lies further left. After leaf M the tiles
+/// are P_M again and must equal the stored ones. Then M' and P_M' replace M
+/// and P_M.
 ///
 ///   [M, M') + P_M'  ->  P_M
 ///
-/// Every leaf of the chunk is absorbed into a compared tile and every
-/// compared tile was itself verified down to the root, so a wrong leaf, a
-/// wrong or missing tile, and a wrong root are all caught. The check needs
-/// neither N nor the depth: alignment is a property of the position alone. The forward MMR of
+/// Every leaf of the chunk is absorbed into a compared tile and every compared
+/// tile was itself verified down to the root, so a wrong leaf, a wrong or
+/// missing tile, and a wrong root are all caught. The check needs neither N nor
+/// the depth: alignment is a property of the position alone. The forward MMR of
 /// Examples 5-6 is never built; the state between chunks is M and P_M.
 ///
 /// === Completeness and mutation ===
 ///
 /// Before each merge the verifier rejects EQUAL siblings. In a valid block two
 /// sibling subtrees never hash alike (that would be a duplicated transaction,
-/// which consensus forbids, or a collision), so the check never rejects a
-/// valid block, and it buys two things: a proof may not contain the tiles
-/// that Bitcoin's rule would duplicate (so proofs are minimal, and the LAST
-/// chunk is recognised by an EMPTY P_M', after which the number of uploaded
-/// leaves is M'), and a
-/// mutated block — a tail of the block uploaded twice, CVE-2012-2459 — is
-/// rejected at the merge of the two copies, which Bitcoin Core detects the
-/// same way.
+/// which consensus forbids, or a collision), so the check never rejects a valid
+/// block, and it buys two things: a proof may not contain the tiles that
+/// Bitcoin's rule would duplicate (so proofs are minimal, and the LAST chunk is
+/// recognised by an EMPTY P_M', and then M' = N), and a mutated block — a tail
+/// of the block uploaded twice, CVE-2012-2459 — is rejected at the merge of the
+/// two copies, which Bitcoin Core detects the same way.
 ///
 /// === What this does NOT establish: that the leaves are transactions ===
 ///
@@ -110,7 +111,7 @@ module {
     /// the first chunk, `[]` once the block is complete.
     var proof : [Blob];
     /// Working tiles, slot k = level k, plus one spare that carries the rising
-    /// block; allocated once.
+    /// node; allocated once.
     pool : [var Hasher.Hasher];
     /// For raw transactions: txid = SHA256(SHA256(tx)).
     d : Sha256.Digest;
@@ -130,10 +131,9 @@ module {
   };
 
   /// Whether the upload is complete: the last accepted chunk came with an
-  /// empty proof, so no leaf can follow. Then `count` is the number of leaves
-  /// uploaded. It is the block's transaction count only if the leaves are
-  /// transaction ids and not the nodes of a whole level, which is for the
-  /// application to check (see "What this does NOT establish" above).
+  /// empty proof, so no leaf can follow, and `count` is N, the block's
+  /// transaction count. (That the leaves are transaction ids is taken for
+  /// granted here: see "What this does NOT establish" above.)
   public func complete(self : Verifier) : Bool = self.count > 0 and self.proof.size() == 0;
 
   func wellFormed(tiles : [Blob]) : Bool {
@@ -171,7 +171,7 @@ module {
       i += 1;
     };
 
-    // Prepend the chunk's leaves, last first. The rising block lives in the
+    // Prepend the chunk's leaves, last first. The rising node lives in the
     // spare slot `pool[levels]`; when it comes to rest as a tile, the slots are
     // swapped so that the spare slot always holds a free hasher.
     var j = chunk.size();
@@ -211,7 +211,7 @@ module {
           break climb;
         };
         // A left child: merge with the right sibling — the tile at this level,
-        // or Bitcoin's duplicate of the block itself where no tile exists.
+        // or Bitcoin's duplicate of the node itself where no tile exists.
         if (((present >> k) & 1) == 1) {
           let sibling = pool[k.toNat()];
           // Equal siblings never occur in a valid block: this is a tile that

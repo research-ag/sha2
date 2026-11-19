@@ -201,8 +201,10 @@ A malformed proof returns `false`.
 A canister receives the N transactions of a block in chunks and knows only the header's Merkle root.
 It wants to reject a bad chunk on arrival, within one message's instruction budget, and to know when the last chunk has arrived.
 
-For a prefix of M leaves, the aligned subtrees that tile the rest, [M, 2^n), are the right siblings of leaf M−1's ancestors; their hashes are the peaks of an MMR grown from the right, P_M.
-Subtrees entirely beyond the real leaves are duplicates by Bitcoin's rule and are left out, so P_0 is the root alone and P_N is empty.
+Let M be the number of leaves uploaded so far, a prefix of the N.
+In the tree padded to 2^n leaves, the positions after that prefix, [M, 2^n), are covered by aligned subtrees that do not overlap, each as large as its position allows: the tiles of M.
+They are the right siblings of leaf M−1's ancestors, and their hashes are the peaks of an MMR grown from the right, P_M (where a tile is stored or compared, its hash is meant).
+Tiles entirely beyond the real leaves are duplicates by Bitcoin's rule and are left out, so P_0 is the root alone and P_N is empty.
 The verifier stores M and P_M.
 A chunk brings the leaves [M, M′) and the uploader's P_M′; the verifier grows P_M′ leftward through the chunk, prepending the leaves last first with the mirrored carry rule (a left child merges with the tile to its right, or with its own duplicate when there is none; a right child waits as a tile), and the tiles left after leaf M must equal the stored P_M:
 
@@ -210,10 +212,11 @@ A chunk brings the leaves [M, M′) and the uploader's P_M′; the verifier grow
 
 Every leaf is absorbed into a compared tile and every compared tile was verified down to the root, so wrong leaves, wrong or missing tiles and a wrong root are all caught.
 Neither N nor the depth is a parameter.
-What the check cannot tell is whether the leaves are transaction ids or the nodes of a whole level of the tree; see the [security notes](#security-notes).
-Equal siblings are rejected before every merge: a valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then M′ leaves were uploaded in all), and the mutated blocks of CVE-2012-2459, a tail of the block uploaded twice, are rejected at the merge of the two copies.
+Equal siblings are rejected before every merge: a valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then M′ = N), and the mutated blocks of CVE-2012-2459, a tail of the block uploaded twice, are rejected at the merge of the two copies.
 The hashing is one node per leaf, as for building the tree once, with no ripple to the root per chunk, and verification allocates nothing: a pool of log N hashers holds the working tiles.
 `proof(txids, m)` is the uploader's side, from all leaves.
+
+All of this takes the uploaded leaves to be transaction ids; what the Merkle root alone cannot tell about that is a separate matter, covered in the [security notes](#security-notes).
 
 ## Security notes
 
