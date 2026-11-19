@@ -67,12 +67,15 @@
 ///
 /// With raw transactions (`verifyChunkTx`) every leaf is hashed here, and an
 /// inner node can only pose as a transaction in the form of a 64-byte one,
-/// the concatenation of its two children (CVE-2017-12842). A caller who needs
-/// the count and the completeness of the block takes raw transactions and
-/// refuses any of exactly 64 bytes (non-standard for relay, but consensus has
-/// not excluded them), or authenticates the depth of the tree by other means,
-/// such as the Merkle branch of the coinbase transaction (Example 7). This
-/// example does neither.
+/// the concatenation of its two children (CVE-2017-12842).
+///
+/// Closing this gap is LEFT TO THE APPLICATION, and one transaction is enough
+/// for it. All leaves of the tree sit on one level, so it suffices to show
+/// that a single leaf is a transaction: take the first one, the coinbase, in
+/// full (its serialization without witness data), check that it hashes to the
+/// first txid and that it is NOT 64 bytes long. Then it is not an inner node,
+/// which fixes the depth of the tree and with it the meaning of every other
+/// leaf and of `count`.
 ///
 /// === Cost ===
 ///
@@ -129,8 +132,8 @@ module {
   /// Whether the upload is complete: the last accepted chunk came with an
   /// empty proof, so no leaf can follow. Then `count` is the number of leaves
   /// uploaded. It is the block's transaction count only if the leaves are
-  /// transaction ids and not the nodes of a whole level, which this verifier
-  /// cannot tell (see "What this does NOT establish" above).
+  /// transaction ids and not the nodes of a whole level, which is for the
+  /// application to check (see "What this does NOT establish" above).
   public func complete(self : Verifier) : Bool = self.count > 0 and self.proof.size() == 0;
 
   func wellFormed(tiles : [Blob]) : Bool {

@@ -360,8 +360,9 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
 // A known limit (security notes, "Leaves and inner nodes"): the tree does not
 // mark leaves apart from inner nodes, so a whole level uploaded as txids
 // verifies as a shorter block, down to the root itself as a block of one, and
-// as raw transactions in the form of 64-byte ones. The examples do not guard
-// against it; this pins the behaviour the documentation describes.
+// as raw transactions in the form of 64-byte ones. The examples leave that
+// check to the application (the coinbase in full, not 64 bytes long); this
+// pins the behaviour the documentation describes.
 do {
   let txids = Array.tabulate<Blob>(8, func(_) = bytes(32));
   let root = refBitcoin(txids);
