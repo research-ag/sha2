@@ -86,12 +86,24 @@ module {
     if (data.size() != 32) Prim.trap("Hasher: hashBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
     // Load the 32 message bytes into the state words (big-endian half-word
     // pairs), then hash the state in place. `process_fold_block` hashes whatever
-    // 32 bytes the state holds, so this yields SHA256(data).
-    var i = 0;
-    while (i < 16) {
-      self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);
-      i += 1;
-    };
+    // 32 bytes the state holds, so this yields SHA256(data). The 16 steps are
+    // written out, here and below: a counted loop costs several times as much.
+    self[0] := nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]);
+    self[1] := nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]);
+    self[2] := nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]);
+    self[3] := nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]);
+    self[4] := nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]);
+    self[5] := nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]);
+    self[6] := nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]);
+    self[7] := nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]);
+    self[8] := nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]);
+    self[9] := nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]);
+    self[10] := nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]);
+    self[11] := nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]);
+    self[12] := nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]);
+    self[13] := nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]);
+    self[14] := nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]);
+    self[15] := nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]);
     self.process_fold_block(self);
   };
 
@@ -208,11 +220,22 @@ module {
   /// Traps if `data` is not exactly 32 bytes.
   public func loadBlob32(self : Hasher, data : Blob) {
     if (data.size() != 32) Prim.trap("Hasher: loadBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
-    var i = 0;
-    while (i < 16) {
-      self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);
-      i += 1;
-    };
+    self[0] := nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]);
+    self[1] := nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]);
+    self[2] := nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]);
+    self[3] := nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]);
+    self[4] := nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]);
+    self[5] := nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]);
+    self[6] := nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]);
+    self[7] := nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]);
+    self[8] := nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]);
+    self[9] := nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]);
+    self[10] := nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]);
+    self[11] := nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]);
+    self[12] := nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]);
+    self[13] := nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]);
+    self[14] := nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]);
+    self[15] := nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]);
   };
 
   /// Copy the 32-byte state of `src` into `self` VERBATIM — no hashing. The
@@ -232,11 +255,22 @@ module {
   /// hasher.loadState(other); // hasher now holds the same hash as other
   /// ```
   public func loadState(self : Hasher, src : Hasher) {
-    var i = 0;
-    while (i < 16) {
-      self[i] := src[i];
-      i += 1;
-    };
+    self[0] := src[0];
+    self[1] := src[1];
+    self[2] := src[2];
+    self[3] := src[3];
+    self[4] := src[4];
+    self[5] := src[5];
+    self[6] := src[6];
+    self[7] := src[7];
+    self[8] := src[8];
+    self[9] := src[9];
+    self[10] := src[10];
+    self[11] := src[11];
+    self[12] := src[12];
+    self[13] := src[13];
+    self[14] := src[14];
+    self[15] := src[15];
   };
 
   /// Compare the current 32-byte digest with a `Blob`, without reading it out:
@@ -251,11 +285,22 @@ module {
   /// ```
   public func equalsBlob32(self : Hasher, data : Blob) : Bool {
     if (data.size() != 32) return false;
-    var i = 0;
-    while (i < 16) {
-      if (self[i] != (nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]))) return false;
-      i += 1;
-    };
+    if (self[0] != (nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]))) return false;
+    if (self[1] != (nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]))) return false;
+    if (self[2] != (nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]))) return false;
+    if (self[3] != (nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]))) return false;
+    if (self[4] != (nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]))) return false;
+    if (self[5] != (nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]))) return false;
+    if (self[6] != (nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]))) return false;
+    if (self[7] != (nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]))) return false;
+    if (self[8] != (nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]))) return false;
+    if (self[9] != (nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]))) return false;
+    if (self[10] != (nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]))) return false;
+    if (self[11] != (nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]))) return false;
+    if (self[12] != (nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]))) return false;
+    if (self[13] != (nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]))) return false;
+    if (self[14] != (nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]))) return false;
+    if (self[15] != (nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]))) return false;
     true;
   };
 
@@ -271,11 +316,22 @@ module {
   /// assert a.equalsState(b);
   /// ```
   public func equalsState(self : Hasher, other : Hasher) : Bool {
-    var i = 0;
-    while (i < 16) {
-      if (self[i] != other[i]) return false;
-      i += 1;
-    };
+    if (self[0] != other[0]) return false;
+    if (self[1] != other[1]) return false;
+    if (self[2] != other[2]) return false;
+    if (self[3] != other[3]) return false;
+    if (self[4] != other[4]) return false;
+    if (self[5] != other[5]) return false;
+    if (self[6] != other[6]) return false;
+    if (self[7] != other[7]) return false;
+    if (self[8] != other[8]) return false;
+    if (self[9] != other[9]) return false;
+    if (self[10] != other[10]) return false;
+    if (self[11] != other[11]) return false;
+    if (self[12] != other[12]) return false;
+    if (self[13] != other[13]) return false;
+    if (self[14] != other[14]) return false;
+    if (self[15] != other[15]) return false;
     true;
   };
 
