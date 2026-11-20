@@ -1,62 +1,76 @@
 /// Example 9: CHUNKED verification of a Bitcoin block's transactions against
 /// the block header's Merkle root, chunk by chunk, with no chunk trusted and
-/// without ever holding the tree. Allocation-free verification.
+/// nothing kept but a few hashes. Built on the tree of `BitcoinMerkleRight.mo`
+/// (Example 8), which is grown from the right.
 ///
-/// === The setting ===
+/// === The problem ===
 ///
-/// A canister receives the N transactions (or txids) of a block in chunks and
-/// knows only the header's Merkle root. It wants to reject a bad chunk on
-/// arrival, within one message's instruction budget, rather than discover at
-/// the end that the root does not match — and it wants to know when the last
-/// chunk has arrived.
+/// A canister receives the N transaction ids of a block in chunks and knows
+/// only the Merkle root from the block header. It wants to reject a bad chunk
+/// when it arrives — not to find out at the end that the root does not match
+/// — and it wants to know when the last chunk has arrived.
 ///
-/// === Mirrored peaks: the right-hand MMR ===
+/// === A proof is a set of peaks ===
 ///
-/// The Bitcoin tree over N leaves is padded to a depth n. For a prefix of M
-/// leaves, consider the aligned subtrees that tile the REST, [M, 2^n), walking
-/// right from M. These are the TILES of M: their sizes grow, they are the
-/// 1-bits of 2^n - M, and they are the right siblings of leaf M - 1's
-/// ancestors. Their hashes are the peaks of an MMR grown from the RIGHT instead
-/// of the left — call it P_M. (Where a tile is stored or compared, its hash is
-/// meant.) Tiles that lie entirely beyond the real leaves are, by Bitcoin's
-/// rule, duplicates of the node to their left and are left out, so P_M holds
-/// only the tiles that contain real leaves; P_0 is the root alone, P_N is
-/// empty.
+/// Build the tree of the block from the right, as Example 8 does, and stop
+/// when the leaves M .. N - 1 are in. What is left in the tree is a set of
+/// peaks: together they stand for everything to the right of the first M
+/// leaves. Call that set P_M, the PROOF for M, lowest peak first.
 ///
-/// === The check: close the gap from both sides ===
+///   - P_0 is the root alone: every leaf is in, and one peak is left.
+///   - P_N is empty: no leaf is in.
 ///
-/// The verifier stores M, the number of leaves uploaded so far, and P_M (at
-/// most log N hashes; initially 0 and the root). A chunk brings the leaves
-/// [M, M') and the uploader's P_M'. The verifier grows P_M' leftward through
-/// the chunk, prepending the leaves M' - 1, ..., M with the mirrored carry
-/// rule: a node at level k whose position has bit k clear is a LEFT child and
-/// merges with its right sibling, `dSHA(node ++ sibling)`, where the sibling
-/// is the tile of P_M' at that level, or — if there is none — the node's own
-/// duplicate; a node whose position has bit k set is a RIGHT child and waits
-/// as a tile for a left sibling that lies further left. After leaf M the tiles
-/// are P_M again and must equal the stored ones. Then M' and P_M' replace M
-/// and P_M.
+/// (Seen from the tree, the peaks of P_M are the right siblings of the
+/// ancestors of leaf M - 1, as far as they contain real leaves.)
 ///
-///   [M, M') + P_M'  ->  P_M
+/// === The check ===
 ///
-/// Every leaf of the chunk is absorbed into a compared tile and every compared
-/// tile was itself verified down to the root, so a wrong leaf, a wrong or
-/// missing tile, and a wrong root are all caught. The check needs neither N nor
-/// the depth: alignment is a property of the position alone. The forward MMR of
-/// Examples 5-6 is never built; the state between chunks is M and P_M. The
-/// carry rule is the one with which `BitcoinMerkleRight.mo` (Example 8) BUILDS
-/// a tree from the right.
+/// The verifier stores M, the number of leaves accepted so far, and P_M;
+/// initially 0 and the root. A chunk brings the leaves M .. M' - 1 and the
+/// uploader's P_M'. The verifier then
+///
+///   1. starts a tree from P_M': it puts the peaks into their slots,
+///   2. adds the leaves of the chunk to it, last to first, as Example 8 does,
+///   3. compares the peaks that are left with the stored P_M,
+///   4. and if they are equal, stores M' and P_M' in place of M and P_M.
+///
+///   P_M' + leaves M .. M' - 1  ->  P_M
+///
+/// Every leaf of the chunk ends up inside a peak that is compared, and every
+/// stored peak was itself compared, chunk by chunk, back to the root. So a
+/// wrong leaf, a wrong or missing peak and a wrong root are all caught.
+///
+/// === Where the peaks go ===
+///
+/// The tree of Example 8 needs its counter, the number of leaf places to the
+/// right of the leaves it holds. For a tree of depth n holding the leaves
+/// from M' on, that is 2^n - M'. Its set bits are the heights of the peaks it
+/// claims, and the lowest of them are the ones that exist: the peaks of P_M'
+/// sit at the LOWEST SET BITS of -M', one bit each, in order. A claimed peak
+/// above them lies in the gap after the last leaf, and Example 8 doubles
+/// there.
+///
+/// Neither N nor the depth is given to the verifier. It does not need the true
+/// depth, only one that is deep enough for the chunk at hand: n is the larger
+/// of ceil(log2 M') and one above the highest peak of P_M'. Below that depth
+/// the bits of 2^n - M' are those of -M' whatever n is, and only the leaf at
+/// position 0 ever climbs to the top, where this n is the true depth: either
+/// the highest peak is the root's right child, or everything is in the chunk.
 ///
 /// === Completeness and mutation ===
 ///
-/// Before each merge the verifier rejects EQUAL siblings. In a valid block two
-/// sibling subtrees never hash alike (that would be a duplicated transaction,
-/// which consensus forbids, or a collision), so the check never rejects a valid
-/// block, and it buys two things: a proof may not contain the tiles that
-/// Bitcoin's rule would duplicate (so proofs are minimal, and the LAST chunk is
-/// recognised by an EMPTY P_M', and then M' = N), and a mutated block — a tail
-/// of the block uploaded twice, CVE-2012-2459 — is rejected at the merge of the
-/// two copies, which Bitcoin Core detects the same way.
+/// Example 8 notes when two EQUAL siblings are merged (`equalSiblings`), and
+/// the verifier rejects the chunk then. In a valid block two sibling subtrees
+/// never hash alike (that would be a repeated transaction, which consensus
+/// forbids, or a collision), so nothing valid is rejected, and it buys two
+/// things:
+///
+///   - A proof may not contain a peak that Bitcoin's rule would duplicate, so
+///     proofs are minimal, and the LAST chunk is recognised by an EMPTY P_M'.
+///     Then M' = N.
+///   - A mutated block — a tail of the block uploaded twice, CVE-2012-2459 —
+///     is rejected where the copy meets its original, which is how Bitcoin
+///     Core detects it too.
 ///
 /// === What this does NOT establish: that the leaves are transactions ===
 ///
@@ -72,35 +86,29 @@
 /// inner node can only pose as a transaction in the form of a 64-byte one,
 /// the concatenation of its two children (CVE-2017-12842).
 ///
-/// Closing this gap is LEFT TO THE APPLICATION, and one transaction is enough
-/// for it. All leaves of the tree sit on one level, so it suffices to show
-/// that a single leaf is a transaction: take the first one, the coinbase, in
-/// full (its serialization without witness data), check that it hashes to the
-/// first txid and that it is NOT 64 bytes long. Then it is not an inner node,
-/// which fixes the depth of the tree and with it the meaning of every other
-/// leaf and of `count`.
+/// Closing this gap is LEFT TO THE APPLICATION. One transaction is enough:
+/// take the first one, the coinbase, in full (its serialization without
+/// witness data), check that it hashes to the first txid and that it is NOT
+/// 64 bytes long. A leaf at position 0 that is a real transaction fixes the
+/// depth of the tree, and with it the level of every other leaf.
 ///
 /// === Cost ===
 ///
-/// One double-SHA node per leaf plus at most one duplicate per level per
-/// chunk: the same hashing as building the tree once, with no per-chunk
-/// ripple to the root. The verifier allocates nothing per chunk: a pool of
-/// log N hashers holds the working tiles, the tiles of P_M' are loaded into
-/// it, the merges use `combineState`, the comparisons `equalsState` and
-/// `equalsBlob32`, and P_M' is kept by reference.
+/// One node is hashed per leaf, as for building the tree once: nothing ripples
+/// to the root per chunk. `verifyChunk` allocates nothing — the hashers are
+/// allocated once by `new`, the proof's peaks are loaded into them, and the
+/// uploader's proof is kept by reference. `verifyChunkTx` allocates the txids
+/// it computes, one `Blob` per transaction.
 ///
-/// Proofs are produced off-chain by whoever has all leaves (`proof`,
-/// `proofTx`): the tiles are nodes of the tree, read off its level arrays.
-///
-/// Caveats as in `BitcoinMerkle.mo`: txids and the root are in Bitcoin's
-/// INTERNAL byte order; for raw transactions the txid hashes the serialization
-/// WITHOUT witness data.
+/// Txids, proofs and the root are in Bitcoin's INTERNAL byte order; the txid
+/// of a raw transaction hashes its serialization WITHOUT witness data.
 
+import Hasher "mo:sha2/Hasher/Sha256";
+import Right "BitcoinMerkleRight";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
-import VarArray "mo:core/VarArray";
-import Hasher "mo:sha2/Hasher/Sha256";
+import Runtime "mo:core/Runtime";
 import Sha256 "mo:sha2/Sha256";
 
 module {
@@ -109,26 +117,23 @@ module {
   public type Verifier = {
     /// Leaves accepted so far (M).
     var count : Nat64;
-    /// P_M: the right-hand MMR of the rest, lowest tile first; `[root]` before
-    /// the first chunk, `[]` once the block is complete.
+    /// P_M, lowest peak first: `[root]` before the first chunk, `[]` once the
+    /// block is complete.
     var proof : [Blob];
-    /// Working tiles, slot k = level k, plus one spare that carries the rising
-    /// node; allocated once.
-    pool : [var Hasher.Hasher];
-    /// For raw transactions: txid = SHA256(SHA256(tx)).
-    d : Sha256.Digest;
+    /// The working tree of Example 8, started afresh from the uploader's
+    /// proof for every chunk; its hashers are allocated once.
+    tree : Right.Mmr;
   };
 
   /// A verifier for the block with Merkle root `root` (32 bytes, internal byte
-  /// order), for blocks of at most 2^maxDepth transactions. Allocates the
-  /// pool of `maxDepth + 2` hashers and one digest.
+  /// order), for blocks of at most 2^maxDepth transactions. Allocates
+  /// `maxDepth + 1` hashers.
   public func new(root : Blob, maxDepth : Nat) : Verifier {
-    assert root.size() == 32;
+    assert root.size() == 32 and maxDepth <= 62;
     {
       var count = 0;
       var proof = [root];
-      pool = VarArray.tabulate<Hasher.Hasher>(maxDepth + 2, func(_) { Hasher.new() });
-      d = Sha256.new();
+      tree = Right.new(0, 2 ** maxDepth);
     };
   };
 
@@ -138,112 +143,60 @@ module {
   /// granted here: see "What this does NOT establish" above.)
   public func complete(self : Verifier) : Bool = self.count > 0 and self.proof.size() == 0;
 
-  func wellFormed(tiles : [Blob]) : Bool {
+  func wellFormed(hashes : [Blob]) : Bool {
     var i = 0;
-    while (i < tiles.size()) {
-      if (tiles[i].size() != 32) return false;
+    while (i < hashes.size()) {
+      if (hashes[i].size() != 32) return false;
       i += 1;
     };
     true;
   };
 
-  // The check [M, M') + next -> P_M. `raw` says whether the chunk holds raw
-  // transactions (to be hashed into txids) or txids. On success the verifier
-  // advances to M' and `next`; on failure it is unchanged.
-  func verify(self : Verifier, chunk : [Blob], raw : Bool, next : [Blob]) : Bool {
-    if (complete(self) or chunk.size() == 0 or not wellFormed(next)) return false;
-    if (not raw and not wellFormed(chunk)) return false;
-    let pool = self.pool;
-    let levels = pool.size() - 1 : Nat; // slots 0 .. levels-1 hold tiles, slot `levels` is the spare
-    let m = self.count;
-    let m2 = m + chunk.size().toNat64();
-
-    // Load the tiles of `next`, the right-hand MMR of [M', 2^n): the first
-    // starts at M' and has the size of its alignment, each next one starts
-    // where the previous ended.
-    var present : Nat64 = 0; // bit k: a tile is held at level k
-    var x = m2;
+  // Start `tree` from the peaks `proof` of the leaves from position `m` on:
+  // each peak goes to the next set bit of -m, lowest first (height 0 is the
+  // pending leaf, kept by reference). The counter is 2^n - m for the smallest
+  // depth n that has room for m leaves and for the highest peak. False if
+  // that is deeper than the tree's capacity.
+  func start(tree : Right.Mmr, m : Nat64, proof : [Blob]) : Bool {
+    let maxDepth = (tree.hasher.size() - 1 : Nat).toNat64();
+    var depth = 64 - Nat64.bitcountLeadingZero(m - 1); // ceil(log2 m)
+    var present : Nat64 = 0;
+    tree.pending := null;
+    // The set bits of -m, lowest first, without forming -m: the lowest is the
+    // lowest set bit of m, and adding that bit to m moves on to the next.
+    var x = m;
     var i = 0;
-    while (i < next.size()) {
+    while (i < proof.size()) {
       let k = Nat64.bitcountTrailingZero(x);
-      if (k.toNat() >= levels) return false;
-      pool[k.toNat()].loadBlob32(next[i]);
+      if (k >= maxDepth) return false;
+      if (k == 0) tree.pending := ?proof[i] else tree.hasher[k.toNat()].loadBlob32(proof[i]);
       present |= 1 << k;
-      x +%= 1 << k;
+      x += 1 << k;
+      depth := Nat64.max(depth, k + 1);
       i += 1;
     };
-
-    // Prepend the chunk's leaves, last first. The rising node lives in the
-    // spare slot `pool[levels]`; when it comes to rest as a tile, the slots are
-    // swapped so that the spare slot always holds a free hasher.
-    var j = chunk.size();
-    while (j > 0) {
-      j -= 1;
-      let pos = m + j.toNat64();
-      let carry = pool[levels];
-      if (raw) {
-        let d = self.d;
-        d.reset();
-        d.writeBlob(chunk[j]);
-        d.closeDouble(); // d.state = txid
-        carry.loadState(d.state);
-      } else {
-        carry.loadBlob32(chunk[j]);
-      };
-      var k : Nat64 = 0;
-      label climb loop {
-        if (pos == 0 and present == 0) {
-          // The first chunk's last leaf has absorbed everything to its right:
-          // the carry is the node over [0, 2^k), and at the depth of the tree
-          // it is the root, the stored P_0.
-          if (carry.equalsBlob32(self.proof[0])) {
-            self.count := m2;
-            self.proof := next;
-            return true;
-          };
-        };
-        if (k.toNat() >= levels) return false;
-        if (((pos >> k) & 1) == 1) {
-          // A right child: it waits, as the tile at this level, for its left
-          // sibling (further left in the chunk, or in the prefix).
-          let tmp = pool[k.toNat()];
-          pool[k.toNat()] := carry;
-          pool[levels] := tmp;
-          present |= 1 << k;
-          break climb;
-        };
-        // A left child: merge with the right sibling — the tile at this level,
-        // or Bitcoin's duplicate of the node itself where no tile exists.
-        if (((present >> k) & 1) == 1) {
-          let sibling = pool[k.toNat()];
-          // Equal siblings never occur in a valid block: this is a tile that
-          // should have been left out, or a mutated block (CVE-2012-2459).
-          if (carry.equalsState(sibling)) return false;
-          carry.combineState(carry, sibling);
-          present &= ^(1 << k);
-        } else {
-          carry.combineState(carry, carry);
-        };
-        carry.hashState(carry);
-        k += 1;
-      };
-    };
-
-    // M > 0 (the first chunk returned above): the tiles now present, lowest
-    // first, must be the stored P_M.
-    var k = 0;
-    i := 0;
-    while (k < levels) {
-      if (((present >> k.toNat64()) & 1) == 1) {
-        if (i >= self.proof.size() or not pool[k].equalsBlob32(self.proof[i])) return false;
-        i += 1;
-      };
-      k += 1;
-    };
-    if (i != self.proof.size()) return false;
-    self.count := m2;
-    self.proof := next;
+    if (depth > maxDepth) return false;
+    tree.count := (1 << depth) - m;
+    tree.present := present;
+    tree.equalSiblings := false;
     true;
+  };
+
+  // Whether the peaks of `tree`, lowest first, are exactly `proof`.
+  func hasPeaks(tree : Right.Mmr, proof : [Blob]) : Bool {
+    var bits = tree.present;
+    var i = 0;
+    while (bits != 0) {
+      if (i >= proof.size()) return false;
+      let k = Nat64.bitcountTrailingZero(bits);
+      if (k == 0) {
+        let ?leaf = tree.pending else return false;
+        if (leaf != proof[i]) return false;
+      } else if (not tree.hasher[k.toNat()].equalsBlob32(proof[i])) return false;
+      bits &= bits - 1;
+      i += 1;
+    };
+    i == proof.size();
   };
 
   /// Verify the next chunk of txids (32 bytes each, internal byte order) with
@@ -251,57 +204,27 @@ module {
   /// and accept it if it checks out: `true` and the verifier advances;
   /// otherwise `false` and the verifier is unchanged. An empty `next` claims
   /// that the chunk is the last one. Allocation-free.
-  public func verifyChunk(self : Verifier, txids : [Blob], next : [Blob]) : Bool = verify(self, txids, false, next);
-
-  /// The same for a chunk of raw transactions (any length each): the txid of
-  /// each is computed through the verifier's digest, with no allocation.
-  public func verifyChunkTx(self : Verifier, txs : [Blob], next : [Blob]) : Bool = verify(self, txs, true, next);
-
-  // ---------------------------------------------------------------------------
-  // The prover (off-chain, from all leaves)
-  // ---------------------------------------------------------------------------
-
-  // Bitcoin's level arrays: level 0 the txids, each next level the double
-  // SHA256 of pairs, the last node of an odd level paired with itself.
-  func levels(txids : [Blob]) : [[Blob]] {
-    var all : [[Blob]] = [txids];
-    var level = txids;
-    while (level.size() > 1) {
-      let len = level.size();
-      let next = Array.tabulate<Blob>(
-        (len + 1) / 2,
-        func(i) {
-          let d = Sha256.new();
-          d.writeBlob(level[2 * i]);
-          d.writeBlob(level[if (2 * i + 1 < len) 2 * i + 1 else len - 1]);
-          d.sumDouble();
-        },
-      );
-      all := all.concat([next]);
-      level := next;
+  public func verifyChunk(self : Verifier, txids : [Blob], next : [Blob]) : Bool {
+    if (complete(self) or txids.size() == 0 or not wellFormed(txids) or not wellFormed(next)) return false;
+    let tree = self.tree;
+    let m2 = self.count + txids.size().toNat64();
+    // 1. Start a tree from the uploader's peaks.
+    if (not start(tree, m2, next)) return false;
+    // 2. Add the chunk to it, last leaf first.
+    var j = txids.size();
+    while (j > 0) {
+      j -= 1;
+      tree.add(txids[j]);
     };
-    all;
-  };
-
-  /// P_m for the block `txids`: the right-hand MMR of the leaves after the
-  /// first `m` (1 <= m <= n), lowest tile first — the right siblings of leaf
-  /// m - 1's ancestors that contain real transactions. Empty for m = n. What
-  /// the uploader sends with the chunk that ends at m.
-  public func proof(txids : [Blob], m : Nat) : [Blob] {
-    let n = txids.size();
-    assert 1 <= m and m <= n;
-    let lv = levels(txids);
-    var tiles : [Blob] = [];
-    var k = 0;
-    while (k + 1 < lv.size()) {
-      let idx = (m - 1 : Nat) / (2 ** k);
-      if (idx % 2 == 0) {
-        if ((idx + 1) * (2 ** k) >= n) return tiles; // this and all higher siblings are duplicates
-        tiles := tiles.concat([lv[k][idx + 1]]);
-      };
-      k += 1;
-    };
-    tiles;
+    // Equal siblings never occur in a valid block: a peak that should have
+    // been left out of the proof, or a mutated block (CVE-2012-2459).
+    if (tree.equalSiblings) return false;
+    // 3. The peaks that are left must be the stored proof.
+    if (not hasPeaks(tree, self.proof)) return false;
+    // 4. Advance.
+    self.count := m2;
+    self.proof := next;
+    true;
   };
 
   /// The txid of a raw transaction (serialized without witness data).
@@ -311,6 +234,62 @@ module {
     d.sumDouble();
   };
 
+  /// The txids of raw transactions.
+  public func txidsOf(txs : [Blob]) : [Blob] {
+    let d = Sha256.new();
+    Array.tabulate<Blob>(
+      txs.size(),
+      func(i) {
+        d.reset();
+        d.writeBlob(txs[i]);
+        d.sumDouble();
+      },
+    );
+  };
+
+  /// The same as `verifyChunk` for a chunk of raw transactions (any length
+  /// each). Allocates their txids.
+  public func verifyChunkTx(self : Verifier, txs : [Blob], next : [Blob]) : Bool = verifyChunk(self, txidsOf(txs), next);
+
+  // ---------------------------------------------------------------------------
+  // The prover (off-chain, from all leaves)
+  // ---------------------------------------------------------------------------
+
+  /// The peaks of a tree of Example 8, lowest first.
+  public func peaks(tree : Right.Mmr) : [Blob] {
+    var bits = tree.present;
+    Array.tabulate<Blob>(
+      Nat64.bitcountNonZero(bits).toNat(),
+      func(_) {
+        let k = Nat64.bitcountTrailingZero(bits);
+        bits &= bits - 1;
+        if (k == 0) {
+          let ?leaf = tree.pending else Runtime.unreachable();
+          leaf;
+        } else tree.hasher[k.toNat()].readSum();
+      },
+    );
+  };
+
+  /// P_m for the block `txids` (0 <= m <= n): the peaks of the block's tree
+  /// built from the right down to leaf m. The root alone for m = 0, empty for
+  /// m = n. What the uploader sends with the chunk that ends at m.
+  ///
+  /// An uploader who needs the proofs for several chunk boundaries builds the
+  /// tree once, from the last leaf to the first, and takes `peaks` at each
+  /// boundary on the way.
+  public func proof(txids : [Blob], m : Nat) : [Blob] {
+    let n = txids.size();
+    assert n >= 1 and m <= n;
+    let tree = Right.new(Right.gapFor(n), n);
+    var i = n;
+    while (i > m) {
+      i -= 1;
+      tree.add(txids[i]);
+    };
+    peaks(tree);
+  };
+
   /// `proof` for a block given as raw transactions.
-  public func proofTx(txs : [Blob], m : Nat) : [Blob] = proof(txs.map<Blob, Blob>(txid), m);
+  public func proofTx(txs : [Blob], m : Nat) : [Blob] = proof(txidsOf(txs), m);
 };

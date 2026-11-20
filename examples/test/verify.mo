@@ -300,6 +300,13 @@ assert (out[0] == NFold.nfold(msg, 3));
 assert (out[1] == NFold.nfold(m0, 3));
 assert (out[2] == NFold.nfold(m100, 3));
 
+// Helpers for Examples 8 and 9.
+func flip(b : Blob) : Blob {
+  let a = b.toArray();
+  Array.tabulate<Nat8>(a.size(), func(i) = if (i == 5) a[5] ^ 0x01 else a[i]).toBlob();
+};
+func slice(a : [Blob], from : Nat, to : Nat) : [Blob] = Array.tabulate<Blob>(to - from, func(i) = a[from + i]);
+
 // --- Example 8: the Bitcoin root built from the right ---
 // The leaves are added last to first, into a tree that ends `gap` places
 // before the end of its last level. Whenever the places used, the gap
@@ -386,6 +393,28 @@ do {
   assert (six.count == 3 and six.present == 1);
   BitcoinMerkleRight.add(six, t[4]);
   assert (six.count == 4 and six.present == 4);
+  // `equalSiblings`: set when two equal siblings are merged, which a mutated
+  // list always does and an honest one never; a doubling does not set it.
+  for (n in ([1, 2, 3, 5, 6, 7, 11, 12, 13, 16, 100] : [Nat]).values()) {
+    let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
+    func built(list : [Blob]) : BitcoinMerkleRight.Mmr {
+      let mmr = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(list.size()), list.size());
+      var i = list.size();
+      while (i > 0) { i -= 1; BitcoinMerkleRight.add(mmr, list[i]) };
+      mmr;
+    };
+    assert (not built(txids).equalSiblings);
+    var width = 1;
+    while (width < n) {
+      if (n % (2 * width) == width) {
+        // the last 2^k leaves written out twice: the same root, and flagged
+        let m = built(txids.concat(slice(txids, n - width, n)));
+        assert (BitcoinMerkleRight.root(m) == refBitcoin(txids) and m.equalSiblings);
+      };
+      width *= 2;
+    };
+    if (n >= 3) assert (built([txids[0], txids[0], txids[1]]).equalSiblings); // any equal pair, as Bitcoin Core
+  };
   // Pool: one hasher per bit of the largest counter value.
   assert (BitcoinMerkleRight.new(3, 5).hasher.size() == 4 and BitcoinMerkleRight.new(0, 1).hasher.size() == 1 and BitcoinMerkleRight.new(0, 7).hasher.size() == 3);
 };
@@ -393,19 +422,57 @@ do {
 // --- Example 9: chunked verification against the Merkle root ---
 // Random chunk sequences over random txids verify chunk by chunk against the
 // root of the whole block, both as txids and as raw transactions; the last
-// chunk is recognised by its empty proof; a forged leaf, a dropped tile, a
-// tile that should have been left out, a duplicated last leaf (CVE-2012-2459),
+// chunk is recognised by its empty proof; a forged leaf, a dropped peak, a
+// peak that should have been left out, a duplicated last leaf (CVE-2012-2459),
 // a wrong root and a chunk after completion are rejected, and a rejected chunk
 // leaves the verifier unchanged.
-func flip(b : Blob) : Blob {
-  let a = b.toArray();
-  Array.tabulate<Nat8>(a.size(), func(i) = if (i == 5) a[5] ^ 0x01 else a[i]).toBlob();
+
+// Reference for the proof P_m, independent of the tree built from the right:
+// from Bitcoin's level arrays, the right siblings of leaf m - 1's ancestors
+// that contain real leaves, lowest first; the root alone for m = 0.
+func refProof(txids : [Blob], m : Nat) : [Blob] {
+  let n = txids.size();
+  if (m == 0) return [refBitcoin(txids)];
+  let out = List.empty<Blob>();
+  var level = txids;
+  var k = 0;
+  while (level.size() > 1) {
+    let len = level.size();
+    let idx = (m - 1 : Nat) / (2 ** k);
+    if (idx % 2 == 0 and (idx + 1) * (2 ** k) < n) out.add(level[idx + 1]);
+    level := Array.tabulate<Blob>(
+      (len + 1) / 2,
+      func(i) {
+        let h = Sha256.new();
+        h.writeBlob(level[2 * i]);
+        h.writeBlob(level[if (2 * i + 1 < len) 2 * i + 1 else len - 1]);
+        h.sumDouble();
+      },
+    );
+    k += 1;
+  };
+  out.toArray();
 };
-func slice(a : [Blob], from : Nat, to : Nat) : [Blob] = Array.tabulate<Blob>(to - from, func(i) = a[from + i]);
 for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 257] : [Nat]).values()) {
   let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
   let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
   let root = refBitcoin(txids);
+  assert (BitcoinChunks.txidsOf(txs) == txids);
+  // The proofs: the root alone for no leaves, empty for all of them, equal to
+  // the reference in between; and all of them from ONE pass over the block,
+  // taking the peaks of the tree at every boundary.
+  assert (BitcoinChunks.proof(txids, 0) == [root] and BitcoinChunks.proof(txids, n) == []);
+  do {
+    let tree = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(n), n);
+    var m = n;
+    while (m > 0) {
+      assert (BitcoinChunks.peaks(tree) == refProof(txids, m));
+      if (n <= 33) assert (BitcoinChunks.proof(txids, m) == refProof(txids, m));
+      m -= 1;
+      BitcoinMerkleRight.add(tree, txids[m]);
+    };
+    assert (BitcoinChunks.peaks(tree) == [root]);
+  };
   // chunk boundaries: a pseudo-random walk from 0 to n, repeated with different steps
   for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
     let v = BitcoinChunks.new(root, 12);
@@ -448,6 +515,19 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
   if (n > 1) {
     let u = BitcoinChunks.new(root, 12);
     assert (not u.verifyChunk(slice(txids, 0, n - 1), []));
+  };
+  // malformed input is rejected, not trapped on: a txid or a peak of the wrong length
+  let z = BitcoinChunks.new(root, 12);
+  assert (not z.verifyChunk(Array.tabulate<Blob>(n, func(i) = if (i == 0) bytes(31) else txids[i]), []));
+  assert (not z.verifyChunk(txids, [bytes(33)]));
+  // a block deeper than the capacity is rejected: 2^depth transactions fit, one more does not
+  var depth = 0;
+  while (2 ** depth < n) depth += 1;
+  let fits = BitcoinChunks.new(root, depth);
+  assert (fits.verifyChunk(txids, []) and fits.complete());
+  if (depth > 0) {
+    let small = BitcoinChunks.new(root, depth - 1 : Nat);
+    assert (not small.verifyChunk(txids, []));
   };
 };
 

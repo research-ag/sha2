@@ -89,14 +89,26 @@
 ///
 /// As in Example 5: the one-shot `bitcoinMerkleRootFromRight` runs
 /// `BitcoinMutation.mutated` over the list first and traps on a flagged one
-/// (CVE-2012-2459), the incremental API (`new`, `add`, `root`) hashes what it
-/// is given, and txids and root are in Bitcoin's internal byte order. See
-/// `BitcoinMutation.mo` for the first and the header of `BitcoinMerkle.mo`
+/// (CVE-2012-2459), and txids and root are in Bitcoin's internal byte order.
+/// See `BitcoinMutation.mo` for the first and the header of `BitcoinMerkle.mo`
 /// for the second.
 ///
-/// `BitcoinChunks.mo` (Example 9) uses the same mirrored carry to VERIFY a
-/// block chunk by chunk against a known root, where this example builds the
-/// root.
+/// The incremental API hashes what it is given, but it NOTES one thing: `add`
+/// sets the flag `equalSiblings` when it merges two equal siblings. A valid
+/// block never has them (that would be a repeated transaction, or a
+/// collision), while a mutated block always does: the written-out copy meets
+/// its original. A doubling is not a merge and does not set the flag. This is
+/// the check Bitcoin Core makes while it builds the tree, and it needs no
+/// view of the whole list, which is what a verifier of chunks has to do
+/// without.
+///
+/// === A structure to verify with ===
+///
+/// The state is a set of peaks plus a counter that says where they sit. So a
+/// tree can be STARTED from peaks that someone else supplies, be grown to the
+/// left with `add`, and have its peaks compared with others afterwards.
+/// `BitcoinChunks.mo` (Example 9) verifies a block chunk by chunk that way,
+/// against nothing but its Merkle root.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Mutation "BitcoinMutation";
@@ -109,14 +121,15 @@ module {
   /// The state of the build: the height-indexed slots, the counter (`count`:
   /// leaf places used, the gap included — its bits claim the peaks), the peaks
   /// that really exist (`present`: bit k for slot k, bit 0 for the pending
-  /// leaf) and the pending leaf. The state of Example 5 plus `present`; the
-  /// gap is not kept, it is only where `count` starts. A static record — it
-  /// can be declared `stable`.
+  /// leaf), the pending leaf, and whether two equal siblings were ever merged
+  /// (`equalSiblings`, never in a valid block). The gap is not kept, it is
+  /// only where `count` starts. A static record — it can be declared `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
     var count : Nat64;
     var present : Nat64;
     var pending : ?Blob;
+    var equalSiblings : Bool;
   };
 
   /// The gap of a Bitcoin tree of `n` leaves (>= 1): the unused places after
@@ -141,12 +154,14 @@ module {
       var count = gap.toNat64(); // the counter starts at the gap
       var present = 0;
       var pending = null;
+      var equalSiblings = false;
     };
   };
 
   /// Add the next leaf, a 32-byte txid in internal byte order. The leaves are
-  /// taken from the LAST of the block to the first. Allocation-free. Traps
-  /// (when the leaf is hashed) if it is not 32 bytes long.
+  /// taken from the LAST of the block to the first. Allocation-free. Sets
+  /// `equalSiblings` if two equal siblings are merged. Traps (when the leaf is
+  /// hashed) if it is not 32 bytes long.
   public func add(self : Mmr, leaf : Blob) {
     let count = self.count; // the places to the right of this leaf
     self.count := count + 1;
@@ -164,6 +179,7 @@ module {
     switch (self.pending) {
       case (?right) {
         self.pending := null;
+        if (leaf == right) self.equalSiblings := true;
         hasher[0].combineBlob32(leaf, right);
       };
       case (null) hasher[0].combineBlob32(leaf, leaf);
@@ -178,6 +194,7 @@ module {
       let kk = k.toNat();
       if (((present >> k) & 1) == 1) {
         // The claimed peak is there: merge.
+        if (hasher[kk - 1].equalsState(hasher[kk])) self.equalSiblings := true;
         hasher[kk].combineState(hasher[kk - 1], hasher[kk]); // dSHA(node ++ peak)
         present ^= 1 << k;
       } else {

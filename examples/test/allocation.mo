@@ -226,9 +226,10 @@ do {
 
 // --- Example 9: chunked verification ---
 
-// Verifying a chunk allocates nothing: the pool and the digest are allocated
-// once by `new`, the uploader's proof is kept by reference, and the merges and
-// comparisons work on hasher states. Txid and raw-transaction chunks alike.
+// Verifying a chunk of txids allocates nothing: the hashers are allocated once
+// by `new`, the uploader's peaks are loaded into them, the proof is kept by
+// reference, and the merges and comparisons work on hasher states. A chunk of
+// raw transactions allocates exactly what computing their txids allocates.
 do {
   let n = 1000;
   let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
@@ -243,7 +244,8 @@ do {
     let chunkTx = Array.tabulate<Blob>(m2 - m, func(i) = txs[m + i]);
     let p = BitcoinChunks.proof(txids, m2);
     check("BitcoinChunks.verifyChunk to " # m2.toText(), alloc(func() { assert v.verifyChunk(chunk, p) }), 0);
-    check("BitcoinChunks.verifyChunkTx to " # m2.toText(), alloc(func() { assert vTx.verifyChunkTx(chunkTx, p) }), 0);
+    let forTxids = alloc(func() { ignore BitcoinChunks.txidsOf(chunkTx) });
+    check("BitcoinChunks.verifyChunkTx to " # m2.toText(), alloc(func() { assert vTx.verifyChunkTx(chunkTx, p) }), forTxids);
     m := m2;
   };
   assert v.complete() and vTx.complete();
