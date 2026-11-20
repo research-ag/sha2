@@ -394,7 +394,7 @@ For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
-| `fromBlob`, empty message  |       12,100 |       13,200 |
+| `fromBlob`, empty message  |       12,100 |       12,900 |
 | `fromBlob`, one block      |       31,000 |       42,000 |
 | `fromBlob`, 1 MB           |  171,000,000 |   95,000,000 |
 | per byte of a long message |          170 |           90 |
