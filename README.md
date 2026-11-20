@@ -394,7 +394,7 @@ For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
-| `fromBlob`, empty message  |       12,100 |       12,900 |
+| `fromBlob`, empty message  |       12,100 |       13,200 |
 | `fromBlob`, one block      |       31,000 |       42,000 |
 | `fromBlob`, 1 MB           |  171,000,000 |   95,000,000 |
 | per byte of a long message |          170 |           90 |
@@ -411,9 +411,9 @@ The `Hasher` against the same hashes computed through a reused `Digest` (`reset`
 
 | Operation                        | `Hasher` | `Digest` |
 | -------------------------------- | -------: | -------: |
-| hash of one 32-byte value        |   13,100 |   15,200 |
+| hash of one 32-byte value        |    9,500 |   15,200 |
 | combine of two 32-byte values    |   15,200 |   26,800 |
-| double hash of one 32-byte value |   21,400 |   23,600 |
+| double hash of one 32-byte value |   17,800 |   23,600 |
 
 A combine is two compressions (the data block and the constant padding block), a single hash one compression; the `Digest` adds its buffer handling on top.
 
