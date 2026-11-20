@@ -42,20 +42,25 @@
 ///
 /// === Where the peaks go ===
 ///
-/// The tree of Example 8 needs its counter, the number of leaf places to the
-/// right of the leaves it holds. For a tree of depth n holding the leaves
-/// from M' on, that is 2^n - M'. Its set bits are the heights of the peaks it
-/// claims, and the lowest of them are the ones that exist: the peaks of P_M'
-/// sit at the LOWEST SET BITS of -M', one bit each, in order. A claimed peak
-/// above them lies in the gap after the last leaf, and Example 8 doubles
-/// there.
+/// A proof is a list of hashes; the height of each follows from M' alone.
+/// Walk to the right from position M': the first peak starts at M' and is as
+/// large as that position allows (2^k places, k the number of trailing zeros
+/// of M'), the next one starts where it ends, and so on, each larger than the
+/// one before. A peak of 2^k places goes into slot k.
 ///
-/// Neither N nor the depth is given to the verifier. It does not need the true
-/// depth, only one that is deep enough for the chunk at hand: n is the larger
-/// of ceil(log2 M') and one above the highest peak of P_M'. Below that depth
-/// the bits of 2^n - M' are those of -M' whatever n is, and only the leaf at
-/// position 0 ever climbs to the top, where this n is the true depth: either
-/// the highest peak is the root's right child, or everything is in the chunk.
+/// The tree of Example 8 also needs its counter, the number of leaf places to
+/// the right of the leaves it holds, and for that the size of the tree.
+/// Neither N nor the depth is given to the verifier, and it does not need the
+/// true size, only one that is large enough for the chunk at hand: the
+/// smallest power of two that has room for the M' leaves and for the peaks of
+/// the proof, 2^n. The counter is then 2^n - M'. Where it claims a peak that
+/// the proof does not have, that peak lies in the gap after the last leaf,
+/// and Example 8 doubles there.
+///
+/// A tree that is in truth larger makes no difference to the chunk: only the
+/// leaf at position 0 ever climbs to the top, and when that leaf is in the
+/// chunk this n is the true depth — either the highest peak of the proof is
+/// the root's right child, or the whole block is in the chunk.
 ///
 /// === Completeness and mutation ===
 ///
@@ -96,8 +101,8 @@
 ///
 /// One node is hashed per leaf, as for building the tree once: nothing ripples
 /// to the root per chunk. `verifyChunk` allocates nothing — the hashers are
-/// allocated once by `new`, the proof's peaks are loaded into them, and the
-/// uploader's proof is kept by reference.
+/// allocated once by `new`, the leaves and the proof's peaks are loaded into
+/// them, and the uploader's proof is kept by reference.
 ///
 /// Like Example 8, this example takes txids, 32-byte `Blob`s, not raw
 /// transactions. Txids, proofs and the root are in Bitcoin's INTERNAL byte
@@ -108,7 +113,6 @@ import Right "BitcoinMerkleRight";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
-import Runtime "mo:core/Runtime";
 
 module {
   /// The verifier's state between chunks. A static record; it can be declared
@@ -126,7 +130,7 @@ module {
 
   /// A verifier for the block with Merkle root `root` (32 bytes, internal byte
   /// order), for blocks of at most 2^maxDepth transactions. Allocates
-  /// `maxDepth + 1` hashers.
+  /// `maxDepth + 2` hashers.
   public func new(root : Blob, maxDepth : Nat) : Verifier {
     assert root.size() == 32 and maxDepth <= 62;
     {
@@ -151,29 +155,24 @@ module {
     true;
   };
 
-  // Start `tree` from the peaks `proof` of the leaves from position `m` on:
-  // each peak goes to the next set bit of -m, lowest first (height 0 is the
-  // pending leaf, kept by reference). The counter is 2^n - m for the smallest
-  // depth n that has room for m leaves and for the highest peak. False if
-  // that is deeper than the tree's capacity.
+  // Start `tree` from the peaks `proof` of the leaves from position `m` on.
+  // False if that takes a deeper tree than there are hashers for.
   func start(tree : Right.Mmr, m : Nat64, proof : [Blob]) : Bool {
-    let maxDepth = (tree.hasher.size() - 1 : Nat).toNat64();
-    var depth = 64 - Nat64.bitcountLeadingZero(m - 1); // ceil(log2 m)
+    let maxDepth = (tree.hasher.size() - 2 : Nat).toNat64();
     var present : Nat64 = 0;
-    tree.pending := null;
-    // The set bits of -m, lowest first, without forming -m: the lowest is the
-    // lowest set bit of m, and adding that bit to m moves on to the next.
-    var x = m;
+    var x = m; // where the next peak starts
     var i = 0;
     while (i < proof.size()) {
-      let k = Nat64.bitcountTrailingZero(x);
+      let k = Nat64.bitcountTrailingZero(x); // it is as large as its position allows
       if (k >= maxDepth) return false;
-      if (k == 0) tree.pending := ?proof[i] else tree.hasher[k.toNat()].loadBlob32(proof[i]);
+      tree.hasher[k.toNat()].loadBlob32(proof[i]);
       present |= 1 << k;
       x += 1 << k;
-      depth := Nat64.max(depth, k + 1);
       i += 1;
     };
+    // The tree: the smallest power of two of places that holds the m leaves
+    // and these peaks, which end at x.
+    let depth = 64 - Nat64.bitcountLeadingZero(x - 1); // ceil(log2 x)
     if (depth > maxDepth) return false;
     tree.count := (1 << depth) - m;
     tree.present := present;
@@ -188,11 +187,8 @@ module {
     while (bits != 0) {
       if (i >= proof.size()) return false;
       let k = Nat64.bitcountTrailingZero(bits);
-      if (k == 0) {
-        let ?leaf = tree.pending else return false;
-        if (leaf != proof[i]) return false;
-      } else if (not tree.hasher[k.toNat()].equalsBlob32(proof[i])) return false;
-      bits &= bits - 1;
+      if (not tree.hasher[k.toNat()].equalsBlob32(proof[i])) return false;
+      bits &= bits - 1; // on to the next peak
       i += 1;
     };
     i == proof.size();
@@ -238,10 +234,7 @@ module {
       func(_) {
         let k = Nat64.bitcountTrailingZero(bits);
         bits &= bits - 1;
-        if (k == 0) {
-          let ?leaf = tree.pending else Runtime.unreachable();
-          leaf;
-        } else tree.hasher[k.toNat()].readSum();
+        tree.hasher[k.toNat()].readSum();
       },
     );
   };

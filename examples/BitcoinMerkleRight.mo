@@ -72,18 +72,20 @@
 /// At other values of `count` there is no root: the leaves still to come are
 /// on the left, and nothing can stand in for them.
 ///
-/// === The delay trick, mirrored ===
+/// === Leaves are loaded ===
 ///
-/// As in Example 5, a leaf is never loaded into a `Hasher` on its own. A leaf
-/// that comes to rest at height 0 waits as a borrowed `Blob` (`pending`, bit
-/// 0 of `present`); the leaf to its left fuses with it straight from the two
-/// Blobs, `combineBlob32(leaf, pending)`, or with itself if bit 0 is claimed
-/// by the gap. Slot 0 is therefore always free between leaves, and it is
-/// where every rising node starts: the node of height k is built in slot
-/// k - 1, and swapped into slot k when it comes to rest.
+/// Every leaf is loaded into a `Hasher` when it is added (`loadBlob32`), and
+/// from there on it is a node like any other: one loop does all the merging
+/// and doubling, from height 0 up. This is where the example parts with
+/// Example 5, which never loads a leaf (it lets a leaf wait as a `Blob` and
+/// fuses two leaves straight from their Blobs). Loading costs about 2% more
+/// instructions over a whole tree, and in exchange neither this example nor
+/// the verifier built on it has a special case for height 0.
 ///
-/// The pool is one slot per bit of the largest `count`, as in Example 5:
-/// `floor(log2 (gap + maxLeaves)) + 1` hashers.
+/// The rising node lives in a spare hasher, the last of the pool; when it
+/// comes to rest in slot k, the hasher that was there becomes the spare. The
+/// pool is one slot per bit of the largest `count` plus the spare:
+/// `floor(log2 (gap + maxLeaves)) + 2` hashers.
 ///
 /// === Mutated blocks, byte order ===
 ///
@@ -118,17 +120,16 @@ import Runtime "mo:core/Runtime";
 import VarArray "mo:core/VarArray";
 
 module {
-  /// The state of the build: the height-indexed slots, the counter (`count`:
-  /// leaf places used, the gap included — its bits claim the peaks), the peaks
-  /// that really exist (`present`: bit k for slot k, bit 0 for the pending
-  /// leaf), the pending leaf, and whether two equal siblings were ever merged
-  /// (`equalSiblings`, never in a valid block). The gap is not kept, it is
-  /// only where `count` starts. A static record — it can be declared `stable`.
+  /// The state of the build: the height-indexed slots with one spare at the
+  /// end, the counter (`count`: leaf places used, the gap included — its bits
+  /// claim the peaks), the peaks that really exist (`present`: bit k for slot
+  /// k), and whether two equal siblings were ever merged (`equalSiblings`,
+  /// never in a valid block). The gap is not kept, it is only where `count`
+  /// starts. A static record — it can be declared `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
     var count : Nat64;
     var present : Nat64;
-    var pending : ?Blob;
     var equalSiblings : Bool;
   };
 
@@ -143,74 +144,55 @@ module {
 
   /// An empty tree that ends `gap` places before the end of its last level,
   /// with capacity for at least `maxLeaves` leaves. Allocates
-  /// `floor(log2 (gap + maxLeaves)) + 1` hashers, one slot per bit of the
-  /// counter. Exceeding the capacity traps (on a slot index out of bounds).
+  /// `floor(log2 (gap + maxLeaves)) + 2` hashers: one slot per bit of the
+  /// counter, and the spare. Exceeding the capacity traps.
   public func new(gap : Nat, maxLeaves : Nat) : Mmr {
     var l = 0;
     var pow = 1;
     while (pow * 2 <= gap + maxLeaves) { pow *= 2; l += 1 }; // l = floor(log2 (gap + maxLeaves))
     {
-      hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
+      hasher = VarArray.tabulate<Hasher.Hasher>(l + 2, func(_) { Hasher.new() });
       var count = gap.toNat64(); // the counter starts at the gap
       var present = 0;
-      var pending = null;
       var equalSiblings = false;
     };
   };
 
   /// Add the next leaf, a 32-byte txid in internal byte order. The leaves are
   /// taken from the LAST of the block to the first. Allocation-free. Sets
-  /// `equalSiblings` if two equal siblings are merged. Traps (when the leaf is
-  /// hashed) if it is not 32 bytes long.
+  /// `equalSiblings` if two equal siblings are merged. Traps if the leaf is
+  /// not 32 bytes long.
   public func add(self : Mmr, leaf : Blob) {
-    let count = self.count; // the places to the right of this leaf
-    self.count := count + 1;
-    if ((count & 1) == 0) {
-      // Bit 0 is clear: the leaf rests at height 0. It waits, as a Blob, for
-      // the leaf to its left.
-      self.pending := ?leaf;
-      self.present |= 1;
-      return;
-    };
     let hasher = self.hasher;
-    // Bit 0 is set: fuse the leaf with the one to its right, straight from
-    // the two Blobs — no loadBlob32 — or, if that place lies in the gap, with
-    // itself. The height-1 node is built in slot 0.
-    switch (self.pending) {
-      case (?right) {
-        self.pending := null;
-        if (leaf == right) self.equalSiblings := true;
-        hasher[0].combineBlob32(leaf, right);
-      };
-      case (null) hasher[0].combineBlob32(leaf, leaf);
-    };
-    hasher[0].hashState(hasher[0]); // -> double SHA
-    var present = self.present & ^1;
-    // Carry: the rising node climbs through the 1-bits of the counter — the
-    // node of height k sits in slot k - 1, the node of height k + 1 is built
-    // in slot k.
-    var k : Nat64 = 1;
+    let spare = hasher.size() - 1 : Nat;
+    let node = hasher[spare]; // the rising node
+    node.loadBlob32(leaf);
+    let count = self.count; // the places to the right of this leaf
+    var present = self.present;
+    // Carry: the node climbs through the 1-bits of the counter.
+    var k : Nat64 = 0;
     while (((count >> k) & 1) == 1) {
-      let kk = k.toNat();
       if (((present >> k) & 1) == 1) {
         // The claimed peak is there: merge.
-        if (hasher[kk - 1].equalsState(hasher[kk])) self.equalSiblings := true;
-        hasher[kk].combineState(hasher[kk - 1], hasher[kk]); // dSHA(node ++ peak)
+        let peak = hasher[k.toNat()];
+        if (node.equalsState(peak)) self.equalSiblings := true;
+        node.combineState(node, peak); // dSHA(node ++ peak)
         present ^= 1 << k;
       } else {
         // The claimed peak lies in the gap: the node is the last of its level,
         // and Bitcoin pairs it with itself.
-        hasher[kk].combineState(hasher[kk - 1], hasher[kk - 1]); // dSHA(node ++ node)
+        node.combineState(node, node); // dSHA(node ++ node)
       };
-      hasher[kk].hashState(hasher[kk]); // -> double SHA
+      node.hashState(node); // -> double SHA
       k += 1;
     };
-    // The carry stopped at a clear bit: slot k is free, and the finished
-    // height-k node sits one below it — swap it into its slot.
+    // The carry stopped at a clear bit: the node rests in slot k, and the
+    // hasher that was there becomes the spare.
     let kk = k.toNat();
-    let tmp = hasher[kk];
-    hasher[kk] := hasher[kk - 1];
-    hasher[kk - 1] := tmp;
+    if (kk >= spare) Runtime.trap("BitcoinMerkleRight: capacity exceeded");
+    hasher[spare] := hasher[kk];
+    hasher[kk] := node;
+    self.count := count + 1;
     self.present := present | (1 << k);
   };
 
@@ -229,13 +211,7 @@ module {
   /// `count`.
   public func root(self : Mmr) : Blob {
     if (not hasRoot(self)) Runtime.trap("BitcoinMerkleRight: no root unless the places used, gap included, are a power of two");
-    switch (self.pending) {
-      // One leaf and no gap: by Bitcoin's convention the root is the txid
-      // itself — still enforce the 32-byte contract that combineBlob32 checks
-      // above.
-      case (?b) { assert b.size() == 32; b };
-      case (null) self.hasher[Nat64.bitcountTrailingZero(self.count).toNat()].readSum();
-    };
+    self.hasher[Nat64.bitcountTrailingZero(self.count).toNat()].readSum();
   };
 
   /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,

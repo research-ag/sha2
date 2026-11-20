@@ -415,8 +415,8 @@ do {
     };
     if (n >= 3) assert (built([txids[0], txids[0], txids[1]]).equalSiblings); // any equal pair, as Bitcoin Core
   };
-  // Pool: one hasher per bit of the largest counter value.
-  assert (BitcoinMerkleRight.new(3, 5).hasher.size() == 4 and BitcoinMerkleRight.new(0, 1).hasher.size() == 1 and BitcoinMerkleRight.new(0, 7).hasher.size() == 3);
+  // Pool: one hasher per bit of the largest counter value, and the spare.
+  assert (BitcoinMerkleRight.new(3, 5).hasher.size() == 5 and BitcoinMerkleRight.new(0, 1).hasher.size() == 2 and BitcoinMerkleRight.new(0, 7).hasher.size() == 4);
 };
 
 // --- Example 9: chunked verification against the Merkle root ---

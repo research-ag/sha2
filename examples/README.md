@@ -179,13 +179,14 @@ None of them is RFC 6962, which prepends a domain-separation byte to each node.
 | 2 (state stack)      | `ceil(log2 n) + 1`        | the waiting leaf occupies a stack slot; the pool is one larger so a slot above the top stays free |
 | 3, 5 (counter)       | `floor(log2 n) + 1`       | the bit length of `n`: one slot per bit of the leaf count                                         |
 | 4, 6 (state counter) | `ceil(log2 n) + 1`        | the peak slots plus the top slot as the accumulator, one level above the highest possible peak    |
-| 8 (mirrored counter) | `floor(log2 (g + n)) + 1` | the bit length of the gap plus `n`: one slot per bit of the counter, which starts at the gap `g`  |
+| 8 (mirrored counter) | `floor(log2 (g + n)) + 2` | one slot per bit of the counter, which starts at the gap `g`, and a spare for the rising node     |
 
 None of them needs a dedicated accumulator `Hasher` for computing the root; a free slot always exists where it is needed.
 The stack always has a free slot just above its top.
 The state stack sizes its pool one above the maximal stack height.
 The counter's slot 0 is free by construction, because the height-0 leaf waits as a pending `Blob`.
 The state counter's top slot can only be occupied when `n` is a power of two, which means a single peak and no accumulation at all.
+The mirrored counter computes nothing for its root; its extra `Hasher` is the spare in which each rising node is built.
 
 The sizes for `Blob` leaves (Examples 1 and 3) differ only when `n` is an exact power of two, where the counter uses one `Hasher` more.
 The sizes for message leaves (Examples 2 and 4) agree with each other for every `n`, and exceed the `Blob` stack (Example 1) by exactly one.
@@ -233,7 +234,8 @@ That root is Bitcoin's root of the leaves added so far exactly when the gap is l
 With a larger gap the tree is deeper than Bitcoin would make it: one leaf and a gap of 3 give the leaf doubled twice, where Bitcoin's root of one transaction is the txid itself.
 At other values of `count` there is no root, because the missing leaves are on the left and nothing can stand in for them.
 
-As in Example 5, a leaf is never loaded into a `Hasher` on its own: a leaf that rests at height 0 waits as a `Blob`, and the leaf to its left fuses with it straight from the two `Blob`s.
+Unlike Example 5, every leaf is loaded into a `Hasher` when it is added, so one loop does all the merging and doubling from height 0 up, in a spare `Hasher` that changes places with the slot where the node comes to rest.
+That costs about 2% more instructions over a whole tree than fusing leaves straight from their `Blob`s, and in exchange neither this example nor the verifier built on it needs a special case for height 0.
 
 `add` also sets a flag, `equalSiblings`, when it merges two equal siblings, which a valid block never has and a mutated block always does.
 It is the check Bitcoin Core makes while building the tree, and Example 9 relies on it.
@@ -261,8 +263,10 @@ In short:
 
 Every leaf ends up inside a peak that is compared, and every stored peak was itself compared, chunk by chunk, back to the root, so wrong leaves, wrong or missing peaks and a wrong root are all caught.
 
-The slots follow from M′ alone: the peaks of P_M′ sit at the lowest set bits of −M′, one bit each, in order.
-Neither N nor the depth is a parameter; the verifier works with the smallest depth that has room for M′ leaves and for the highest peak, which is the true depth whenever the leaf at position 0 is in the chunk and makes no difference otherwise.
+The slot of each peak follows from M′ alone.
+Walk to the right from position M′: the first peak starts at M′ and is as large as that position allows (2^k places, k the number of trailing zeros of M′), the next starts where it ends, and so on; a peak of 2^k places goes into slot k.
+Neither N nor the depth is a parameter.
+For the tree's size the verifier takes the smallest power of two that has room for the M′ leaves and the peaks of the proof, which is the true size whenever the leaf at position 0 is in the chunk and makes no difference otherwise.
 
 `add` of Example 8 notes when it merges two equal siblings, and the verifier rejects the chunk then.
 A valid block never has them, so proofs must be minimal, the last chunk is recognised by an empty proof (then M′ = N), and the mutated blocks of CVE-2012-2459, a tail of the block uploaded twice, are rejected where the copy meets its original.

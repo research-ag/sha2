@@ -105,10 +105,12 @@ for (n in ns.values()) {
   check("BitcoinMerkle.root" # suffix, alloc(func() { ignore BitcoinMerkle.root(b) }), rootBytes);
 
   // Example 8, the same tree from the right: the doubling during the build
-  // allocates as little as the merges, and the root is read from the last peak.
+  // allocates as little as the merges, and the root is read from the last
+  // peak. Every leaf is loaded into a hasher, so a single leaf is read out
+  // like any other root.
   let r = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(n), n);
   check("BitcoinMerkleRight.add" # suffix, alloc(func() { var j = n; while (j > 0) { j -= 1; BitcoinMerkleRight.add(r, leaves[j]) } }), 0);
-  check("BitcoinMerkleRight.root" # suffix, alloc(func() { ignore BitcoinMerkleRight.root(r) }), rootBytes);
+  check("BitcoinMerkleRight.root" # suffix, alloc(func() { ignore BitcoinMerkleRight.root(r) }), readout);
 };
 
 // --- Trees over raw messages (fed through an embedded Digest) ---
