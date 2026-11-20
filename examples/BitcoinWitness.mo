@@ -53,7 +53,7 @@
 /// Caveats as in `BitcoinMerkle.mo`: txids, root and witness are in
 /// Bitcoin's INTERNAL byte order, and duplication is CVE-2012-2459 territory:
 /// the incremental trees used here hash what they are given, so run
-/// `BitcoinMerkle.mutated` over the complete list before trusting its root.
+/// `BitcoinMutation.mutated` over the complete list before trusting its root.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";

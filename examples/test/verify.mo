@@ -5,6 +5,7 @@ import MerkleStackState "../MerkleStackState";
 import MerkleCounter "../MerkleCounter";
 import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
+import BitcoinMutation "../BitcoinMutation";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
 import BitcoinMerkleRight "../BitcoinMerkleRight";
@@ -475,7 +476,7 @@ do {
   assert (x.verifyChunkTx(pairs, []) and x.complete() and x.count == 4);
 };
 
-// --- Mutated blocks (Examples 5 and 6): `BitcoinMerkle.mutated` ---
+// --- Mutated blocks (Examples 5, 6 and 8): `BitcoinMutation.mutated` ---
 // The a-priori test on the leaves must flag every list in which the last two
 // nodes of some level are equal siblings (the written-out duplicate), so that
 // among all lists with the same root at most one passes it; beyond those it
@@ -521,7 +522,7 @@ do {
       var c = code;
       let leaves = Array.tabulate<Blob>(n, func(_) { let l = abc[c % 3]; c /= 3; l });
       let (root, equal) = refMutated(leaves);
-      let flagged = BitcoinMerkle.mutated(leaves);
+      let flagged = BitcoinMutation.mutated(leaves);
       if (equal) assert flagged;
       if (not flagged) {
         assert (clean.get(Blob.compare, root) == null); // no second clean list with this root
@@ -539,8 +540,8 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 23, 31, 33, 100] : [N
   let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
   let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
   let root = refBitcoin(txids);
-  assert (not BitcoinMerkle.mutated(txids));
-  assert (not BitcoinMerkle.mutated(txs));
+  assert (not BitcoinMutation.mutated(txids));
+  assert (not BitcoinMutation.mutated(txs));
   assert (BitcoinMerkle.bitcoinMerkleRoot(txids) == root);
   assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(txs) == root);
   // Repeat the last 2^k leaves when they are the lone last node of level k
@@ -550,8 +551,8 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 23, 31, 33, 100] : [N
     let m = txids.concat(slice(txids, n - width, n));
     if (n % (2 * width) == width and n > width) {
       assert (uncheckedRoot(m) == root);
-      assert (BitcoinMerkle.mutated(m));
-      assert (BitcoinMerkle.mutated(txs.concat(slice(txs, n - width, n))));
+      assert (BitcoinMutation.mutated(m));
+      assert (BitcoinMutation.mutated(txs.concat(slice(txs, n - width, n))));
     } else {
       assert (uncheckedRoot(m) != root);
     };
@@ -563,19 +564,19 @@ do {
   // [1..5] and [1,2,3,4,5,5,5]: an odd count
   let five = slice(t, 0, 5);
   let seven = five.concat([t[4], t[4]]);
-  assert (uncheckedRoot(seven) == refBitcoin(five) and BitcoinMerkle.mutated(seven));
+  assert (uncheckedRoot(seven) == refBitcoin(five) and BitcoinMutation.mutated(seven));
   // [1..6] and [1,2,3,4,5,6,5,6]: the last two differ
   let six = slice(t, 0, 6);
   let eight = six.concat([t[4], t[5]]);
-  assert (uncheckedRoot(eight) == refBitcoin(six) and BitcoinMerkle.mutated(eight));
+  assert (uncheckedRoot(eight) == refBitcoin(six) and BitcoinMutation.mutated(eight));
   // [1..8,a,b,c] and [1..8,a,b,c,c,a,b,c]: odd count, the last two differ, and
   // the only equal pair (c,c) is not the last complete pair of its level
   let fifteen = t.concat([t[10], t[8], t[9], t[10]]);
-  assert (uncheckedRoot(fifteen) == refBitcoin(t) and BitcoinMerkle.mutated(fifteen));
+  assert (uncheckedRoot(fifteen) == refBitcoin(t) and BitcoinMutation.mutated(fifteen));
   // Flagged beyond the mutations: the last txid repeated 2^k places back,
   // though the root differs from every honest one ([a,b,a]). Not a search for
   // repeats in general: [a,b,c,a] and [a,a,b] pass.
-  assert (BitcoinMerkle.mutated([t[0], t[1], t[0]]));
-  assert (not BitcoinMerkle.mutated([t[0], t[1], t[2], t[0]]));
-  assert (not BitcoinMerkle.mutated([t[0], t[0], t[1]]));
+  assert (BitcoinMutation.mutated([t[0], t[1], t[0]]));
+  assert (not BitcoinMutation.mutated([t[0], t[1], t[2], t[0]]));
+  assert (not BitcoinMutation.mutated([t[0], t[0], t[1]]));
 };

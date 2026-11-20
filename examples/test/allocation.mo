@@ -23,6 +23,7 @@ import MerkleStackState "../MerkleStackState";
 import MerkleCounter "../MerkleCounter";
 import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
+import BitcoinMutation "../BitcoinMutation";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
 import BitcoinMerkleRight "../BitcoinMerkleRight";
@@ -135,14 +136,14 @@ for (n in ns.values()) {
   let suffix = " (n = " # n.toText() # ")";
   let txids = Array.tabulate<Blob>(n, func(j) = leaves[j]);
   let txs = Array.tabulate<Blob>(n, func(j) = msgs[j]);
-  check("BitcoinMerkle.mutated" # suffix, alloc(func() { assert not BitcoinMerkle.mutated(txids) }), 0);
-  check("BitcoinMerkle.mutated, raw" # suffix, alloc(func() { assert not BitcoinMerkle.mutated(txs) }), 0);
+  check("BitcoinMutation.mutated" # suffix, alloc(func() { assert not BitcoinMutation.mutated(txids) }), 0);
+  check("BitcoinMutation.mutated, raw" # suffix, alloc(func() { assert not BitcoinMutation.mutated(txs) }), 0);
   let twice = Array.tabulate<Blob>(2 * n, func(j) = leaves[j % n]);
   // the block twice: flagged exactly when n is a power of two (the last leaf n places back)
   var p = 1;
   while (p < n) p *= 2;
   let expected = p == n;
-  check("BitcoinMerkle.mutated, block twice" # suffix, alloc(func() { assert (BitcoinMerkle.mutated(twice) == expected) }), 0);
+  check("BitcoinMutation.mutated, block twice" # suffix, alloc(func() { assert (BitcoinMutation.mutated(twice) == expected) }), 0);
 };
 
 // Incremental use: a second root after more leaves again allocates only the root.

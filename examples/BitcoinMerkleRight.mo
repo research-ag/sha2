@@ -86,17 +86,18 @@
 /// === Mutated blocks, byte order ===
 ///
 /// As in Example 5: the one-shot `bitcoinMerkleRootFromRight` runs
-/// `BitcoinMerkle.mutated` over the list first and traps on a flagged one
+/// `BitcoinMutation.mutated` over the list first and traps on a flagged one
 /// (CVE-2012-2459), the incremental API (`new`, `add`, `root`) hashes what it
-/// is given, and txids and root are in Bitcoin's internal byte order. See the
-/// header of `BitcoinMerkle.mo` for both.
+/// is given, and txids and root are in Bitcoin's internal byte order. See
+/// `BitcoinMutation.mo` for the first and the header of `BitcoinMerkle.mo`
+/// for the second.
 ///
 /// `BitcoinChunks.mo` (Example 9) uses the same mirrored carry to VERIFY a
 /// block chunk by chunk against a known root, where this example builds the
 /// root.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import BitcoinMerkle "BitcoinMerkle";
+import Mutation "BitcoinMutation";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import Runtime "mo:core/Runtime";
@@ -231,12 +232,12 @@ module {
   /// in internal byte order), for ANY leaf count (>= 1), in one shot, reading
   /// the list from its end. The same root as `BitcoinMerkle.bitcoinMerkleRoot`.
   /// Allocation-free except the returned root `Blob`. Traps if the list is
-  /// flagged by `BitcoinMerkle.mutated` (CVE-2012-2459), before the tree is
+  /// flagged by `BitcoinMutation.mutated` (CVE-2012-2459), before the tree is
   /// built.
   public func bitcoinMerkleRootFromRight(txids : [Blob]) : Blob {
     let n = txids.size();
     assert n >= 1;
-    if (BitcoinMerkle.mutated(txids)) Runtime.trap("BitcoinMerkleRight: mutated transaction list (CVE-2012-2459)");
+    if (Mutation.mutated(txids)) Runtime.trap("BitcoinMerkleRight: mutated transaction list (CVE-2012-2459)");
     let mmr = new(gapFor(n), n);
     var i = n;
     while (i > 0) {

@@ -64,13 +64,13 @@
 ///     instead. Pre-segwit and stripped serializations are fine as-is.
 ///   * MUTATED BLOCKS (CVE-2012-2459): last-node duplication lets distinct
 ///     transaction lists share a root. As in `BitcoinMerkle.mo`, the one-shot
-///     `bitcoinTxMerkleRoot` first runs `BitcoinMerkle.mutated` over the raw
+///     `bitcoinTxMerkleRoot` first runs `BitcoinMutation.mutated` over the raw
 ///     transactions and traps on a flagged list, so a caller who passes one
 ///     gets its call rejected; the incremental API does not check.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterStateBase";
-import BitcoinMerkle "BitcoinMerkle";
+import Mutation "BitcoinMutation";
 import Nat64 "mo:core/Nat64";
 import Runtime "mo:core/Runtime";
 
@@ -136,11 +136,11 @@ module {
   /// arbitrary-length `Blob`), for ANY count (>= 1), in one shot. Equals
   /// `BitcoinMerkle.bitcoinMerkleRoot` over the transactions' txids.
   /// Allocates nothing per transaction or node — only the returned root `Blob`.
-  /// Traps if `BitcoinMerkle.mutated` flags the list (CVE-2012-2459): run on
+  /// Traps if `BitcoinMutation.mutated` flags the list (CVE-2012-2459): run on
   /// the raw transactions up front, before the tree is built.
   public func bitcoinTxMerkleRoot(txs : [Blob]) : Blob {
     assert txs.size() >= 1;
-    if (BitcoinMerkle.mutated(txs)) Runtime.trap("BitcoinTxMerkle: mutated transaction list (CVE-2012-2459)");
+    if (Mutation.mutated(txs)) Runtime.trap("BitcoinTxMerkle: mutated transaction list (CVE-2012-2459)");
     let mmr = new(txs.size(), false);
     for (tx in txs.values()) {
       mmr.add(tx);
