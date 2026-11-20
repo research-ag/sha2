@@ -23,6 +23,9 @@
 /// (Seen from the tree, the peaks of P_M are the right siblings of the
 /// ancestors of leaf M - 1, as far as they contain real leaves.)
 ///
+/// Computing the proofs is the uploader's side: see `BitcoinChunkProof.mo`,
+/// which Example 10 shares.
+///
 /// === The check ===
 ///
 /// The verifier stores M, the number of leaves accepted so far, and P_M;
@@ -110,7 +113,6 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Right "BitcoinMerkleRight";
-import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 
@@ -195,7 +197,8 @@ module {
   };
 
   /// Verify the next chunk of txids (32 bytes each, internal byte order) with
-  /// the uploader's proof `next` for the leaves after the chunk (see `proof`),
+  /// the uploader's proof `next` for the leaves after the chunk (see
+  /// `BitcoinChunkProof.mo`),
   /// and accept it if it checks out: `true` and the verifier advances;
   /// otherwise `false` and the verifier is unchanged. An empty `next` claims
   /// that the chunk is the last one. Allocation-free.
@@ -220,41 +223,5 @@ module {
     self.count := m2;
     self.proof := next;
     true;
-  };
-
-  // ---------------------------------------------------------------------------
-  // The prover (off-chain, from all leaves)
-  // ---------------------------------------------------------------------------
-
-  /// The peaks of a tree of Example 8, lowest first.
-  public func peaks(tree : Right.Mmr) : [Blob] {
-    var bits = tree.present;
-    Array.tabulate<Blob>(
-      Nat64.bitcountNonZero(bits).toNat(),
-      func(_) {
-        let k = Nat64.bitcountTrailingZero(bits);
-        bits &= bits - 1;
-        tree.hasher[k.toNat()].readSum();
-      },
-    );
-  };
-
-  /// P_m for the block `txids` (0 <= m <= n): the peaks of the block's tree
-  /// built from the right down to leaf m. The root alone for m = 0, empty for
-  /// m = n. What the uploader sends with the chunk that ends at m.
-  ///
-  /// An uploader who needs the proofs for several chunk boundaries builds the
-  /// tree once, from the last leaf to the first, and takes `peaks` at each
-  /// boundary on the way.
-  public func proof(txids : [Blob], m : Nat) : [Blob] {
-    let n = txids.size();
-    assert n >= 1 and m <= n;
-    let tree = Right.new(Right.gapFor(n), n);
-    var i = n;
-    while (i > m) {
-      i -= 1;
-      tree.add(txids[i]);
-    };
-    peaks(tree);
   };
 };

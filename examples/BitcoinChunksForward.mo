@@ -9,8 +9,9 @@
 /// The verifier keeps the tree of Example 5 over the leaves accepted so far:
 /// a few peaks, as many as the leaf count has 1-bits. A chunk brings the next
 /// leaves and the uploader's proof for the leaves that are still to come: the
-/// peaks to the right of the chunk's last leaf, lowest first (see Example 9,
-/// "A proof is a set of peaks" — the proofs are the same). The verifier then
+/// peaks to the right of the chunk's last leaf, lowest first. The proofs are
+/// those of Example 9, and `BitcoinChunkProof.mo` computes them for both. The
+/// verifier then
 ///
 ///   1. adds the leaves of the chunk to its tree, as Example 5 does,
 ///   2. closes the tree: it computes the root from its own peaks on the left
@@ -90,9 +91,7 @@
 /// Txids, proofs and the root are in Bitcoin's INTERNAL byte order.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import Sha256 "mo:sha2/Sha256";
 import BitcoinMerkle "BitcoinMerkle";
-import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import VarArray "mo:core/VarArray";
@@ -245,7 +244,8 @@ module {
   };
 
   /// Verify the next chunk of txids (32 bytes each, internal byte order) with
-  /// the uploader's proof `next` for the leaves after the chunk (see `proof`),
+  /// the uploader's proof `next` for the leaves after the chunk (see
+  /// `BitcoinChunkProof.mo`),
   /// and accept it if it checks out: `true` and the verifier advances;
   /// otherwise `false` and the verifier is unchanged. An empty `next` claims
   /// that the chunk is the last one. Allocation-free.
@@ -276,54 +276,5 @@ module {
     mmr.count := count;
     mmr.pending := pending;
     false;
-  };
-
-  // ---------------------------------------------------------------------------
-  // The prover (off-chain, from all leaves)
-  // ---------------------------------------------------------------------------
-
-  // Bitcoin's level arrays: level 0 the txids, each next level the double
-  // SHA256 of pairs, the last node of an odd level paired with itself.
-  func levels(txids : [Blob]) : [[Blob]] {
-    var all : [[Blob]] = [txids];
-    var level = txids;
-    while (level.size() > 1) {
-      let len = level.size();
-      let next = Array.tabulate<Blob>(
-        (len + 1) / 2,
-        func(i) {
-          let d = Sha256.new();
-          d.writeBlob(level[2 * i]);
-          d.writeBlob(level[if (2 * i + 1 < len) 2 * i + 1 else len - 1]);
-          d.sumDouble();
-        },
-      );
-      all := all.concat([next]);
-      level := next;
-    };
-    all;
-  };
-
-  /// The proof for the first `m` leaves of the block `txids` (0 <= m <= n):
-  /// the peaks to the right of leaf m - 1, lowest first — the right siblings
-  /// of its ancestors that contain real transactions. The root alone for
-  /// m = 0, empty for m = n. What the uploader sends with the chunk that ends
-  /// at m. The same proofs as in Example 9.
-  public func proof(txids : [Blob], m : Nat) : [Blob] {
-    let n = txids.size();
-    assert n >= 1 and m <= n;
-    let lv = levels(txids);
-    if (m == 0) return lv[lv.size() - 1];
-    var peaks : [Blob] = [];
-    var k = 0;
-    while (k + 1 < lv.size()) {
-      let idx = (m - 1 : Nat) / (2 ** k);
-      if (idx % 2 == 0) {
-        if ((idx + 1) * (2 ** k) >= n) return peaks; // this and all higher siblings are duplicates
-        peaks := peaks.concat([lv[k][idx + 1]]);
-      };
-      k += 1;
-    };
-    peaks;
   };
 };

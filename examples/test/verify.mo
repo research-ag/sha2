@@ -11,6 +11,7 @@ import BitcoinWitness "../BitcoinWitness";
 import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
+import BitcoinChunkProof "../BitcoinChunkProof";
 import BitcoinChunksForward "../BitcoinChunksForward";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
@@ -461,17 +462,17 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
   // The proofs: the root alone for no leaves, empty for all of them, equal to
   // the reference in between; and all of them from ONE pass over the block,
   // taking the peaks of the tree at every boundary.
-  assert (BitcoinChunks.proof(txids, 0) == [root] and BitcoinChunks.proof(txids, n) == []);
+  assert (BitcoinChunkProof.proof(txids, 0) == [root] and BitcoinChunkProof.proof(txids, n) == []);
   do {
     let tree = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(n), n);
     var m = n;
     while (m > 0) {
-      assert (BitcoinChunks.peaks(tree) == refProof(txids, m));
-      if (n <= 33) assert (BitcoinChunks.proof(txids, m) == refProof(txids, m));
+      assert (BitcoinChunkProof.peaks(tree) == refProof(txids, m));
+      if (n <= 33) assert (BitcoinChunkProof.proof(txids, m) == refProof(txids, m));
       m -= 1;
       BitcoinMerkleRight.add(tree, txids[m]);
     };
-    assert (BitcoinChunks.peaks(tree) == [root]);
+    assert (BitcoinChunkProof.peaks(tree) == [root]);
   };
   // chunk boundaries: a pseudo-random walk from 0 to n, repeated with different steps
   for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
@@ -481,7 +482,7 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
     while (m < n) {
       let m2 = if (m + s >= n) n else m + s;
       s := 1 + (s * 7 + m) % (2 * step); // vary the chunk length
-      let p = BitcoinChunks.proof(txids, m2);
+      let p = BitcoinChunkProof.proof(txids, m2);
       // rejections first; the verifier must stay at m
       assert (not v.verifyChunk(slice(txids, m, m2), p.concat([txids[n - 1]]))); // a tile Bitcoin would duplicate, or junk
       if (p.size() > 0) {
@@ -540,8 +541,8 @@ do {
   let level1 = Array.tabulate<Blob>(4, func(i) = refBitcoin([txids[2 * i], txids[2 * i + 1]]));
   assert (BitcoinMerkle.bitcoinMerkleRoot(level1) == root);
   let v = BitcoinChunks.new(root, 12);
-  assert (v.verifyChunk(slice(level1, 2, 4), BitcoinChunks.proof(level1, 2)) == false); // chunks go left to right
-  assert (v.verifyChunk(slice(level1, 0, 2), BitcoinChunks.proof(level1, 2)));
+  assert (v.verifyChunk(slice(level1, 2, 4), BitcoinChunkProof.proof(level1, 2)) == false); // chunks go left to right
+  assert (v.verifyChunk(slice(level1, 0, 2), BitcoinChunkProof.proof(level1, 2)));
   assert (v.verifyChunk(slice(level1, 2, 4), []) and v.complete() and v.count == 4);
   let w = BitcoinChunks.new(root, 12);
   assert (w.verifyChunk([root], []) and w.complete() and w.count == 1);
@@ -550,7 +551,8 @@ do {
 };
 
 // --- Example 10: chunked verification, the forward way ---
-// The same battery as for Example 9, with the same proofs: random chunk
+// The same battery as for Example 9, with the same proofs (the prover is
+// checked against the reference there): random chunk
 // sequences verify chunk by chunk against the root; the last chunk is
 // recognised by its empty proof; a forged leaf, a dropped peak, a peak that
 // should have been left out, a duplicated last leaf, a wrong root and a chunk
@@ -559,9 +561,6 @@ do {
 for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 257] : [Nat]).values()) {
   let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
   let root = refBitcoin(txids);
-  // the prover: equal to the reference, and so to the proofs of Example 9
-  if (n <= 33) for (m in Nat.range(0, n + 1)) assert (BitcoinChunksForward.proof(txids, m) == refProof(txids, m));
-  assert (BitcoinChunksForward.proof(txids, 0) == [root] and BitcoinChunksForward.proof(txids, n) == []);
   for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
     let v = BitcoinChunksForward.new(root, 12);
     var m = 0;
@@ -569,7 +568,7 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
     while (m < n) {
       let m2 = if (m + s >= n) n else m + s;
       s := 1 + (s * 7 + m) % (2 * step); // vary the chunk length
-      let p = BitcoinChunksForward.proof(txids, m2);
+      let p = BitcoinChunkProof.proof(txids, m2);
       // rejections first; the verifier must stay at m
       assert (not v.verifyChunk(slice(txids, m, m2), p.concat([txids[n - 1]]))); // a peak Bitcoin would duplicate, or junk
       if (p.size() > 0) {
@@ -627,7 +626,7 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
           assert (not f.verifyChunk(mutated, []));
           assert (not b.verifyChunk(mutated, []));
         } else {
-          let p = BitcoinChunksForward.proof(mutated, cut);
+          let p = BitcoinChunkProof.proof(mutated, cut);
           assert (not (f.verifyChunk(slice(mutated, 0, cut), p) and f.verifyChunk(slice(mutated, cut, mutated.size()), [])));
           assert (not (b.verifyChunk(slice(mutated, 0, cut), p) and b.verifyChunk(slice(mutated, cut, mutated.size()), [])));
         };
@@ -671,7 +670,7 @@ do {
   let eight = Array.tabulate<Blob>(8, func(_) = bytes(32));
   let level1 = Array.tabulate<Blob>(4, func(i) = h(eight[2 * i], eight[2 * i + 1]));
   let l = BitcoinChunksForward.new(refBitcoin(eight), 12);
-  assert (l.verifyChunk(slice(level1, 0, 2), BitcoinChunksForward.proof(level1, 2)));
+  assert (l.verifyChunk(slice(level1, 0, 2), BitcoinChunkProof.proof(level1, 2)));
   assert (l.verifyChunk(slice(level1, 2, 4), []) and l.complete() and l.mmr.count == 4);
 };
 

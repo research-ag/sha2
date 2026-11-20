@@ -27,6 +27,7 @@ Examples 3 and 5 share their tree-building code in [`CounterBase.mo`](./CounterB
 Within each pair the examples differ only in single versus double SHA-256 and in how the root is computed, which lives in the example files.
 Example 8 has its own tree-building code: it mirrors that of Example 5 and does Bitcoin's duplication while building.
 The one-shot roots of Examples 5, 6 and 8 share the test for mutated blocks in [`BitcoinMutation.mo`](./BitcoinMutation.mo).
+Examples 9 and 10 share the uploader's side, which computes the proofs, in [`BitcoinChunkProof.mo`](./BitcoinChunkProof.mo).
 
 Examples 1 to 8 form a progression, each adding one concept, and they are explained one by one [below](#the-examples-one-by-one).
 Each file's header comment is a how-to: it spells out exactly what to do to keep hashing allocation-free in bulk.
@@ -279,7 +280,7 @@ A valid block never has them, so proofs must be minimal, the last chunk is recog
 
 The hashing is one node per leaf, as for building the tree once, with no ripple to the root per chunk.
 `verifyChunk` allocates nothing: the hashers are allocated once and the uploader's peaks are loaded into them.
-`proof(txids, m)` is the uploader's side; for several chunk boundaries, build the tree once from the last leaf to the first and take `peaks` at each boundary.
+The uploader's side is in [`BitcoinChunkProof.mo`](./BitcoinChunkProof.mo): `proof(txids, m)`, and for several chunk boundaries a single pass that builds the tree from the last leaf to the first and takes `peaks` at each boundary.
 
 All of this takes the uploaded leaves to be transaction ids; what the Merkle root alone cannot tell about that is a separate matter, covered in the [security notes](#security-notes).
 

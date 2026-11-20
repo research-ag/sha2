@@ -29,6 +29,7 @@ import BitcoinWitness "../BitcoinWitness";
 import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
+import BitcoinChunkProof "../BitcoinChunkProof";
 import BitcoinChunksForward "../BitcoinChunksForward";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
@@ -242,7 +243,7 @@ do {
   var m = 0;
   for (m2 in bounds.values()) {
     let chunk = Array.tabulate<Blob>(m2 - m, func(i) = txids[m + i]);
-    let p = BitcoinChunks.proof(txids, m2);
+    let p = BitcoinChunkProof.proof(txids, m2);
     check("BitcoinChunks.verifyChunk to " # m2.toText(), alloc(func() { assert v.verifyChunk(chunk, p) }), 0);
     // Example 10, the forward way: also nothing, including the copy of the
     // peaks that lets a rejected chunk be undone, and a rejected chunk itself.
