@@ -25,6 +25,7 @@ import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
+import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
 import Hasher "mo:sha2/Hasher/Sha256";
@@ -101,6 +102,12 @@ for (n in ns.values()) {
   let b = BitcoinMerkle.new(maxN, false);
   check("BitcoinMerkle.add" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinMerkle.add(b, leaves[j]); j += 1 } }), 0);
   check("BitcoinMerkle.root" # suffix, alloc(func() { ignore BitcoinMerkle.root(b) }), rootBytes);
+
+  // Example 8, the same tree from the right: the doubling during the build
+  // allocates as little as the merges, and the root is read from the last peak.
+  let r = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(n), n);
+  check("BitcoinMerkleRight.add" # suffix, alloc(func() { var j = n; while (j > 0) { j -= 1; BitcoinMerkleRight.add(r, leaves[j]) } }), 0);
+  check("BitcoinMerkleRight.root" # suffix, alloc(func() { ignore BitcoinMerkleRight.root(r) }), rootBytes);
 };
 
 // --- Trees over raw messages (fed through an embedded Digest) ---
@@ -216,7 +223,7 @@ do {
   check("nfoldBatch per message", alloc(func() { ignore NFold.nfoldBatch(batch20, 5) }) - b2, 10 * readout + arrayBytes(20) - arrayBytes(10));
 };
 
-// --- Example 8: chunked verification ---
+// --- Example 9: chunked verification ---
 
 // Verifying a chunk allocates nothing: the pool and the digest are allocated
 // once by `new`, the uploader's proof is kept by reference, and the merges and

@@ -1,4 +1,4 @@
-/// Example 8: CHUNKED verification of a Bitcoin block's transactions against
+/// Example 9: CHUNKED verification of a Bitcoin block's transactions against
 /// the block header's Merkle root, chunk by chunk, with no chunk trusted and
 /// without ever holding the tree. Allocation-free verification.
 ///
@@ -43,7 +43,9 @@
 /// tile was itself verified down to the root, so a wrong leaf, a wrong or
 /// missing tile, and a wrong root are all caught. The check needs neither N nor
 /// the depth: alignment is a property of the position alone. The forward MMR of
-/// Examples 5-6 is never built; the state between chunks is M and P_M.
+/// Examples 5-6 is never built; the state between chunks is M and P_M. The
+/// carry rule is the one with which `BitcoinMerkleRight.mo` (Example 8) BUILDS
+/// a tree from the right.
 ///
 /// === Completeness and mutation ===
 ///

@@ -7,6 +7,7 @@ import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
+import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
 import Sha256 "mo:sha2/Sha256";
@@ -173,6 +174,7 @@ do {
   let b170t1 : Blob = Array.toBlob([22, 158, 30, 131, 233, 48, 133, 51, 145, 188, 111, 53, 246, 5, 198, 117, 76, 254, 173, 87, 207, 131, 135, 99, 157, 59, 64, 150, 197, 79, 24, 244]);
   let b170root : Blob = Array.toBlob([255, 16, 76, 203, 5, 66, 26, 185, 62, 99, 248, 195, 206, 92, 44, 46, 157, 187, 55, 222, 39, 100, 179, 163, 23, 92, 129, 102, 86, 44, 172, 125]);
   assert (BitcoinMerkle.bitcoinMerkleRoot([b170t0, b170t1]) == b170root);
+  assert (BitcoinMerkleRight.bitcoinMerkleRootFromRight([b170t0, b170t1]) == b170root);
 
   // block 586, 3 transactions (odd -> exercises last-node duplication);
   // merkle root 197b3d968ce463aa5da7d8eeba8af35eba80ded4e4fe6808e6cc0dd1c069594d
@@ -184,6 +186,7 @@ do {
   let b586t2 : Blob = Array.toBlob([159, 228, 13, 90, 182, 215, 125, 175, 249, 80, 129, 254, 174, 13, 228, 184, 132, 45, 42, 128, 190, 120, 226, 97, 135, 170, 8, 139, 84, 99, 243, 107]);
   let b586root : Blob = Array.toBlob([77, 89, 105, 192, 209, 13, 204, 230, 8, 104, 254, 228, 212, 222, 128, 186, 94, 243, 138, 186, 238, 216, 167, 93, 170, 99, 228, 140, 150, 61, 123, 25]);
   assert (BitcoinMerkle.bitcoinMerkleRoot([b586t0, b586t1, b586t2]) == b586root);
+  assert (BitcoinMerkleRight.bitcoinMerkleRootFromRight([b586t0, b586t1, b586t2]) == b586root);
 };
 
 // --- Example 6: root over RAW (variable-length) transactions must equal the
@@ -296,7 +299,99 @@ assert (out[0] == NFold.nfold(msg, 3));
 assert (out[1] == NFold.nfold(m0, 3));
 assert (out[2] == NFold.nfold(m100, 3));
 
-// --- Example 8: chunked verification against the Merkle root ---
+// --- Example 8: the Bitcoin root built from the right ---
+// The leaves are added last to first, into a tree that ends `gap` places
+// before the end of its last level. Whenever the places used, the gap
+// included, are a power of two 2^d, the single peak is the root of the tree
+// padded to depth d, and it is Bitcoin's root (reference B) exactly when the
+// gap is less than half. The peaks that exist (`present`) lag behind the
+// counter while the gap is being filled, and equal it from the first power of
+// two above the gap on.
+
+// Reference: Bitcoin's rule applied for exactly `depth` levels (a lone node is
+// paired with itself as well).
+func refPadded(leaves : [Blob], depth : Nat) : Blob {
+  var level = leaves;
+  for (_ in Nat.range(0, depth)) {
+    let m = level.size();
+    level := Array.tabulate<Blob>(
+      (m + 1) / 2,
+      func(i) {
+        let h = Sha256.new();
+        h.writeBlob(level[2 * i]);
+        h.writeBlob(if (2 * i + 1 < m) level[2 * i + 1] else level[2 * i]);
+        h.sumDouble();
+      },
+    );
+  };
+  assert level.size() == 1;
+  level[0];
+};
+
+do {
+  var roots = 0;
+  var bitcoinRoots = 0;
+  for (gap in ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 21, 31, 32, 33, 63, 100] : [Nat]).values()) {
+    let maxLeaves = 260;
+    let added = Array.tabulate<Blob>(maxLeaves, func(_) = bytes(32)); // in the order added: last leaf first
+    let mmr = BitcoinMerkleRight.new(gap, maxLeaves);
+    var caughtUpAt = 1; // the first power of two above the gap
+    while (caughtUpAt <= gap) caughtUpAt *= 2;
+    assert (not BitcoinMerkleRight.hasRoot(mmr));
+    for (i in Nat.range(0, maxLeaves)) {
+      BitcoinMerkleRight.add(mmr, added[i]);
+      let count = gap + i + 1 : Nat;
+      assert (mmr.count == count.toNat64());
+      assert (BitcoinMerkleRight.leaves(mmr) == i + 1);
+      assert ((mmr.present == mmr.count) == (count >= caughtUpAt));
+      var depth = 0;
+      while (2 ** depth < count) depth += 1;
+      let powerOfTwo = 2 ** depth == count;
+      assert (BitcoinMerkleRight.hasRoot(mmr) == powerOfTwo);
+      assert (BitcoinMerkleRight.rootIsBitcoin(mmr) == (powerOfTwo and 2 * gap < count));
+      if (powerOfTwo) {
+        let leaves = Array.tabulate<Blob>(i + 1, func(j) = added[i - j]); // in block order
+        let root = BitcoinMerkleRight.root(mmr);
+        assert (root == refPadded(leaves, depth));
+        assert (BitcoinMerkleRight.root(mmr) == root); // reading the root changes nothing
+        assert ((root == refBitcoin(leaves)) == (2 * gap < count));
+        roots += 1;
+        if (2 * gap < count) bitcoinRoots += 1;
+      };
+    };
+  };
+  assert (roots == 103 and bitcoinRoots == 84);
+
+  // One shot, from the leaf count: the same root as Example 5 and reference B.
+  let counts = Array.tabulate<Nat>(130, func(i) = i + 1).concat([255, 256, 257, 1000, 1023, 1024, 1025]);
+  for (n in counts.values()) {
+    let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
+    let root = refBitcoin(txids);
+    assert (BitcoinMerkleRight.bitcoinMerkleRootFromRight(txids) == root);
+    assert (BitcoinMerkle.bitcoinMerkleRoot(txids) == root);
+    let gap = BitcoinMerkleRight.gapFor(n);
+    var places = 1;
+    while (places < n) places *= 2;
+    assert (gap + n == places and (n == 1 or 2 * gap < places));
+  };
+
+  // The worked examples of the header: gap 3 has caught up after one leaf
+  // (two doublings), gap 2 after two leaves (a merge, then a doubling).
+  let t = Array.tabulate<Blob>(6, func(_) = bytes(32));
+  let five = BitcoinMerkleRight.new(3, 5);
+  BitcoinMerkleRight.add(five, t[4]);
+  assert (five.count == 4 and five.present == 4);
+  assert (BitcoinMerkleRight.root(five) == refPadded([t[4]], 2) and not BitcoinMerkleRight.rootIsBitcoin(five));
+  let six = BitcoinMerkleRight.new(2, 6);
+  BitcoinMerkleRight.add(six, t[5]);
+  assert (six.count == 3 and six.present == 1);
+  BitcoinMerkleRight.add(six, t[4]);
+  assert (six.count == 4 and six.present == 4);
+  // Pool: one hasher per bit of the largest counter value.
+  assert (BitcoinMerkleRight.new(3, 5).hasher.size() == 4 and BitcoinMerkleRight.new(0, 1).hasher.size() == 1 and BitcoinMerkleRight.new(0, 7).hasher.size() == 3);
+};
+
+// --- Example 9: chunked verification against the Merkle root ---
 // Random chunk sequences over random txids verify chunk by chunk against the
 // root of the whole block, both as txids and as raw transactions; the last
 // chunk is recognised by its empty proof; a forged leaf, a dropped tile, a
