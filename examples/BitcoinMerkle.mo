@@ -140,9 +140,10 @@ module {
         acc.combineState(acc, acc);
       };
       case (null) {
-        // A single peak (power-of-two count) is the root outright — leave it
-        // untouched.
-        while (((count >> k) & 1) == 0) { k += 1 };
+        // No leaf is pending, so bit 0 is clear and the lowest peak is at the
+        // number of trailing zeros. A single peak (power-of-two count) is the
+        // root outright — leave it untouched.
+        k := Nat64.bitcountTrailingZero(count);
         if (Nat64.bitcountNonZero(count) == 1) {
           return hasher[k.toNat()].readSum();
         };
