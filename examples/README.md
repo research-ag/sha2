@@ -9,18 +9,19 @@ To reuse an example, copy the file unchanged into your project and point `sha2` 
 
 ## Contents
 
-| #   | File                                               | Input per leaf                                             | Hash per node  | Peaks kept in         | Root               |
-| --- | -------------------------------------------------- | ---------------------------------------------------------- | -------------- | --------------------- | ------------------ |
-| 1   | [`MerkleStack.mo`](./MerkleStack.mo)               | 32-byte `Blob`                                             | SHA-256        | a stack               | bagging            |
-| 2   | [`MerkleStackState.mo`](./MerkleStackState.mo)     | message of any length                                      | SHA-256        | a stack               | bagging            |
-| 3   | [`MerkleCounter.mo`](./MerkleCounter.mo)           | 32-byte `Blob`                                             | SHA-256        | a counter             | bagging            |
-| 4   | [`MerkleCounterState.mo`](./MerkleCounterState.mo) | message of any length                                      | SHA-256        | a counter             | bagging            |
-| 5   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)           | 32-byte txid                                               | double SHA-256 | a counter             | Bitcoin's collapse |
-| 6   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)       | raw transaction                                            | double SHA-256 | a counter             | Bitcoin's collapse |
-| 7   | [`BitcoinWitness.mo`](./BitcoinWitness.mo)         | coinbase inclusion proof for the trees of Examples 5 and 6 |                |                       |                    |
-| 8   | [`BitcoinMerkleRight.mo`](./BitcoinMerkleRight.mo) | 32-byte txid, last to first                                | double SHA-256 | a mirrored counter    | the one peak left  |
-| 9   | [`BitcoinChunks.mo`](./BitcoinChunks.mo)           | chunked verification of a block against its Merkle root    | double SHA-256 | the tree of Example 8 | the stored proof   |
-|     | [`NFold.mo`](./NFold.mo)                           | N-fold hashing `H^N(msg)`                                  |                |                       |                    |
+| #   | File                                                   | Input per leaf                                             | Hash per node  | Peaks kept in         | Root                            |
+| --- | ------------------------------------------------------ | ---------------------------------------------------------- | -------------- | --------------------- | ------------------------------- |
+| 1   | [`MerkleStack.mo`](./MerkleStack.mo)                   | 32-byte `Blob`                                             | SHA-256        | a stack               | bagging                         |
+| 2   | [`MerkleStackState.mo`](./MerkleStackState.mo)         | message of any length                                      | SHA-256        | a stack               | bagging                         |
+| 3   | [`MerkleCounter.mo`](./MerkleCounter.mo)               | 32-byte `Blob`                                             | SHA-256        | a counter             | bagging                         |
+| 4   | [`MerkleCounterState.mo`](./MerkleCounterState.mo)     | message of any length                                      | SHA-256        | a counter             | bagging                         |
+| 5   | [`BitcoinMerkle.mo`](./BitcoinMerkle.mo)               | 32-byte txid                                               | double SHA-256 | a counter             | Bitcoin's collapse              |
+| 6   | [`BitcoinTxMerkle.mo`](./BitcoinTxMerkle.mo)           | raw transaction                                            | double SHA-256 | a counter             | Bitcoin's collapse              |
+| 7   | [`BitcoinWitness.mo`](./BitcoinWitness.mo)             | coinbase inclusion proof for the trees of Examples 5 and 6 |                |                       |                                 |
+| 8   | [`BitcoinMerkleRight.mo`](./BitcoinMerkleRight.mo)     | 32-byte txid, last to first                                | double SHA-256 | a mirrored counter    | the one peak left               |
+| 9   | [`BitcoinChunks.mo`](./BitcoinChunks.mo)               | chunked verification of a block against its Merkle root    | double SHA-256 | the tree of Example 8 | the stored proof                |
+| 10  | [`BitcoinChunksForward.mo`](./BitcoinChunksForward.mo) | the same, with the tree grown from the left                | double SHA-256 | the tree of Example 5 | closing the tree with the proof |
+|     | [`NFold.mo`](./NFold.mo)                               | N-fold hashing `H^N(msg)`                                  |                |                       |                                 |
 
 Examples 3 and 5 share their tree-building code in [`CounterBase.mo`](./CounterBase.mo), Examples 4 and 6 share theirs, including the embedded `Digest`, in [`CounterStateBase.mo`](./CounterStateBase.mo).
 Within each pair the examples differ only in single versus double SHA-256 and in how the root is computed, which lives in the example files.
@@ -49,7 +50,7 @@ Allocating more `Hasher`s on demand would also be possible, but is not in scope 
 The examples organize the pool in one of two ways:
 
 - as a **stack** of peaks with a parallel array of their heights (Examples 1 and 2), or
-- as an **array indexed by height**, where slot `k` holds the peak of height `k` if there is one (Examples 3 to 9). Which slots are occupied follows from the bits of the leaf count, so a single counter replaces the height array. This organization is the preferred one.
+- as an **array indexed by height**, where slot `k` holds the peak of height `k` if there is one (Examples 3 to 10). Which slots are occupied follows from the bits of the leaf count, so a single counter replaces the height array. This organization is the preferred one.
 
 To obtain a **root** from several peaks the examples fold the peaks into one hash, from the lowest peak to the highest: `acc := SHA256(peak ++ acc)`.
 This is called **bagging** the peaks and is the usual MMR finalization.
@@ -162,6 +163,11 @@ See [Building from the right](#building-from-the-right-example-8).
 Not a tree of its own: a verifier that receives a block's transactions in chunks and checks each chunk against the header's Merkle root, holding only the leaf count and a few peaks.
 It is built on Example 8: for each chunk it starts a tree from the peaks the uploader supplies, adds the chunk with the `add` of Example 8, and compares the peaks that are left with the ones it stored.
 See [Chunked verification](#chunked-verification-example-9).
+
+**Example 10, [`BitcoinChunksForward.mo`](./BitcoinChunksForward.mo).**
+The same verifier as Example 9, built on Example 5 instead of Example 8: the tree grows from the left as the chunks arrive, and each chunk is checked by closing the tree with the uploader's proof and comparing with the root.
+Closing is the root computation of Example 5 with one more case, a peak of the proof on the right.
+See [Chunked verification, forward](#chunked-verification-forward-example-10).
 
 **[`NFold.mo`](./NFold.mo).**
 N-fold hashing, `H^N(msg)`: a `Digest` absorbs the message, then its state is passed straight to a `Hasher` (`hashState(d.state)`), which runs the remaining rounds with no intermediate `Blob`.
@@ -277,11 +283,35 @@ The hashing is one node per leaf, as for building the tree once, with no ripple 
 
 All of this takes the uploaded leaves to be transaction ids; what the Merkle root alone cannot tell about that is a separate matter, covered in the [security notes](#security-notes).
 
+## Chunked verification, forward (Example 10)
+
+The task and the proofs are those of Example 9.
+The verifier keeps the tree of Example 5 over the leaves accepted so far, and for a chunk it
+
+1. adds the leaves of the chunk to the tree,
+2. closes the tree with the uploader's proof: starting from the lowest peak and going up, the node in hand meets a peak of the tree on its left where the leaf count has a 1-bit, else the next peak of the proof on its right, else nothing, in which case it is the last node of its level and is paired with itself,
+3. compares the result with the block's root,
+4. and keeps the grown tree if they are equal.
+
+Every chunk is checked against the root itself, and the proof is used once and not stored.
+As in Example 5, closing only reads the peaks of the tree and works in slot 0, and the proof's peaks are combined straight from their `Blob`s.
+
+Equal siblings are rejected in all four places where two siblings are combined: in `add`, and in closing where the node in hand meets a peak of the tree, a peak of the proof, or, as the last leaf itself, the first peak of the proof.
+That gives what it gives in Example 9: minimal proofs, an empty proof for the last chunk, and the rejection of mutated blocks.
+The shared `add` of Example 5 has no such check, so this example has its own.
+
+A chunk's leaves are added before the check can fail, so the peaks are copied aside first and copied back if the chunk is rejected.
+A canister that traps on a bad chunk needs no such copy.
+
+Which of the two verifiers is cheaper depends on the chunk size.
+Example 10 pays one double hash per level for closing the tree, per chunk; Example 9 pays a little more per leaf, because it loads each leaf into a `Hasher`.
+For a block of 8281 txids, Example 10 is 1.8% cheaper in three chunks, the two are equal at about 500 txids per chunk, and with chunks of 10 txids Example 10 costs twice as much.
+
 ## Security notes
 
 - **The bagged root does not commit to the leaf count.** In Examples 1 to 4 the same root arises from the same peak hashes at different heights, and a leaf equal to an inner node value is trivially constructible, since leaves are arbitrary 32-byte values. Verifiers must be given `n` out of band; the peak heights are exactly its bits. RFC 6962 closes this with domain separation (`0x00` before leaf data, `0x01` before node inputs), which these fixed 64-byte combiners do not produce.
-- **Bitcoin's duplication rule** (Examples 5 to 9) is the source of CVE-2012-2459: distinct transaction lists can yield the same root, for example `[1,2,3]` and `[1,2,3,3]`, or `[1..6]` and `[1,2,3,4,5,6,5,6]`. Every such list other than the block itself ends with a second copy, complete or cut off, of the subtree right before it on some level k, so its last txid equals the one 2^k places before it. `mutated` in [`BitcoinMutation.mo`](./BitcoinMutation.mo) tests a complete list for that up front, on the txids (or raw transactions) alone: it compares the last txid with the ones 1, 2, 4, 8, ... places before it. That catches every mutation, so among lists of genuine transaction ids with a given root at most one passes (a whole level of inner nodes passed as txids passes too, see the next note), and whatever else it flags repeats a txid, which a valid block never does. At most log2(n) `Blob` comparisons, no hashing, no allocation. The one-shot roots of Examples 5, 6 and 8 run it first and trap on a flagged list, so a caller who submits one gets its call rejected. The incremental API (`new`, `add`, `root`) and the shared tree machinery do not check; run `mutated` over the complete list yourself. Example 9, which never sees the whole list, rejects equal siblings at every merge instead, as Bitcoin Core does.
-- **Leaves and inner nodes** (Examples 5 to 9). Bitcoin's tree does not mark leaves apart from inner nodes, and the header commits to neither the depth nor the transaction count. The nodes of any whole level, passed as txids, therefore have the same root as the block: the root's two children as a block of two, the root itself as a block of one. No test on the hashes can tell, so with txids as input the examples prove the list against the root only if the caller knows that the leaves are transaction ids. With raw transactions (Example 6) every leaf is hashed by the example, and an inner node can only pose as a transaction of exactly 64 bytes, the concatenation of its two children (CVE-2017-12842). Closing this gap is left to the application, and one transaction is enough for it: all leaves sit on one level, so it suffices to take the first one, the coinbase, in full (serialized without witness data) and to check that it hashes to the first txid and is not 64 bytes long. Then it is not an inner node, which fixes the depth of the tree and with it the meaning of every other leaf and of the count.
+- **Bitcoin's duplication rule** (Examples 5 to 10) is the source of CVE-2012-2459: distinct transaction lists can yield the same root, for example `[1,2,3]` and `[1,2,3,3]`, or `[1..6]` and `[1,2,3,4,5,6,5,6]`. Every such list other than the block itself ends with a second copy, complete or cut off, of the subtree right before it on some level k, so its last txid equals the one 2^k places before it. `mutated` in [`BitcoinMutation.mo`](./BitcoinMutation.mo) tests a complete list for that up front, on the txids (or raw transactions) alone: it compares the last txid with the ones 1, 2, 4, 8, ... places before it. That catches every mutation, so among lists of genuine transaction ids with a given root at most one passes (a whole level of inner nodes passed as txids passes too, see the next note), and whatever else it flags repeats a txid, which a valid block never does. At most log2(n) `Blob` comparisons, no hashing, no allocation. The one-shot roots of Examples 5, 6 and 8 run it first and trap on a flagged list, so a caller who submits one gets its call rejected. The incremental API (`new`, `add`, `root`) and the shared tree machinery do not check; run `mutated` over the complete list yourself. Examples 9 and 10, which never see the whole list, reject equal siblings at every merge instead, as Bitcoin Core does.
+- **Leaves and inner nodes** (Examples 5 to 10). Bitcoin's tree does not mark leaves apart from inner nodes, and the header commits to neither the depth nor the transaction count. The nodes of any whole level, passed as txids, therefore have the same root as the block: the root's two children as a block of two, the root itself as a block of one. No test on the hashes can tell, so with txids as input the examples prove the list against the root only if the caller knows that the leaves are transaction ids. With raw transactions (Example 6) every leaf is hashed by the example, and an inner node can only pose as a transaction of exactly 64 bytes, the concatenation of its two children (CVE-2017-12842). Closing this gap is left to the application, and one transaction is enough for it: all leaves sit on one level, so it suffices to take the first one, the coinbase, in full (serialized without witness data) and to check that it hashes to the first txid and is not 64 bytes long. Then it is not an inner node, which fixes the depth of the tree and with it the meaning of every other leaf and of the count.
 - **Byte order.** Txids, roots and proofs are in Bitcoin's internal byte order, the raw double-SHA-256 output. Block explorers and RPC display them byte-reversed; reverse the 32 bytes to compare (see the mainnet vectors in `test/verify.mo`).
 - **Segwit.** A txid hashes the transaction serialized without witness data. Feeding full segwit bytes to Example 6 yields the wtxid instead.
 

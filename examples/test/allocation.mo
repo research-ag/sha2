@@ -29,6 +29,7 @@ import BitcoinWitness "../BitcoinWitness";
 import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
+import BitcoinChunksForward "../BitcoinChunksForward";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
@@ -237,12 +238,18 @@ do {
   let root = BitcoinMerkle.bitcoinMerkleRoot(txids);
   let bounds : [Nat] = [1, 2, 300, 617, 999, 1000];
   let v = BitcoinChunks.new(root, 12);
+  let f = BitcoinChunksForward.new(root, 12);
   var m = 0;
   for (m2 in bounds.values()) {
     let chunk = Array.tabulate<Blob>(m2 - m, func(i) = txids[m + i]);
     let p = BitcoinChunks.proof(txids, m2);
     check("BitcoinChunks.verifyChunk to " # m2.toText(), alloc(func() { assert v.verifyChunk(chunk, p) }), 0);
+    // Example 10, the forward way: also nothing, including the copy of the
+    // peaks that lets a rejected chunk be undone, and a rejected chunk itself.
+    let forged = Array.tabulate<Blob>(chunk.size(), func(i) = if (i == 0) leaves[0] else chunk[i]);
+    check("BitcoinChunksForward.verifyChunk rejected, to " # m2.toText(), alloc(func() { assert not f.verifyChunk(forged, p) }), 0);
+    check("BitcoinChunksForward.verifyChunk to " # m2.toText(), alloc(func() { assert f.verifyChunk(chunk, p) }), 0);
     m := m2;
   };
-  assert v.complete();
+  assert v.complete() and f.complete();
 };
