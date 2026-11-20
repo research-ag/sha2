@@ -21,5 +21,6 @@ moc = "2.2.3"
 wasmtime = "50.0.2"
 pocket-ic = "15.0.0"
 wasm-opt = "133"
+mo-fmt = "0.5.0"
 
 [optimize]

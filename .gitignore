@@ -16,6 +16,11 @@ node_modules/
 .copilot/
 skills-lock.json
 
-# npm (prettier tooling) — do not commit
+# npm (prettier, for Markdown and JSON only) — do not commit
 package.json
 package-lock.json
+
+# Local-only benchmark with large fixtures of real blocks. Listed here and
+# not only in .git/info/exclude, because `mops format` reads .gitignore alone.
+bench/Block*.mo
+bench/bitcoinBlocks.bench.mo

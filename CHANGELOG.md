@@ -13,6 +13,7 @@
 
 - Maintenance:
   - Bump `core` from 2.6.2 to 2.7.0.
+  - Format Motoko code with `mo-fmt` (`mops format`) instead of the deprecated Prettier plugin.
 
 ## 0.3.2
 
