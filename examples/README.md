@@ -237,7 +237,7 @@ At other values of `count` there is no root, because the missing leaves are on t
 Unlike Example 5, every leaf is loaded into a `Hasher` when it is added, so one loop does all the merging and doubling from height 0 up, in a spare `Hasher` that changes places with the slot where the node comes to rest.
 That costs about 2% more instructions over a whole tree than fusing leaves straight from their `Blob`s, and in exchange neither this example nor the verifier built on it needs a special case for height 0.
 
-`add` also sets a flag, `equalSiblings`, when it merges two equal siblings, which a valid block never has and a mutated block always does.
+`add` also sets a flag, `mergedEqualSiblings`, when it merges two equal siblings, which a valid block never has and a mutated block always does.
 It is the check Bitcoin Core makes while building the tree, and Example 9 relies on it.
 
 ## Chunked verification (Example 9)

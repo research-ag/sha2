@@ -96,13 +96,12 @@
 /// for the second.
 ///
 /// The incremental API hashes what it is given, but it NOTES one thing: `add`
-/// sets the flag `equalSiblings` when it merges two equal siblings. A valid
-/// block never has them (that would be a repeated transaction, or a
+/// sets the flag `mergedEqualSiblings` when it merges two equal siblings. A
+/// valid block never has them (that would be a repeated transaction, or a
 /// collision), while a mutated block always does: the written-out copy meets
 /// its original. A doubling is not a merge and does not set the flag. This is
-/// the check Bitcoin Core makes while it builds the tree, and it needs no
-/// view of the whole list, which is what a verifier of chunks has to do
-/// without.
+/// the check Bitcoin Core makes while it builds the tree, and it needs no view
+/// of the whole list, which is what a verifier of chunks has to do without.
 ///
 /// === A structure to verify with ===
 ///
@@ -123,14 +122,15 @@ module {
   /// The state of the build: the height-indexed slots with one spare at the
   /// end, the counter (`count`: leaf places used, the gap included — its bits
   /// claim the peaks), the peaks that really exist (`present`: bit k for slot
-  /// k), and whether two equal siblings were ever merged (`equalSiblings`,
-  /// never in a valid block). The gap is not kept, it is only where `count`
-  /// starts. A static record — it can be declared `stable`.
+  /// k), and whether two equal siblings were ever merged
+  /// (`mergedEqualSiblings`, never in a valid block). The gap is not kept, it
+  /// is only where `count` starts. A static record — it can be declared
+  /// `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
     var count : Nat64;
     var present : Nat64;
-    var equalSiblings : Bool;
+    var mergedEqualSiblings : Bool;
   };
 
   /// The gap of a Bitcoin tree of `n` leaves (>= 1): the unused places after
@@ -154,14 +154,14 @@ module {
       hasher = VarArray.tabulate<Hasher.Hasher>(l + 2, func(_) { Hasher.new() });
       var count = gap.toNat64(); // the counter starts at the gap
       var present = 0;
-      var equalSiblings = false;
+      var mergedEqualSiblings = false;
     };
   };
 
   /// Add the next leaf, a 32-byte txid in internal byte order. The leaves are
   /// taken from the LAST of the block to the first. Allocation-free. Sets
-  /// `equalSiblings` if two equal siblings are merged. Traps if the leaf is
-  /// not 32 bytes long.
+  /// `mergedEqualSiblings` if two equal siblings are merged. Traps if the leaf
+  /// is not 32 bytes long.
   public func add(self : Mmr, leaf : Blob) {
     let hasher = self.hasher;
     let spare = hasher.size() - 1 : Nat;
@@ -175,7 +175,7 @@ module {
       if (((present >> k) & 1) == 1) {
         // The claimed peak is there: merge.
         let peak = hasher[k.toNat()];
-        if (node.equalsState(peak)) self.equalSiblings := true;
+        if (node.equalsState(peak)) self.mergedEqualSiblings := true;
         node.combineState(node, peak); // dSHA(node ++ peak)
         present ^= 1 << k;
       } else {

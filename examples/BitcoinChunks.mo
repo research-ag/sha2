@@ -64,11 +64,11 @@
 ///
 /// === Completeness and mutation ===
 ///
-/// Example 8 notes when two EQUAL siblings are merged (`equalSiblings`), and
-/// the verifier rejects the chunk then. In a valid block two sibling subtrees
-/// never hash alike (that would be a repeated transaction, which consensus
-/// forbids, or a collision), so nothing valid is rejected, and it buys two
-/// things:
+/// Example 8 notes when two EQUAL siblings are merged (`mergedEqualSiblings`),
+/// and the verifier rejects the chunk then. In a valid block two sibling
+/// subtrees never hash alike (that would be a repeated transaction, which
+/// consensus forbids, or a collision), so nothing valid is rejected, and it
+/// buys two things:
 ///
 ///   - A proof may not contain a peak that Bitcoin's rule would duplicate, so
 ///     proofs are minimal, and the LAST chunk is recognised by an EMPTY P_M'.
@@ -176,7 +176,7 @@ module {
     if (depth > maxDepth) return false;
     tree.count := (1 << depth) - m;
     tree.present := present;
-    tree.equalSiblings := false;
+    tree.mergedEqualSiblings := false;
     true;
   };
 
@@ -213,7 +213,7 @@ module {
     };
     // Equal siblings never occur in a valid block: a peak that should have
     // been left out of the proof, or a mutated block (CVE-2012-2459).
-    if (tree.equalSiblings) return false;
+    if (tree.mergedEqualSiblings) return false;
     // 3. The peaks that are left must be the stored proof.
     if (not hasPeaks(tree, self.proof)) return false;
     // 4. Advance.

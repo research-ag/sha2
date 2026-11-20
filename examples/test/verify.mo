@@ -393,8 +393,9 @@ do {
   assert (six.count == 3 and six.present == 1);
   BitcoinMerkleRight.add(six, t[4]);
   assert (six.count == 4 and six.present == 4);
-  // `equalSiblings`: set when two equal siblings are merged, which a mutated
-  // list always does and an honest one never; a doubling does not set it.
+  // `mergedEqualSiblings`: set when two equal siblings are merged, which a
+  // mutated list always does and an honest one never; a doubling does not set
+  // it.
   for (n in ([1, 2, 3, 5, 6, 7, 11, 12, 13, 16, 100] : [Nat]).values()) {
     let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
     func built(list : [Blob]) : BitcoinMerkleRight.Mmr {
@@ -403,17 +404,17 @@ do {
       while (i > 0) { i -= 1; BitcoinMerkleRight.add(mmr, list[i]) };
       mmr;
     };
-    assert (not built(txids).equalSiblings);
+    assert (not built(txids).mergedEqualSiblings);
     var width = 1;
     while (width < n) {
       if (n % (2 * width) == width) {
         // the last 2^k leaves written out twice: the same root, and flagged
         let m = built(txids.concat(slice(txids, n - width, n)));
-        assert (BitcoinMerkleRight.root(m) == refBitcoin(txids) and m.equalSiblings);
+        assert (BitcoinMerkleRight.root(m) == refBitcoin(txids) and m.mergedEqualSiblings);
       };
       width *= 2;
     };
-    if (n >= 3) assert (built([txids[0], txids[0], txids[1]]).equalSiblings); // any equal pair, as Bitcoin Core
+    if (n >= 3) assert (built([txids[0], txids[0], txids[1]]).mergedEqualSiblings); // any equal pair, as Bitcoin Core
   };
   // Pool: one hasher per bit of the largest counter value, and the spare.
   assert (BitcoinMerkleRight.new(3, 5).hasher.size() == 5 and BitcoinMerkleRight.new(0, 1).hasher.size() == 2 and BitcoinMerkleRight.new(0, 7).hasher.size() == 4);
