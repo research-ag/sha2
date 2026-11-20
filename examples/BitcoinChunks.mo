@@ -82,9 +82,9 @@
 /// proves "these leaves, in this order and no others, hash to the root", and
 /// the caller must know from elsewhere that they are transaction ids.
 ///
-/// With raw transactions (`verifyChunkTx`) every leaf is hashed here, and an
-/// inner node can only pose as a transaction in the form of a 64-byte one,
-/// the concatenation of its two children (CVE-2017-12842).
+/// (A caller that computes the txids from raw transactions itself narrows
+/// this: an inner node can then only pose as a transaction in the form of a
+/// 64-byte one, the concatenation of its two children, CVE-2017-12842.)
 ///
 /// Closing this gap is LEFT TO THE APPLICATION. One transaction is enough:
 /// take the first one, the coinbase, in full (its serialization without
@@ -97,11 +97,11 @@
 /// One node is hashed per leaf, as for building the tree once: nothing ripples
 /// to the root per chunk. `verifyChunk` allocates nothing — the hashers are
 /// allocated once by `new`, the proof's peaks are loaded into them, and the
-/// uploader's proof is kept by reference. `verifyChunkTx` allocates the txids
-/// it computes, one `Blob` per transaction.
+/// uploader's proof is kept by reference.
 ///
-/// Txids, proofs and the root are in Bitcoin's INTERNAL byte order; the txid
-/// of a raw transaction hashes its serialization WITHOUT witness data.
+/// Like Example 8, this example takes txids, 32-byte `Blob`s, not raw
+/// transactions. Txids, proofs and the root are in Bitcoin's INTERNAL byte
+/// order.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Right "BitcoinMerkleRight";
@@ -109,7 +109,6 @@ import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import Runtime "mo:core/Runtime";
-import Sha256 "mo:sha2/Sha256";
 
 module {
   /// The verifier's state between chunks. A static record; it can be declared
@@ -227,30 +226,6 @@ module {
     true;
   };
 
-  /// The txid of a raw transaction (serialized without witness data).
-  public func txid(tx : Blob) : Blob {
-    let d = Sha256.new();
-    d.writeBlob(tx);
-    d.sumDouble();
-  };
-
-  /// The txids of raw transactions.
-  public func txidsOf(txs : [Blob]) : [Blob] {
-    let d = Sha256.new();
-    Array.tabulate<Blob>(
-      txs.size(),
-      func(i) {
-        d.reset();
-        d.writeBlob(txs[i]);
-        d.sumDouble();
-      },
-    );
-  };
-
-  /// The same as `verifyChunk` for a chunk of raw transactions (any length
-  /// each). Allocates their txids.
-  public func verifyChunkTx(self : Verifier, txs : [Blob], next : [Blob]) : Bool = verifyChunk(self, txidsOf(txs), next);
-
   // ---------------------------------------------------------------------------
   // The prover (off-chain, from all leaves)
   // ---------------------------------------------------------------------------
@@ -289,7 +264,4 @@ module {
     };
     peaks(tree);
   };
-
-  /// `proof` for a block given as raw transactions.
-  public func proofTx(txs : [Blob], m : Nat) : [Blob] = proof(txidsOf(txs), m);
 };

@@ -421,7 +421,7 @@ do {
 
 // --- Example 9: chunked verification against the Merkle root ---
 // Random chunk sequences over random txids verify chunk by chunk against the
-// root of the whole block, both as txids and as raw transactions; the last
+// root of the whole block; the last
 // chunk is recognised by its empty proof; a forged leaf, a dropped peak, a
 // peak that should have been left out, a duplicated last leaf (CVE-2012-2459),
 // a wrong root and a chunk after completion are rejected, and a rejected chunk
@@ -454,10 +454,8 @@ func refProof(txids : [Blob], m : Nat) : [Blob] {
   out.toArray();
 };
 for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 257] : [Nat]).values()) {
-  let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
-  let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
+  let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
   let root = refBitcoin(txids);
-  assert (BitcoinChunks.txidsOf(txs) == txids);
   // The proofs: the root alone for no leaves, empty for all of them, equal to
   // the reference in between; and all of them from ONE pass over the block,
   // taking the peaks of the tree at every boundary.
@@ -476,14 +474,12 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
   // chunk boundaries: a pseudo-random walk from 0 to n, repeated with different steps
   for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
     let v = BitcoinChunks.new(root, 12);
-    let vTx = BitcoinChunks.new(root, 12);
     var m = 0;
     var s = step;
     while (m < n) {
       let m2 = if (m + s >= n) n else m + s;
       s := 1 + (s * 7 + m) % (2 * step); // vary the chunk length
       let p = BitcoinChunks.proof(txids, m2);
-      assert (p == BitcoinChunks.proofTx(txs, m2));
       // rejections first; the verifier must stay at m
       assert (not v.verifyChunk(slice(txids, m, m2), p.concat([txids[n - 1]]))); // a tile Bitcoin would duplicate, or junk
       if (p.size() > 0) {
@@ -495,12 +491,11 @@ for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 
       assert (v.count == Nat.toNat64(m));
       // the honest chunk
       assert (v.verifyChunk(slice(txids, m, m2), p));
-      assert (vTx.verifyChunkTx(slice(txs, m, m2), p));
       assert (v.count == Nat.toNat64(m2));
       assert (v.complete() == (m2 == n));
       m := m2;
     };
-    assert (v.complete() and vTx.complete());
+    assert (v.complete());
     assert (not v.verifyChunk([txids[0]], [])); // nothing after completion
   };
   // the whole block at once, and the mutated block: the last txid uploaded twice
@@ -550,8 +545,6 @@ do {
   assert (w.verifyChunk([root], []) and w.complete() and w.count == 1);
   let pairs = Array.tabulate<Blob>(4, func(i) = txids[2 * i].toArray().concat(txids[2 * i + 1].toArray()).toBlob()); // 64-byte "transactions"
   assert (BitcoinTxMerkle.bitcoinTxMerkleRoot(pairs) == root);
-  let x = BitcoinChunks.new(root, 12);
-  assert (x.verifyChunkTx(pairs, []) and x.complete() and x.count == 4);
 };
 
 // --- Mutated blocks (Examples 5, 6 and 8): `BitcoinMutation.mutated` ---
@@ -616,7 +609,7 @@ do {
 // flagged, also where the last two txids differ or the count is odd.
 for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 16, 17, 23, 31, 33, 100] : [Nat]).values()) {
   let txs = Array.tabulate<Blob>(n, func(i) = bytes(1 + (i * 37) % 150));
-  let txids = txs.map<Blob, Blob>(BitcoinChunks.txid);
+  let txids = txs.map<Blob, Blob>(func(tx) { let h = Sha256.new(); h.writeBlob(tx); h.sumDouble() });
   let root = refBitcoin(txids);
   assert (not BitcoinMutation.mutated(txids));
   assert (not BitcoinMutation.mutated(txs));
