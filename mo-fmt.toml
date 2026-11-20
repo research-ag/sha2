@@ -1,0 +1,5 @@
+# Formatter settings for `mops format` (mo-fmt). Carried over from the
+# Prettier plugin's settings: two spaces, and trailing commas in lists that
+# span several lines.
+indent-width = 2
+trailing-commas = "multiline"

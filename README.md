@@ -471,11 +471,11 @@ Benchmarks:
 mops bench
 ```
 
-Formatting:
+Formatting. Motoko code is formatted with `mo-fmt`, pinned in `mops.toml` and configured in `mo-fmt.toml`; Markdown and JSON with prettier:
 
 ```bash
-npm install --no-save prettier prettier-plugin-motoko
-npx prettier --plugin prettier-plugin-motoko --write '**/*.{mo,json,md}'
+mops format
+npx prettier --write '**/*.{json,md}'
 ```
 
 ## Copyright
