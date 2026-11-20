@@ -42,16 +42,43 @@ module {
       Array.tabulate<Nat8>(1_000_000, func(i) = rng.nat8()),
     ];
 
+    // The inputs of every column, derived once. Where they lie in memory
+    // matters to the measurement: newer replicas charge a call about 20k
+    // instructions for every 64 KiB memory page it touches first, and a short
+    // message that sits alone on a page of its own would cost several times
+    // its hash. So the large inputs are built first and the short ones last,
+    // as fresh copies: the short inputs, the closures and the table below
+    // then lie together at the end of what init allocates, next to the
+    // benchmark object, on pages the harness touches before it measures. The
+    // large inputs still pay for the pages they occupy, as they should.
+    type Input = {
+      source : [Nat8];
+      blob : Blob;
+      list : List.List<Nat8>;
+      varArray : [var Nat8];
+    };
+    func input(source : [Nat8]) : Input = {
+      source;
+      blob = source.toBlob();
+      list = List.fromArray(source);
+      varArray = source.toVarArray();
+    };
+    func copy(a : [Nat8]) : [Nat8] = Array.tabulate<Nat8>(a.size(), func(i) = a[i]);
+    let i5 = input(rowSourceArrays[5]);
+    let i4 = input(rowSourceArrays[4]);
+    let i3 = input(copy(rowSourceArrays[3]));
+    let i2 = input(copy(rowSourceArrays[2]));
+    let i1 = input(copy(rowSourceArrays[1]));
+    let i0 = input(copy(rowSourceArrays[0]));
+    let inputs = [i0, i1, i2, i3, i4, i5];
+
     let routines : [[() -> ()]] = Array.tabulate<[() -> ()]>(
       rows.size(),
       func(ri) {
         Array.tabulate<() -> ()>(
           cols.size(),
           func(ci) {
-            let source = rowSourceArrays[ci];
-            let blob = source.toBlob();
-            let list = List.fromArray(source);
-            let varArray = source.toVarArray();
+            let { source; blob; list; varArray } = inputs[ci];
 
             switch (ri) {
               case (0) {

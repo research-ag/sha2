@@ -1,5 +1,19 @@
 # Sha2 changelog
 
+## 0.3.3
+
+- Added:
+  - `Hasher.equalsBlob32(data)` and `Hasher.equalsState(other)`
+  - Example `BitcoinMerkleRight.mo`: Bitcoin Merkle root with the txids added in reverse order from last to first.
+  - Example `BitcoinChunks.mo`: Chunked validation of Bitcoin blocks with implementation based on reverse order MMR.
+  - Example `BitcoinChunksForward.mo`: Chunked validation of Bitcoin blocks with implementation based on forward MMR.
+- Changed:
+  - Examples `BitcoinMerkle`, `BitcoinTxMerkle` now reject txid repetitions that don't change the root.
+  - Optimized `Hasher.hashBlob32`, `loadBlob32` and `loadState`.
+
+- Maintenance:
+  - Bump `core` from 2.6.2 to 2.7.0.
+
 ## 0.3.2
 
 - Changed:

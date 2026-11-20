@@ -86,11 +86,11 @@ jobs:
           mops install --locked
           cd examples && mops install --locked
 
-      # moc 2.0.0 has only the 64-bit heap. The 32-bit heap needs moc 1.x with
+      # moc 2.x has only the 64-bit heap. The 32-bit heap needs moc 1.x with
       # legacy persistence, which the library still supports.
-      - name: Install moc 1.16.1
+      - name: Install moc 1.16.2
         run: |
-          mops toolchain use moc 1.16.1
+          mops toolchain use moc 1.16.2
           $(mops toolchain bin moc) --version
 
       - name: Check the library allocations

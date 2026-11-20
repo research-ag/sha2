@@ -98,15 +98,17 @@ module {
         acc.loadBlob32(b); // the only loadBlob32: once, per bagging
       };
       case (null) {
-        // A single peak is the root outright — leave it untouched.
-        while (((count >> k) & 1) == 0) { k += 1 };
+        // No leaf is pending, so bit 0 is clear and the lowest peak is at the
+        // number of trailing zeros. A single peak is the root outright — leave
+        // it untouched.
+        k := Nat64.bitcountTrailingZero(count);
         if (Nat64.bitcountNonZero(count) == 1) {
           return hasher[k.toNat()].readSum();
         };
         // Fuse the two lowest peaks straight into the accumulator.
         let k0 = k.toNat();
         k += 1;
-        while (((count >> k) & 1) == 0) { k += 1 };
+        k += Nat64.bitcountTrailingZero(count >> k); // the next peak up
         acc.combineState(hasher[k.toNat()], hasher[k0]);
         k += 1;
       };

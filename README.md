@@ -356,7 +356,7 @@ Pass `d.state` only as a source, never as the hasher that is written to.
 - Inputs are fixed-length only: 32-byte blobs or 256-bit states. A blob of another length traps with a message such as `Hasher: hashBlob32 expects a 32-byte blob, got 20 bytes`.
 - The `Hasher` type is a raw `[var Nat16]` of length 16; the type system does not enforce the length. Treat it as opaque and only operate on values created by `Hasher.new()`.
 
-The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, and iterated hashing.
+The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, chunked verification of a Bitcoin block against its Merkle root, and iterated hashing.
 See its [README](https://github.com/research-ag/sha2/blob/main/examples/README.md).
 
 ### Message length limits
@@ -390,7 +390,7 @@ mops bench
 or look at the [benchmarks on mops](https://mops.one/sha2/benchmarks).
 The benchmarks cover every convenience function over message lengths from 0 bytes to 1 MB, the cost of each step of the `Digest` lifecycle, the `Hasher` operations against the equivalent `Digest` calls, and a Merkle build.
 
-For orientation, measured with moc 2.0.0 and wasm-opt on the 0.3.2 code:
+For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
@@ -411,9 +411,9 @@ The `Hasher` against the same hashes computed through a reused `Digest` (`reset`
 
 | Operation                        | `Hasher` | `Digest` |
 | -------------------------------- | -------: | -------: |
-| hash of one 32-byte value        |   13,100 |   15,200 |
+| hash of one 32-byte value        |    9,500 |   15,200 |
 | combine of two 32-byte values    |   15,200 |   26,800 |
-| double hash of one 32-byte value |   21,400 |   23,600 |
+| double hash of one 32-byte value |   17,800 |   23,600 |
 
 A combine is two compressions (the data block and the constant padding block), a single hash one compression; the `Digest` adds its buffer handling on top.
 
@@ -428,6 +428,9 @@ The benchmark history on mops.one shows changed numbers from 0.2.5 to 0.3.0 beca
 The published 0.2.5 results were measured with moc 1.10.0 under legacy persistence (32-bit heap, copying GC) and without wasm-opt; the 0.3.0 results with moc 2.0.0 (64-bit heap, incremental GC) and wasm-opt.
 Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same for hashing with Sha256 and Sha512, for all input types and the whole `Digest` lifecycle (within 0.2%; some short writes are up to 4% faster).
 
+In summary, this is what the published numbers show for the transition from 0.2.5 to 0.3.0.
+The first two points come from the measurement setup; the third is the one change in the code:
+
 - Instructions: +9% to +35% for Sha256 hashing, −6% to +23% for Sha512 hashing. Creating a digest with `new()` costs about 3× as much: each heap allocation costs about 130 instructions more with the incremental GC.
 - Heap: the Heap table now shows what each cell allocates (0.2.5 reported its allocation in the Garbage Collection table). Allocations are about twice as large: words and pointers take 8 bytes on the 64-bit heap, and the incremental GC adds a forwarding pointer to every object.
 - The allocation-free Merkle build is 40% faster than in 0.2.5, because it now uses the `Hasher` engine.
@@ -436,6 +439,8 @@ Measured with the same setup, the 0.2.5 code and the 0.3.0 code cost the same fo
 
 - The round loops of the compression function are unrolled, for both SHA-256 and SHA-512. This was mainly motivated by reducing the heap allocations but it also reduced the instructions significantly.
 - SHA-256 keeps its state and message buffer in 16-bit half-words (`Nat16`), which Motoko never boxes, so hashing allocates nothing. SHA-512 needs 64-bit words, which are boxed when large; that is the bounded per-call allocation noted above.
+  - On the 64-bit heap `Nat32` is never boxed either, so the state and the message buffer could be kept in `Nat32` words instead of `Nat16` half-words. We measured this. It saves the joining and splitting of half-words only where a call reads and writes back the state and where bytes pass through the buffer, so the improvement is per call, not per byte: long messages are unaffected, and for short messages and Merkle-tree hashing the improvement was not big enough to justify the change.
+  - The change would also have a cost: the package supports the 32-bit heap as well (moc 1.x with legacy persistence), where large `Nat32` values are boxed. There the state and buffer words would allocate, and the package is meant to stay allocation-free on the 32-bit heap too.
 - Whole blocks are compressed directly from the input (`Blob`, arrays, accessor, reader, iterator) without passing through the message buffer. Only the partial block at the start and at the end of a write goes through the buffer. The `Blob`, array and accessor block routines index the input with `Nat32` arithmetic: a `Nat` addition is a runtime call of about 50 instructions, which for the 64 index computations of a block cost a quarter of the hashing. The reader and iterator routines have no index arithmetic and are unchanged.
 - `writeBlob` reads the `Blob` directly rather than through an accessor closure, so it allocates nothing.
 - When a message ends on a block boundary, the padding block is compressed directly from constants instead of being assembled in the buffer.
