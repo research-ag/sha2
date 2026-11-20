@@ -89,6 +89,18 @@ for (_ in Nat.range(0, 200)) {
   h.combineBlob32State(a, h);
   assert (h.readSum() == sha256Concat(a, b));
 
+  // equalsBlob32 compares the state with a Blob without a readout.
+  h.hashBlob32(a);
+  assert (h.equalsBlob32(Sha256.fromBlob(a)));
+  assert (not h.equalsBlob32(Sha256.fromBlob(b)));
+  assert (not h.equalsBlob32("")); // wrong length compares false, no trap
+
+  // equalsState compares two hashers' states.
+  h.hashBlob32(a);
+  xa.hashBlob32(a);
+  assert (h.equalsState(xa));
+  assert (not h.equalsState(yb));
+
   // loadBlob32 deposits bytes verbatim (no hash): round-trips through readSum.
   h.loadBlob32(a);
   assert (h.readSum() == a);

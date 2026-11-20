@@ -51,15 +51,28 @@
 /// The extra cost is one dSHA per clear bit — bagging spends one compression
 /// per SET bit of n, the collapse one per bit position up to the highest.
 ///
-/// === Caveats (byte order, CVE) ===
+/// === Mutated blocks (CVE-2012-2459) ===
 ///
-///   * BYTE ORDER: txids and the returned root are in Bitcoin's INTERNAL byte
-///     order (the raw double-SHA256 output). Block explorers and RPC display
-///     them byte-REVERSED — reverse the 32 bytes to compare (see the mainnet
-///     vectors in `test/verify.mo`).
-///   * Duplicating the last node is the source of Bitcoin's CVE-2012-2459 (two
-///     distinct leaf lists can yield the same root); callers must reject blocks
-///     with duplicate txids in that position.
+/// Duplicating the last node means that two distinct txid lists can have the
+/// same root: `[1,2,3]` and `[1,2,3,3]`, `[1..6]` and `[1,2,3,4,5,6,5,6]`. A
+/// root alone therefore does not pin down the transaction list.
+/// `BitcoinMutation.mo` explains this and has the test for it, `mutated`,
+/// which works on the txids alone, before any hashing.
+///
+/// The one-shot `bitcoinMerkleRoot` runs that test first and TRAPS on a
+/// flagged list, so a caller who passes one gets its call rejected. The
+/// incremental API (`new`, `add`, `root`) hashes what it is given: whoever
+/// uses it for a whole block runs `BitcoinMutation.mutated` over the complete
+/// list. The tree machinery itself (`CounterBase.mo`) knows nothing of this.
+/// For a block that arrives in chunks, see `BitcoinChunks.mo`, which rejects
+/// equal siblings at every merge instead, as Bitcoin Core does.
+///
+/// === Byte order ===
+///
+/// Txids and the returned root are in Bitcoin's INTERNAL byte order (the raw
+/// double-SHA256 output). Block explorers and RPC display them byte-REVERSED:
+/// reverse the 32 bytes to compare (see the mainnet vectors in
+/// `test/verify.mo`).
 ///
 /// For raw (variable-length) transactions instead of ready txids, see
 /// `BitcoinTxMerkle.mo`, which adds the `Digest` -> `Hasher` bridge in front of
@@ -67,7 +80,9 @@
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Base "CounterBase";
+import Mutation "BitcoinMutation";
 import Nat64 "mo:core/Nat64";
+import Runtime "mo:core/Runtime";
 
 module {
   /// The MMR state — see `CounterBase.mo`, which holds the building machinery
@@ -110,9 +125,10 @@ module {
         acc.combineState(acc, acc);
       };
       case (null) {
-        // A single peak (power-of-two count) is the root outright — leave it
-        // untouched.
-        while (((count >> k) & 1) == 0) { k += 1 };
+        // No leaf is pending, so bit 0 is clear and the lowest peak is at the
+        // number of trailing zeros. A single peak (power-of-two count) is the
+        // root outright — leave it untouched.
+        k := Nat64.bitcountTrailingZero(count);
         if (Nat64.bitcountNonZero(count) == 1) {
           return hasher[k.toNat()].readSum();
         };
@@ -140,9 +156,12 @@ module {
 
   /// Bitcoin (double-SHA256) Merkle root over `txids` (each a 32-byte `Blob`,
   /// in internal byte order), for ANY leaf count (>= 1), in one shot.
-  /// Allocation-free except the returned root `Blob`.
+  /// Allocation-free except the returned root `Blob`. Traps if the list is
+  /// flagged by `BitcoinMutation.mutated` (CVE-2012-2459), up front, before
+  /// the tree is built.
   public func bitcoinMerkleRoot(txids : [Blob]) : Blob {
     assert txids.size() >= 1;
+    if (Mutation.mutated(txids)) Runtime.trap("BitcoinMerkle: mutated transaction list (CVE-2012-2459)");
     let mmr = new(txids.size(), false);
     for (leaf in txids.values()) {
       mmr.add(leaf);

@@ -18,11 +18,14 @@ module {
   // deserialize. 'State leaves' are 32-byte hashes already sitting in Hashers,
   // treated as transient: the half-delay parks the first leaf of each pair
   // into slot 0 with one loadState (its partner is read directly by
-  // combineState) — the column gap is exactly those n/2 copies. Both do n-1
-  // combines, allocation-free except the root Blob. Power-of-two counts, so
-  // no bagging finale — the examples add only that. (When state leaves stream
-  // out of a Digest even the park is free: the bridge produces the txid
-  // directly INTO slot 0 — see examples/BitcoinTxMerkle.mo.)
+  // combineState). The column gap is those n/2 copies (about 530 instructions
+  // each) against what combineBlob32 pays to read its 64 bytes out of two
+  // Blobs where combineState reads state words (about 1060 per pair): the
+  // state column comes out cheaper. Both do n-1 combines, allocation-free
+  // except the root Blob. Power-of-two counts, so no bagging finale — the
+  // examples add only that. (When state leaves stream out of a Digest even the
+  // park is free: the bridge produces the txid directly INTO slot 0 — see
+  // examples/BitcoinTxMerkle.mo.)
 
   public func init() : Bench.V1 {
     let exps : [Nat] = [8, 10, 12];
@@ -31,7 +34,7 @@ module {
 
     let schema : Bench.Schema = {
       name = "Sha256 Merkle counter: Blob vs State leaves";
-      description = "Single-SHA Merkle root over 2^k leaves via the binary-counter MMR: Blob leaves vs state leaves — the column gap is the half-delay's n/2 parking copies.";
+      description = "Single-SHA Merkle root over 2^k leaves via the binary-counter MMR: Blob leaves vs state leaves — per pair, state leaves add one parking copy and save reading two Blobs.";
       rows = rows;
       cols = cols;
     };

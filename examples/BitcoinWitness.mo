@@ -51,9 +51,9 @@
 /// finalization-specific, and only the Bitcoin variants are provided here.
 ///
 /// Caveats as in `BitcoinMerkle.mo`: txids, root and witness are in
-/// Bitcoin's INTERNAL byte order, and duplication is CVE-2012-2459 territory
-/// — callers must reject blocks with duplicate txids in the vulnerable
-/// position.
+/// Bitcoin's INTERNAL byte order, and duplication is CVE-2012-2459 territory:
+/// the incremental trees used here hash what they are given, so run
+/// `BitcoinMutation.mutated` over the complete list before trusting its root.
 
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
@@ -120,7 +120,9 @@ module {
         acc.combineState(acc, acc);
       };
       case (null) {
-        while (((count >> k) & 1) == 0) { k += 1 };
+        // No leaf is pending, so bit 0 is clear: the lowest peak is at the
+        // number of trailing zeros.
+        k := Nat64.bitcountTrailingZero(count);
         // A single peak: every hash of the proof was captured during the
         // build.
         if (Nat64.bitcountNonZero(count) == 1) return w.sliceToArray(0, kTop);

@@ -1,4 +1,3 @@
-import Nat "mo:core/Nat";
 import VarArray "mo:core/VarArray";
 import Prim "mo:prim";
 
@@ -22,7 +21,9 @@ module {
 
   /// Overwrite the 16 half-words of `self` with the first 16 entries of `vals`.
   public func set(self : State, vals : [Nat16]) {
-    for (i in Nat.range(0, 16)) self[i] := vals[i];
+    // An index array, not `Nat.range`: the range allocates its iterator and
+    // costs more than twice the instructions.
+    for (i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].values()) self[i] := vals[i];
   };
   /// Return an independent copy of the state array.
   public let clone = VarArray.clone;

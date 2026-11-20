@@ -356,7 +356,7 @@ Pass `d.state` only as a source, never as the hasher that is written to.
 - Inputs are fixed-length only: 32-byte blobs or 256-bit states. A blob of another length traps with a message such as `Hasher: hashBlob32 expects a 32-byte blob, got 20 bytes`.
 - The `Hasher` type is a raw `[var Nat16]` of length 16; the type system does not enforce the length. Treat it as opaque and only operate on values created by `Hasher.new()`.
 
-The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, and iterated hashing.
+The [`examples/` directory](https://github.com/research-ag/sha2/tree/main/examples) shows the intended use: allocation-free Merkle trees in seven variants, including Bitcoin's block Merkle tree and the coinbase inclusion proof, chunked verification of a Bitcoin block against its Merkle root, and iterated hashing.
 See its [README](https://github.com/research-ag/sha2/blob/main/examples/README.md).
 
 ### Message length limits
@@ -394,7 +394,7 @@ For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
 
 | Operation                  |       Sha256 |       Sha512 |
 | -------------------------- | -----------: | -----------: |
-| `fromBlob`, empty message  |       12,100 |       12,900 |
+| `fromBlob`, empty message  |       12,100 |       13,200 |
 | `fromBlob`, one block      |       31,000 |       42,000 |
 | `fromBlob`, 1 MB           |  171,000,000 |   95,000,000 |
 | per byte of a long message |          170 |           90 |
@@ -411,9 +411,9 @@ The `Hasher` against the same hashes computed through a reused `Digest` (`reset`
 
 | Operation                        | `Hasher` | `Digest` |
 | -------------------------------- | -------: | -------: |
-| hash of one 32-byte value        |   13,100 |   15,200 |
+| hash of one 32-byte value        |    9,500 |   15,200 |
 | combine of two 32-byte values    |   15,200 |   26,800 |
-| double hash of one 32-byte value |   21,400 |   23,600 |
+| double hash of one 32-byte value |   17,800 |   23,600 |
 
 A combine is two compressions (the data block and the constant padding block), a single hash one compression; the `Digest` adds its buffer handling on top.
 
