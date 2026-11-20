@@ -99,6 +99,8 @@ do {
   check("Hasher.combineBlob32State", alloc(func() = h.combineBlob32State(b32, h)), 0);
   check("Hasher.loadBlob32", alloc(func() = h.loadBlob32(b32)), 0);
   check("Hasher.loadState", alloc(func() = h.loadState(h2)), 0);
+  check("Hasher.equalsBlob32", alloc(func() { ignore h.equalsBlob32(b32) }), 0);
+  check("Hasher.equalsState", alloc(func() { ignore h.equalsState(h2) }), 0);
   check("Hasher.readSum", alloc(func() { ignore h.readSum() }), readout(32));
 };
 

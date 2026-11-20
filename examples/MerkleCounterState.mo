@@ -86,8 +86,7 @@ module {
     assert count >= 1;
     // A single component (a lone parked leaf, or one peak) is the root
     // outright — leave it untouched.
-    var k : Nat64 = 0;
-    while (((count >> k) & 1) == 0) { k += 1 };
+    var k = Nat64.bitcountTrailingZero(count); // the lowest component
     if (Nat64.bitcountNonZero(count) == 1) {
       return hasher[k.toNat()].readSum();
     };
@@ -98,7 +97,7 @@ module {
     let acc = hasher[top];
     let k0 = k.toNat();
     k += 1;
-    while (((count >> k) & 1) == 0) { k += 1 };
+    k += Nat64.bitcountTrailingZero(count >> k); // the next peak up
     acc.combineState(hasher[k.toNat()], hasher[k0]);
     k += 1;
     while (k.toNat() < top) {

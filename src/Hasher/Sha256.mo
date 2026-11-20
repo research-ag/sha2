@@ -86,12 +86,24 @@ module {
     if (data.size() != 32) Prim.trap("Hasher: hashBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
     // Load the 32 message bytes into the state words (big-endian half-word
     // pairs), then hash the state in place. `process_fold_block` hashes whatever
-    // 32 bytes the state holds, so this yields SHA256(data).
-    var i = 0;
-    while (i < 16) {
-      self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);
-      i += 1;
-    };
+    // 32 bytes the state holds, so this yields SHA256(data). The 16 steps are
+    // written out, here and below: a counted loop costs several times as much.
+    self[0] := nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]);
+    self[1] := nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]);
+    self[2] := nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]);
+    self[3] := nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]);
+    self[4] := nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]);
+    self[5] := nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]);
+    self[6] := nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]);
+    self[7] := nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]);
+    self[8] := nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]);
+    self[9] := nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]);
+    self[10] := nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]);
+    self[11] := nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]);
+    self[12] := nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]);
+    self[13] := nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]);
+    self[14] := nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]);
+    self[15] := nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]);
     self.process_fold_block(self);
   };
 
@@ -126,7 +138,7 @@ module {
   public func combineBlob32(self : Hasher, b1 : Blob, b2 : Blob) {
     if (b1.size() != 32 or b2.size() != 32) Prim.trap("Hasher: combineBlob32 expects two 32-byte blobs, got " # debug_show (b1.size()) # " and " # debug_show (b2.size()) # " bytes");
     self.process_leaf_block(b1, b2); // data block (b1 ++ b2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine the 32-byte states of two `Hasher`s: `self := SHA256(s1 ++ s2)` (a
@@ -145,7 +157,7 @@ module {
   /// ```
   public func combineState(self : Hasher, s1 : Hasher, s2 : Hasher) {
     self.process_merge_block(s1, s2); // data block (s1 ++ s2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine a `Hasher` state with a 32-byte `Blob`: `self := SHA256(s1 ++ b2)`
@@ -167,7 +179,7 @@ module {
   public func combineStateBlob32(self : Hasher, s1 : Hasher, b2 : Blob) {
     if (b2.size() != 32) Prim.trap("Hasher: combineStateBlob32 expects a 32-byte blob, got " # debug_show (b2.size()) # " bytes");
     self.process_state_blob_block(s1, b2); // data block (s1 ++ b2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Combine a 32-byte `Blob` with a `Hasher` state: `self := SHA256(b1 ++ s2)`
@@ -188,7 +200,7 @@ module {
   public func combineBlob32State(self : Hasher, b1 : Blob, s2 : Hasher) {
     if (b1.size() != 32) Prim.trap("Hasher: combineBlob32State expects a 32-byte blob, got " # debug_show (b1.size()) # " bytes");
     self.process_blob_state_block(b1, s2); // data block (b1 ++ s2) from the IV
-    self.process_padding_block(512); // padding: 64-byte message = 512 bits
+    self.process_padding_block_512(); // padding: 64-byte message = 512 bits
   };
 
   /// Load a 32-byte hash into `self` VERBATIM — no hashing. The inverse of
@@ -208,11 +220,22 @@ module {
   /// Traps if `data` is not exactly 32 bytes.
   public func loadBlob32(self : Hasher, data : Blob) {
     if (data.size() != 32) Prim.trap("Hasher: loadBlob32 expects a 32-byte blob, got " # debug_show (data.size()) # " bytes");
-    var i = 0;
-    while (i < 16) {
-      self[i] := nat8ToNat16(data[2 * i]) << 8 | nat8ToNat16(data[2 * i + 1]);
-      i += 1;
-    };
+    self[0] := nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]);
+    self[1] := nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]);
+    self[2] := nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]);
+    self[3] := nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]);
+    self[4] := nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]);
+    self[5] := nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]);
+    self[6] := nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]);
+    self[7] := nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]);
+    self[8] := nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]);
+    self[9] := nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]);
+    self[10] := nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]);
+    self[11] := nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]);
+    self[12] := nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]);
+    self[13] := nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]);
+    self[14] := nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]);
+    self[15] := nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]);
   };
 
   /// Copy the 32-byte state of `src` into `self` VERBATIM — no hashing. The
@@ -232,11 +255,84 @@ module {
   /// hasher.loadState(other); // hasher now holds the same hash as other
   /// ```
   public func loadState(self : Hasher, src : Hasher) {
-    var i = 0;
-    while (i < 16) {
-      self[i] := src[i];
-      i += 1;
-    };
+    self[0] := src[0];
+    self[1] := src[1];
+    self[2] := src[2];
+    self[3] := src[3];
+    self[4] := src[4];
+    self[5] := src[5];
+    self[6] := src[6];
+    self[7] := src[7];
+    self[8] := src[8];
+    self[9] := src[9];
+    self[10] := src[10];
+    self[11] := src[11];
+    self[12] := src[12];
+    self[13] := src[13];
+    self[14] := src[14];
+    self[15] := src[15];
+  };
+
+  /// Compare the current 32-byte digest with a `Blob`, without reading it out:
+  /// `true` iff `data` is exactly the 32 bytes of the state. Allocation-free,
+  /// unlike `readSum() == data`. A `Blob` of another length compares `false`.
+  ///
+  /// ```motoko include=import
+  /// let hasher = Hasher.new();
+  /// let leaf : Blob = "\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f";
+  /// hasher.loadBlob32(leaf);
+  /// assert hasher.equalsBlob32(leaf);
+  /// ```
+  public func equalsBlob32(self : Hasher, data : Blob) : Bool {
+    if (data.size() != 32) return false;
+    if (self[0] != (nat8ToNat16(data[0]) << 8 | nat8ToNat16(data[1]))) return false;
+    if (self[1] != (nat8ToNat16(data[2]) << 8 | nat8ToNat16(data[3]))) return false;
+    if (self[2] != (nat8ToNat16(data[4]) << 8 | nat8ToNat16(data[5]))) return false;
+    if (self[3] != (nat8ToNat16(data[6]) << 8 | nat8ToNat16(data[7]))) return false;
+    if (self[4] != (nat8ToNat16(data[8]) << 8 | nat8ToNat16(data[9]))) return false;
+    if (self[5] != (nat8ToNat16(data[10]) << 8 | nat8ToNat16(data[11]))) return false;
+    if (self[6] != (nat8ToNat16(data[12]) << 8 | nat8ToNat16(data[13]))) return false;
+    if (self[7] != (nat8ToNat16(data[14]) << 8 | nat8ToNat16(data[15]))) return false;
+    if (self[8] != (nat8ToNat16(data[16]) << 8 | nat8ToNat16(data[17]))) return false;
+    if (self[9] != (nat8ToNat16(data[18]) << 8 | nat8ToNat16(data[19]))) return false;
+    if (self[10] != (nat8ToNat16(data[20]) << 8 | nat8ToNat16(data[21]))) return false;
+    if (self[11] != (nat8ToNat16(data[22]) << 8 | nat8ToNat16(data[23]))) return false;
+    if (self[12] != (nat8ToNat16(data[24]) << 8 | nat8ToNat16(data[25]))) return false;
+    if (self[13] != (nat8ToNat16(data[26]) << 8 | nat8ToNat16(data[27]))) return false;
+    if (self[14] != (nat8ToNat16(data[28]) << 8 | nat8ToNat16(data[29]))) return false;
+    if (self[15] != (nat8ToNat16(data[30]) << 8 | nat8ToNat16(data[31]))) return false;
+    true;
+  };
+
+  /// Compare the states of two `Hasher`s: `true` iff they hold the same
+  /// 32-byte digest. Allocation-free. Used to detect the equal siblings that
+  /// Bitcoin's duplication rule produces and a mutated block would forge.
+  ///
+  /// ```motoko include=import
+  /// let a = Hasher.new();
+  /// let b = Hasher.new();
+  /// a.hashBlob32("\00\01\02\03\04\05\06\07\08\09\0a\0b\0c\0d\0e\0f\10\11\12\13\14\15\16\17\18\19\1a\1b\1c\1d\1e\1f");
+  /// b.loadState(a);
+  /// assert a.equalsState(b);
+  /// ```
+  public func equalsState(self : Hasher, other : Hasher) : Bool {
+    if (self[0] != other[0]) return false;
+    if (self[1] != other[1]) return false;
+    if (self[2] != other[2]) return false;
+    if (self[3] != other[3]) return false;
+    if (self[4] != other[4]) return false;
+    if (self[5] != other[5]) return false;
+    if (self[6] != other[6]) return false;
+    if (self[7] != other[7]) return false;
+    if (self[8] != other[8]) return false;
+    if (self[9] != other[9]) return false;
+    if (self[10] != other[10]) return false;
+    if (self[11] != other[11]) return false;
+    if (self[12] != other[12]) return false;
+    if (self[13] != other[13]) return false;
+    if (self[14] != other[14]) return false;
+    if (self[15] != other[15]) return false;
+    true;
   };
 
   /// Read the current 32-byte digest as a `Blob`. Non-mutating — the state is

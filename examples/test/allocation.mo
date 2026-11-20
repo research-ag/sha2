@@ -23,9 +23,14 @@ import MerkleStackState "../MerkleStackState";
 import MerkleCounter "../MerkleCounter";
 import MerkleCounterState "../MerkleCounterState";
 import BitcoinMerkle "../BitcoinMerkle";
+import BitcoinMutation "../BitcoinMutation";
 import BitcoinTxMerkle "../BitcoinTxMerkle";
 import BitcoinWitness "../BitcoinWitness";
+import BitcoinMerkleRight "../BitcoinMerkleRight";
 import NFold "../NFold";
+import BitcoinChunks "../BitcoinChunks";
+import BitcoinChunkProof "../BitcoinChunkProof";
+import BitcoinChunksForward "../BitcoinChunksForward";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
@@ -100,6 +105,14 @@ for (n in ns.values()) {
   let b = BitcoinMerkle.new(maxN, false);
   check("BitcoinMerkle.add" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinMerkle.add(b, leaves[j]); j += 1 } }), 0);
   check("BitcoinMerkle.root" # suffix, alloc(func() { ignore BitcoinMerkle.root(b) }), rootBytes);
+
+  // Example 8, the same tree from the right: the doubling during the build
+  // allocates as little as the merges, and the root is read from the last
+  // peak. Every leaf is loaded into a hasher, so a single leaf is read out
+  // like any other root.
+  let r = BitcoinMerkleRight.new(BitcoinMerkleRight.gapFor(n), n);
+  check("BitcoinMerkleRight.add" # suffix, alloc(func() { var j = n; while (j > 0) { j -= 1; BitcoinMerkleRight.add(r, leaves[j]) } }), 0);
+  check("BitcoinMerkleRight.root" # suffix, alloc(func() { ignore BitcoinMerkleRight.root(r) }), readout);
 };
 
 // --- Trees over raw messages (fed through an embedded Digest) ---
@@ -118,6 +131,23 @@ for (n in ns.values()) {
   let b = BitcoinTxMerkle.new(maxN, false);
   check("BitcoinTxMerkle.add" # suffix, alloc(func() { var j = 0; while (j < n) { BitcoinTxMerkle.add(b, msgs[j]); j += 1 } }), 0);
   check("BitcoinTxMerkle.root" # suffix, alloc(func() { ignore BitcoinTxMerkle.root(b) }), readout);
+};
+
+// The a-priori mutation test of the one-shot Bitcoin roots (CVE-2012-2459)
+// compares leaves in place: no allocation, whether it passes or finds the
+// last leaf repeated, on txids and raw transactions alike.
+for (n in ns.values()) {
+  let suffix = " (n = " # n.toText() # ")";
+  let txids = Array.tabulate<Blob>(n, func(j) = leaves[j]);
+  let txs = Array.tabulate<Blob>(n, func(j) = msgs[j]);
+  check("BitcoinMutation.mutated" # suffix, alloc(func() { assert not BitcoinMutation.mutated(txids) }), 0);
+  check("BitcoinMutation.mutated, raw" # suffix, alloc(func() { assert not BitcoinMutation.mutated(txs) }), 0);
+  let twice = Array.tabulate<Blob>(2 * n, func(j) = leaves[j % n]);
+  // the block twice: flagged exactly when n is a power of two (the last leaf n places back)
+  var p = 1;
+  while (p < n) p *= 2;
+  let expected = p == n;
+  check("BitcoinMutation.mutated, block twice" # suffix, alloc(func() { assert (BitcoinMutation.mutated(twice) == expected) }), 0);
 };
 
 // Incremental use: a second root after more leaves again allocates only the root.
@@ -196,4 +226,31 @@ do {
   // The batch reuses one Digest and one Hasher: one result Blob per message.
   let batch20 = Array.tabulate<Blob>(20, func(_) = bytes(50));
   check("nfoldBatch per message", alloc(func() { ignore NFold.nfoldBatch(batch20, 5) }) - b2, 10 * readout + arrayBytes(20) - arrayBytes(10));
+};
+
+// --- Example 9: chunked verification ---
+
+// Verifying a chunk of txids allocates nothing: the hashers are allocated once
+// by `new`, the uploader's peaks are loaded into them, the proof is kept by
+// reference, and the merges and comparisons work on hasher states.
+do {
+  let n = 1000;
+  let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
+  let root = BitcoinMerkle.bitcoinMerkleRoot(txids);
+  let bounds : [Nat] = [1, 2, 300, 617, 999, 1000];
+  let v = BitcoinChunks.new(root, 12);
+  let f = BitcoinChunksForward.new(root, 12);
+  var m = 0;
+  for (m2 in bounds.values()) {
+    let chunk = Array.tabulate<Blob>(m2 - m, func(i) = txids[m + i]);
+    let p = BitcoinChunkProof.proof(txids, m2);
+    check("BitcoinChunks.verifyChunk to " # m2.toText(), alloc(func() { assert v.verifyChunk(chunk, p) }), 0);
+    // Example 10, the forward way: also nothing, including the copy of the
+    // peaks that lets a rejected chunk be undone, and a rejected chunk itself.
+    let forged = Array.tabulate<Blob>(chunk.size(), func(i) = if (i == 0) leaves[0] else chunk[i]);
+    check("BitcoinChunksForward.verifyChunk rejected, to " # m2.toText(), alloc(func() { assert not f.verifyChunk(forged, p) }), 0);
+    check("BitcoinChunksForward.verifyChunk to " # m2.toText(), alloc(func() { assert f.verifyChunk(chunk, p) }), 0);
+    m := m2;
+  };
+  assert v.complete() and f.complete();
 };
