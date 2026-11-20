@@ -229,7 +229,7 @@ With a gap of 2 (n = 6), the first leaf rests at once (`count` = 3, `present` = 
 There is one doubling for every 1-bit of the gap, and all are done when `count` reaches the first power of two above the gap; from then on `present` equals `count` and the build is the plain mirror image of Example 5.
 
 Whenever `count` is a power of two, one peak is left and it is the root, read with no computation; the tree can then keep growing to the left.
-That root is Bitcoin's root of the leaves added so far exactly when the gap is less than half of the places (`rootIsBitcoin`).
+That root is Bitcoin's root of the leaves added so far exactly when the gap is less than half of the places; the tree does not keep the gap, so that is for the caller to know.
 With a larger gap the tree is deeper than Bitcoin would make it: one leaf and a gap of 3 give the leaf doubled twice, where Bitcoin's root of one transaction is the txid itself.
 At other values of `count` there is no root, because the missing leaves are on the left and nothing can stand in for them.
 

@@ -57,15 +57,17 @@
 /// === The root ===
 ///
 /// Whenever `count` is a power of two, 2^n, one peak is left: the root of the
-/// tree with 2^n places, of which `count - gap` hold leaves. It is read off
+/// tree with 2^n places, of which all but the gap hold leaves. It is read off
 /// with no computation, and the tree can go on growing to the left: the root
 /// then simply waits as a right child.
 ///
 /// That root is BITCOIN'S root of the leaves added so far exactly when the gap
-/// is less than half of the places (`rootIsBitcoin`). With a larger gap the
+/// is less than half of the places, 2 * gap < `count`. With a larger gap the
 /// tree is deeper than Bitcoin would make it: one leaf and a gap of 3 give
 /// the leaf doubled twice, where Bitcoin's root of a single transaction is
-/// the txid itself.
+/// the txid itself. The caller chose the gap and is the one to know; the tree
+/// does not keep it. With `gapFor(n)` and n leaves the root is always
+/// Bitcoin's.
 ///
 /// At other values of `count` there is no root: the leaves still to come are
 /// on the left, and nothing can stand in for them.
@@ -104,14 +106,14 @@ import Runtime "mo:core/Runtime";
 import VarArray "mo:core/VarArray";
 
 module {
-  /// The state of the build: the height-indexed slots, the gap, the counter
-  /// (`count`: leaf places used, the gap included — its bits claim the peaks),
-  /// the peaks that really exist (`present`: bit k for slot k, bit 0 for the
-  /// pending leaf) and the pending leaf. A static record — it can be declared
-  /// `stable`.
+  /// The state of the build: the height-indexed slots, the counter (`count`:
+  /// leaf places used, the gap included — its bits claim the peaks), the peaks
+  /// that really exist (`present`: bit k for slot k, bit 0 for the pending
+  /// leaf) and the pending leaf. The state of Example 5 plus `present`; the
+  /// gap is not kept, it is only where `count` starts. A static record — it
+  /// can be declared `stable`.
   public type Mmr = {
     hasher : [var Hasher.Hasher];
-    gap : Nat64;
     var count : Nat64;
     var present : Nat64;
     var pending : ?Blob;
@@ -134,11 +136,9 @@ module {
     var l = 0;
     var pow = 1;
     while (pow * 2 <= gap + maxLeaves) { pow *= 2; l += 1 }; // l = floor(log2 (gap + maxLeaves))
-    let g = gap.toNat64();
     {
       hasher = VarArray.tabulate<Hasher.Hasher>(l + 1, func(_) { Hasher.new() });
-      gap = g;
-      var count = g;
+      var count = gap.toNat64(); // the counter starts at the gap
       var present = 0;
       var pending = null;
     };
@@ -197,9 +197,6 @@ module {
     self.present := present | (1 << k);
   };
 
-  /// The number of leaves added so far.
-  public func leaves(self : Mmr) : Nat = (self.count - self.gap).toNat();
-
   /// Whether a root can be read: at least one leaf has been added and the
   /// places used, the gap included, are a power of two. Exactly then a single
   /// peak is left.
@@ -207,16 +204,12 @@ module {
     self.present == self.count and Nat64.bitcountNonZero(self.count) == 1;
   };
 
-  /// Whether the root that can be read now is Bitcoin's Merkle root of the
-  /// leaves added so far: `hasRoot`, and the gap is less than half of the
-  /// places.
-  public func rootIsBitcoin(self : Mmr) : Bool = hasRoot(self) and 2 * self.gap < self.count;
-
   /// The root of the tree as it stands: the one peak that is left. Nothing is
   /// computed, and the tree is left unchanged — keep adding leaves and read
   /// the next root when `hasRoot` holds again. Allocation-free except the
-  /// returned root `Blob`. Traps unless `hasRoot`. See `rootIsBitcoin` for
-  /// whether it is Bitcoin's root.
+  /// returned root `Blob`. Traps unless `hasRoot`. It is Bitcoin's root of the
+  /// leaves added so far if the gap given to `new` is less than half of
+  /// `count`.
   public func root(self : Mmr) : Blob {
     if (not hasRoot(self)) Runtime.trap("BitcoinMerkleRight: no root unless the places used, gap included, are a power of two");
     switch (self.pending) {

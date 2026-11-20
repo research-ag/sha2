@@ -343,13 +343,11 @@ do {
       BitcoinMerkleRight.add(mmr, added[i]);
       let count = gap + i + 1 : Nat;
       assert (mmr.count == count.toNat64());
-      assert (BitcoinMerkleRight.leaves(mmr) == i + 1);
       assert ((mmr.present == mmr.count) == (count >= caughtUpAt));
       var depth = 0;
       while (2 ** depth < count) depth += 1;
       let powerOfTwo = 2 ** depth == count;
       assert (BitcoinMerkleRight.hasRoot(mmr) == powerOfTwo);
-      assert (BitcoinMerkleRight.rootIsBitcoin(mmr) == (powerOfTwo and 2 * gap < count));
       if (powerOfTwo) {
         let leaves = Array.tabulate<Blob>(i + 1, func(j) = added[i - j]); // in block order
         let root = BitcoinMerkleRight.root(mmr);
@@ -382,7 +380,7 @@ do {
   let five = BitcoinMerkleRight.new(3, 5);
   BitcoinMerkleRight.add(five, t[4]);
   assert (five.count == 4 and five.present == 4);
-  assert (BitcoinMerkleRight.root(five) == refPadded([t[4]], 2) and not BitcoinMerkleRight.rootIsBitcoin(five));
+  assert (BitcoinMerkleRight.root(five) == refPadded([t[4]], 2)); // the leaf doubled twice: not Bitcoin's root of one
   let six = BitcoinMerkleRight.new(2, 6);
   BitcoinMerkleRight.add(six, t[5]);
   assert (six.count == 3 and six.present == 1);
