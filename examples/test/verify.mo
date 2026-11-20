@@ -13,6 +13,7 @@ import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
 import BitcoinChunkProof "../BitcoinChunkProof";
 import BitcoinChunksForward "../BitcoinChunksForward";
+import BitcoinChunksForwardPlain "../BitcoinChunksForwardPlain";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
@@ -672,6 +673,121 @@ do {
   let l = BitcoinChunksForward.new(refBitcoin(eight), 12);
   assert (l.verifyChunk(slice(level1, 0, 2), BitcoinChunkProof.proof(level1, 2)));
   assert (l.verifyChunk(slice(level1, 2, 4), []) and l.complete() and l.mmr.count == 4);
+};
+
+// --- Example 11: the forward way without the pending leaf ---
+// The same battery as for Example 10, on the self-contained verifier that
+// loads every leaf into a hasher.
+for (n in ([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 16, 17, 23, 31, 32, 33, 64, 100, 257] : [Nat]).values()) {
+  let txids = Array.tabulate<Blob>(n, func(_) = bytes(32));
+  let root = refBitcoin(txids);
+  for (step in ([1, 2, 3, 5, 8, 1000] : [Nat]).values()) {
+    let v = BitcoinChunksForwardPlain.new(root, 12);
+    var m = 0;
+    var s = step;
+    while (m < n) {
+      let m2 = if (m + s >= n) n else m + s;
+      s := 1 + (s * 7 + m) % (2 * step); // vary the chunk length
+      let p = BitcoinChunkProof.proof(txids, m2);
+      // rejections first; the verifier must stay at m
+      assert (not v.verifyChunk(slice(txids, m, m2), p.concat([txids[n - 1]]))); // a peak Bitcoin would duplicate, or junk
+      if (p.size() > 0) {
+        assert (not v.verifyChunk(slice(txids, m, m2), slice(p, 1, p.size()))); // dropped peak
+        assert (not v.verifyChunk(slice(txids, m, m2), Array.tabulate<Blob>(p.size(), func(i) = if (i == 0) flip(p[0]) else p[i])));
+      };
+      let forged = Array.tabulate<Blob>(m2 - m, func(i) = if (i == 0) flip(txids[m]) else txids[m + i]);
+      assert (not v.verifyChunk(forged, p));
+      assert (v.count == Nat.toNat64(m));
+      // the honest chunk
+      assert (v.verifyChunk(slice(txids, m, m2), p));
+      assert (v.count == Nat.toNat64(m2));
+      assert (v.complete() == (m2 == n));
+      m := m2;
+    };
+    assert (v.complete());
+    assert (not v.verifyChunk([txids[0]], [])); // nothing after completion
+  };
+  // the whole block at once, and the mutated block: the last txid uploaded twice
+  let w = BitcoinChunksForwardPlain.new(root, 12);
+  assert (not w.verifyChunk(txids.concat([txids[n - 1]]), []));
+  assert (w.count == 0);
+  assert (w.verifyChunk(txids, []) and w.complete());
+  // wrong root
+  let bad = BitcoinChunksForwardPlain.new(flip(root), 12);
+  assert (not bad.verifyChunk(txids, []));
+  // a prefix is not the whole block
+  if (n > 1) {
+    let u = BitcoinChunksForwardPlain.new(root, 12);
+    assert (not u.verifyChunk(slice(txids, 0, n - 1), []));
+  };
+  // malformed input is rejected, not trapped on
+  let z = BitcoinChunksForwardPlain.new(root, 12);
+  assert (not z.verifyChunk(Array.tabulate<Blob>(n, func(i) = if (i == 0) bytes(31) else txids[i]), []));
+  assert (not z.verifyChunk(txids, [bytes(33)]));
+  // a block deeper than the capacity is rejected
+  var depth = 0;
+  while (2 ** depth < n) depth += 1;
+  let fits = BitcoinChunksForwardPlain.new(root, depth);
+  assert (fits.verifyChunk(txids, []) and fits.complete());
+  if (depth > 0) {
+    let small = BitcoinChunksForwardPlain.new(root, depth - 1 : Nat);
+    assert (not small.verifyChunk(txids, []));
+  };
+  // every same-root mutation is rejected, in one chunk and split anywhere
+  var width = 1;
+  while (width < n) {
+    if (n % (2 * width) == width) {
+      let mutated = txids.concat(slice(txids, n - width, n));
+      assert (refBitcoin(mutated) == root);
+      for (cut in ([mutated.size(), n, n - width, 1] : [Nat]).values()) {
+        let f = BitcoinChunksForwardPlain.new(root, 12);
+        if (cut == mutated.size()) {
+          assert (not f.verifyChunk(mutated, []));
+        } else {
+          let p = BitcoinChunkProof.proof(mutated, cut);
+          assert (not (f.verifyChunk(slice(mutated, 0, cut), p) and f.verifyChunk(slice(mutated, cut, mutated.size()), [])));
+        };
+      };
+    };
+    width *= 2;
+  };
+};
+
+// The three places where equal siblings are caught, with the cases of Example
+// 10: the last leaf against the first peak of the proof is now a case of (3).
+do {
+  let t = Array.tabulate<Blob>(6, func(_) = bytes(32));
+  let (a, b, c, d) = (t[0], t[1], t[2], t[3]);
+  func h(x : Blob, y : Blob) : Blob = refBitcoin([x, y]);
+  func rejects(list : [Blob], chunk : [Blob], proof : [Blob]) : Bool {
+    let v = BitcoinChunksForwardPlain.new(refBitcoin(list), 12);
+    not v.verifyChunk(chunk, proof) and v.count == 0;
+  };
+  // (1) in add: two equal leaves, and two equal nodes one level up
+  assert (rejects([a, a, b, c], [a, a, b, c], []));
+  assert (rejects([a, b, a, b, c, d], [a, b, a, b, c, d], []));
+  // (2) closing, against a peak of the tree: [a,b,a] + [b] meets H(a,b) twice
+  assert (rejects([a, b, a, b], [a, b, a], [b]));
+  // (3) closing, against a peak of the proof: at the lowest peak, and higher up
+  assert (rejects([a, b, a, b], [a, b], [h(a, b)]));
+  assert (rejects([a, b, c, d, a, b, c, d], [a, b, c], [d, h(h(a, b), h(c, d))]));
+  // (3) again: the last leaf, now the lowest peak, against the first peak of the proof
+  assert (rejects([a, a], [a], [a]));
+  // An honest block of five: the proof may not name the copy of the fifth
+  // leaf, and one of six may not name the copy of its last pair (both 3).
+  let five = slice(t, 0, 5);
+  let v5 = BitcoinChunksForwardPlain.new(refBitcoin(five), 12);
+  assert (not v5.verifyChunk(five, [t[4]]));
+  assert (v5.verifyChunk(five, []) and v5.complete());
+  let v6 = BitcoinChunksForwardPlain.new(refBitcoin(t), 12);
+  assert (not v6.verifyChunk(t, [h(t[4], t[5])]));
+  assert (v6.verifyChunk(t, []) and v6.complete());
+  // The known limit holds here as well: a whole level verifies as a shorter block.
+  let eight = Array.tabulate<Blob>(8, func(_) = bytes(32));
+  let level1 = Array.tabulate<Blob>(4, func(i) = h(eight[2 * i], eight[2 * i + 1]));
+  let l = BitcoinChunksForwardPlain.new(refBitcoin(eight), 12);
+  assert (l.verifyChunk(slice(level1, 0, 2), BitcoinChunkProof.proof(level1, 2)));
+  assert (l.verifyChunk(slice(level1, 2, 4), []) and l.complete() and l.count == 4);
 };
 
 // --- Mutated blocks (Examples 5, 6 and 8): `BitcoinMutation.mutated` ---
