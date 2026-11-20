@@ -31,7 +31,6 @@ import NFold "../NFold";
 import BitcoinChunks "../BitcoinChunks";
 import BitcoinChunkProof "../BitcoinChunkProof";
 import BitcoinChunksForward "../BitcoinChunksForward";
-import BitcoinChunksForwardPlain "../BitcoinChunksForwardPlain";
 import Hasher "mo:sha2/Hasher/Sha256";
 import Sha256 "mo:sha2/Sha256";
 import Array "mo:core/Array";
@@ -241,7 +240,6 @@ do {
   let bounds : [Nat] = [1, 2, 300, 617, 999, 1000];
   let v = BitcoinChunks.new(root, 12);
   let f = BitcoinChunksForward.new(root, 12);
-  let g = BitcoinChunksForwardPlain.new(root, 12);
   var m = 0;
   for (m2 in bounds.values()) {
     let chunk = Array.tabulate<Blob>(m2 - m, func(i) = txids[m + i]);
@@ -252,10 +250,7 @@ do {
     let forged = Array.tabulate<Blob>(chunk.size(), func(i) = if (i == 0) leaves[0] else chunk[i]);
     check("BitcoinChunksForward.verifyChunk rejected, to " # m2.toText(), alloc(func() { assert not f.verifyChunk(forged, p) }), 0);
     check("BitcoinChunksForward.verifyChunk to " # m2.toText(), alloc(func() { assert f.verifyChunk(chunk, p) }), 0);
-    // Example 11, the same without the pending leaf.
-    check("BitcoinChunksForwardPlain.verifyChunk rejected, to " # m2.toText(), alloc(func() { assert not g.verifyChunk(forged, p) }), 0);
-    check("BitcoinChunksForwardPlain.verifyChunk to " # m2.toText(), alloc(func() { assert g.verifyChunk(chunk, p) }), 0);
     m := m2;
   };
-  assert v.complete() and f.complete() and g.complete();
+  assert v.complete() and f.complete();
 };

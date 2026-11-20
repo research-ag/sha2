@@ -1,7 +1,6 @@
-/// The PROVER for the chunked verification of `BitcoinChunks.mo`,
-/// `BitcoinChunksForward.mo` and `BitcoinChunksForwardPlain.mo` (Examples 9
-/// to 11): the uploader's side, run off-chain over the whole block. All three
-/// verifiers take the same proofs.
+/// The PROVER for the chunked verification of `BitcoinChunks.mo` and
+/// `BitcoinChunksForward.mo` (Examples 9 and 10): the uploader's side, run
+/// off-chain over the whole block. Both verifiers take the same proofs.
 ///
 /// A proof is a set of peaks. Build the block's tree from the right, as
 /// `BitcoinMerkleRight.mo` (Example 8) does, and stop when the leaves from m

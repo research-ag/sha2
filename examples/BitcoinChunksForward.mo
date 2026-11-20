@@ -1,19 +1,35 @@
 /// Example 10: CHUNKED verification of a Bitcoin block's transactions against
 /// the block header's Merkle root — the same task as `BitcoinChunks.mo`
-/// (Example 9), done the FORWARD way: the tree of `BitcoinMerkle.mo` (Example
-/// 5) is grown from the left as the chunks arrive, and each chunk is checked
-/// by closing that tree with the uploader's proof and comparing with the root.
+/// (Example 9), done the FORWARD way: a tree is grown from the left as the
+/// chunks arrive, and each chunk is checked by closing that tree with the
+/// uploader's proof and comparing with the root. One self-contained file: it
+/// imports no other example.
+///
+/// === The tree ===
+///
+/// The binary counter of Example 5 (`BitcoinMerkle.mo`): slot k holds the
+/// peak of height k, and the 1-bits of the leaf count say which slots are
+/// occupied. A new leaf climbs through the trailing 1-bits of the count,
+/// merging with the peak it finds at each, `dSHA(peak ++ node)`, and comes to
+/// rest at the first 0-bit.
+///
+/// Unlike Example 5, every leaf is loaded into a `Hasher` when it is added
+/// (`loadBlob32`), and from there on it is a node like any other. Example 5
+/// lets a leaf without a partner wait as a `Blob` and fuses two leaves
+/// straight from their Blobs, which is about 1.7% cheaper for this verifier
+/// but needs a case of its own for the waiting leaf in `add`, in closing the
+/// tree, in the checks for equal siblings and in undoing a chunk. Here the
+/// rising node lives in a spare hasher, the last of the pool; where it comes
+/// to rest, the hasher that was in that slot becomes the spare.
 ///
 /// === The check ===
 ///
-/// The verifier keeps the tree of Example 5 over the leaves accepted so far:
-/// a few peaks, as many as the leaf count has 1-bits. A chunk brings the next
-/// leaves and the uploader's proof for the leaves that are still to come: the
-/// peaks to the right of the chunk's last leaf, lowest first. The proofs are
-/// those of Example 9, and `BitcoinChunkProof.mo` computes them for both. The
-/// verifier then
+/// A chunk brings the next leaves and the uploader's proof for the leaves that
+/// are still to come: the peaks to the right of the chunk's last leaf, lowest
+/// first. The proofs are those of Example 9, and `BitcoinChunkProof.mo`
+/// computes them for both. The verifier then
 ///
-///   1. adds the leaves of the chunk to its tree, as Example 5 does,
+///   1. adds the leaves of the chunk to its tree,
 ///   2. closes the tree: it computes the root from its own peaks on the left
 ///      and the proof's peaks on the right,
 ///   3. compares that with the block's root,
@@ -32,30 +48,27 @@
 ///   - else nothing: it is the last node of its level, in the gap after the
 ///     last leaf, and Bitcoin pairs it with itself.
 ///
-/// As in Example 5 the node in hand lives in slot 0, which is free, so the
-/// peaks of the tree are only read and the tree goes on growing afterwards.
-/// The peaks of the proof are combined straight from their Blobs
-/// (`combineStateBlob32`), without being loaded anywhere.
+/// The node in hand lives in the spare hasher, so the peaks of the tree are
+/// only read and the tree goes on growing afterwards. The peaks of the proof
+/// are combined straight from their Blobs (`combineStateBlob32`), without
+/// being loaded anywhere.
 ///
 /// === Equal siblings ===
 ///
 /// A valid block never has two sibling subtrees that hash alike (that would
 /// be a repeated transaction, which consensus forbids, or a collision). The
-/// verifier rejects a chunk on any such pair, in all four places where two
+/// verifier rejects a chunk on any such pair, in the three places where two
 /// siblings are combined:
 ///
 ///   1. in `add`, where two nodes of the tree are merged,
 ///   2. in closing, where the node in hand meets a peak of the tree,
-///   3. in closing, where it meets a peak of the proof,
-///   4. in closing, where the last leaf itself meets the first peak of the
-///      proof.
+///   3. in closing, where it meets a peak of the proof.
 ///
 /// Nothing valid is rejected, and it buys what it buys in Example 9: a proof
 /// may not contain a peak that Bitcoin's rule would duplicate, so proofs are
 /// minimal and the LAST chunk is recognised by an EMPTY proof; and a mutated
 /// block — a tail of the block uploaded twice, CVE-2012-2459 — is rejected
-/// where the copy meets its original. The shared tree code of Example 5
-/// (`CounterBase.mo`) has no such check, so this example has its own `add`.
+/// where the copy meets its original.
 ///
 /// Fewer checks would do for these two purposes. A mutated block has its
 /// equal pair on the right edge of the finished tree, and a peak that
@@ -65,7 +78,7 @@
 ///   - (1) for the last leaf of the last chunk only, the one that comes with
 ///     an empty proof,
 ///   - (2) only when closing with an empty proof,
-///   - (3) and (4) only for the highest peak of the proof.
+///   - (3) only for the highest peak of the proof.
 ///
 /// The checks at all other merges reject a block that repeats a transaction
 /// elsewhere, which no other list shares its root with. They are kept: they
@@ -87,11 +100,12 @@
 /// === Cost ===
 ///
 /// One node is hashed per leaf, as for building the tree once, plus one per
-/// level for closing the tree, per chunk. Verification allocates nothing.
-/// Txids, proofs and the root are in Bitcoin's INTERNAL byte order.
+/// level for closing the tree, per chunk. That last part is what Example 9
+/// does not pay, so for many small chunks Example 9 is the cheaper one.
+/// Verification allocates nothing. Txids, proofs and the root are in
+/// Bitcoin's INTERNAL byte order.
 
 import Hasher "mo:sha2/Hasher/Sha256";
-import BitcoinMerkle "BitcoinMerkle";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import VarArray "mo:core/VarArray";
@@ -101,31 +115,34 @@ module {
   public type Verifier = {
     /// The block's Merkle root.
     root : Blob;
-    /// The tree of Example 5 over the leaves accepted so far; `mmr.count` is
-    /// their number.
-    mmr : BitcoinMerkle.Mmr;
+    /// The tree over the leaves accepted so far: slot k is the peak of height
+    /// k, the last slot is the spare.
+    hasher : [var Hasher.Hasher];
     /// Room to copy the peaks aside while a chunk is being checked.
     backup : [var Hasher.Hasher];
+    /// The number of leaves accepted so far; its 1-bits are the peaks.
+    var count : Nat64;
     /// Whether the last chunk has been accepted.
     var done : Bool;
   };
 
   /// A verifier for the block with Merkle root `root` (32 bytes, internal byte
   /// order), for blocks of at most 2^maxDepth transactions. Allocates
-  /// `2 * (maxDepth + 1)` hashers.
+  /// `2 * maxDepth + 3` hashers: the slots 0 to maxDepth, the spare, and room
+  /// to copy the slots aside.
   public func new(root : Blob, maxDepth : Nat) : Verifier {
     assert root.size() == 32 and maxDepth <= 62;
-    let mmr = BitcoinMerkle.new(2 ** maxDepth, false);
     {
       root;
-      mmr;
-      backup = VarArray.tabulate<Hasher.Hasher>(mmr.hasher.size(), func(_) { Hasher.new() });
+      hasher = VarArray.tabulate<Hasher.Hasher>(maxDepth + 2, func(_) { Hasher.new() });
+      backup = VarArray.tabulate<Hasher.Hasher>(maxDepth + 1, func(_) { Hasher.new() });
+      var count = 0;
       var done = false;
     };
   };
 
   /// Whether the upload is complete: the last accepted chunk came with an
-  /// empty proof, so no leaf can follow, and `mmr.count` is N, the block's
+  /// empty proof, so no leaf can follow, and `count` is N, the block's
   /// transaction count. (That the leaves are transaction ids is taken for
   /// granted here, as in Example 9.)
   public func complete(self : Verifier) : Bool = self.done;
@@ -139,78 +156,57 @@ module {
     true;
   };
 
-  // `add` of Example 5 (`CounterBase.add` with double SHA256), with the check
-  // for equal siblings: false if two equal siblings would be merged, or if
-  // the capacity is exceeded. The tree is then left half-updated; the caller
-  // restores it.
-  func addChecked(self : BitcoinMerkle.Mmr, leaf : Blob) : Bool {
+  // Add a leaf to the tree. False if two equal siblings would be merged, or
+  // if the tree has no room for the leaf. The tree is then left half-updated;
+  // the caller restores it.
+  func add(self : Verifier, leaf : Blob) : Bool {
     let hasher = self.hasher;
-    switch (self.pending) {
-      case (null) { self.pending := ?leaf }; // hold this leaf; pair it with the next
-      case (?leaf0) {
-        self.pending := null;
-        if (leaf0 == leaf) return false; // equal siblings (1)
-        hasher[0].combineBlob32(leaf0, leaf);
-        hasher[0].hashState(hasher[0]);
-        var k : Nat64 = 1;
-        while (((self.count >> k) & 1) == 1) {
-          let kk = k.toNat();
-          if (hasher[kk].equalsState(hasher[kk - 1])) return false; // equal siblings (1)
-          hasher[kk].combineState(hasher[kk], hasher[kk - 1]);
-          hasher[kk].hashState(hasher[kk]);
-          k += 1;
-        };
-        let kk = k.toNat();
-        if (kk >= hasher.size()) return false; // more leaves than the tree has room for
-        let tmp = hasher[kk];
-        hasher[kk] := hasher[kk - 1];
-        hasher[kk - 1] := tmp;
-      };
+    let spare = hasher.size() - 1 : Nat;
+    let node = hasher[spare]; // the rising node
+    node.loadBlob32(leaf);
+    let count = self.count;
+    // Carry: the node climbs through the trailing 1-bits of the count.
+    var k : Nat64 = 0;
+    while (((count >> k) & 1) == 1) {
+      let peak = hasher[k.toNat()];
+      if (peak.equalsState(node)) return false; // equal siblings (1)
+      node.combineState(peak, node); // dSHA(peak ++ node)
+      node.hashState(node); // -> double SHA
+      k += 1;
     };
-    self.count += 1;
+    // The node rests in slot k, and the hasher that was there is the spare.
+    let kk = k.toNat();
+    if (kk >= spare) return false; // more leaves than the tree has room for
+    hasher[spare] := hasher[kk];
+    hasher[kk] := node;
+    self.count := count + 1;
     true;
   };
 
   // Close the tree with `proof`, the peaks to the right of its last leaf, and
-  // compare with `root`. Only reads the peaks of the tree: slot 0 holds the
-  // node in hand. False on equal siblings, on a tree deeper than the capacity,
-  // and on a different root.
-  func closes(mmr : BitcoinMerkle.Mmr, proof : [Blob], root : Blob) : Bool {
-    let hasher = mmr.hasher;
-    let count = mmr.count;
-    let maxDepth = (hasher.size() - 1 : Nat).toNat64();
-    let acc = hasher[0];
+  // compare with the root. Works in the spare hasher and only reads the
+  // peaks. False on equal siblings, on a tree deeper than the capacity, and
+  // on a different root.
+  func closes(self : Verifier, proof : [Blob]) : Bool {
+    let hasher = self.hasher;
+    let count = self.count;
+    let maxDepth = (hasher.size() - 2 : Nat).toNat64();
+    let acc = hasher[hasher.size() - 1]; // the node in hand
     var i = 0; // the next peak of the proof
-    var k : Nat64 = 1; // the height of the node in hand
-    switch (mmr.pending) {
-      case (?leaf) {
-        // The last leaf is a left child: its right sibling is the first peak
-        // of the proof, or, if there is none, the leaf itself.
-        if (i < proof.size()) {
-          if (leaf == proof[i]) return false; // equal siblings (4)
-          acc.combineBlob32(leaf, proof[i]);
-          i += 1;
-        } else {
-          if (count == 1) return leaf == root; // a block of one: the txid is the root
-          acc.combineBlob32(leaf, leaf);
-        };
-      };
-      case (null) {
-        // The lowest peak is a left child, likewise.
-        k := Nat64.bitcountTrailingZero(count);
-        let lowest = hasher[k.toNat()];
-        if (i < proof.size()) {
-          if (lowest.equalsBlob32(proof[i])) return false; // equal siblings (3)
-          acc.combineStateBlob32(lowest, proof[i]);
-          i += 1;
-        } else {
-          if (Nat64.bitcountNonZero(count) == 1) return lowest.equalsBlob32(root); // a single peak is the root
-          acc.combineState(lowest, lowest);
-        };
-        k += 1;
-      };
+    // The lowest peak is a left child: its right sibling is the first peak of
+    // the proof, or, if there is none, the peak itself.
+    var k = Nat64.bitcountTrailingZero(count);
+    let lowest = hasher[k.toNat()];
+    if (i < proof.size()) {
+      if (lowest.equalsBlob32(proof[i])) return false; // equal siblings (3)
+      acc.combineStateBlob32(lowest, proof[i]);
+      i += 1;
+    } else {
+      if (Nat64.bitcountNonZero(count) == 1) return lowest.equalsBlob32(self.root); // a single peak is the root
+      acc.combineState(lowest, lowest);
     };
     acc.hashState(acc); // -> double SHA
+    k += 1;
     // Upward: a peak of the tree on the left, else a peak of the proof on the
     // right, else, in the gap, the node itself.
     while ((count >> k) > 0 or i < proof.size()) {
@@ -229,13 +225,13 @@ module {
       acc.hashState(acc); // -> double SHA
       k += 1;
     };
-    k <= maxDepth and acc.equalsBlob32(root);
+    k <= maxDepth and acc.equalsBlob32(self.root);
   };
 
   // Copy the peaks that a tree of `count` leaves holds from one pool to the
-  // other: the slots at the 1-bits of the count above bit 0.
+  // other: the slots at the 1-bits of the count.
   func copyPeaks(from : [var Hasher.Hasher], to : [var Hasher.Hasher], count : Nat64) {
-    var bits = count & ^1;
+    var bits = count;
     while (bits != 0) {
       let k = Nat64.bitcountTrailingZero(bits).toNat();
       to[k].loadState(from[k]);
@@ -245,36 +241,32 @@ module {
 
   /// Verify the next chunk of txids (32 bytes each, internal byte order) with
   /// the uploader's proof `next` for the leaves after the chunk (see
-  /// `BitcoinChunkProof.mo`),
-  /// and accept it if it checks out: `true` and the verifier advances;
-  /// otherwise `false` and the verifier is unchanged. An empty `next` claims
-  /// that the chunk is the last one. Allocation-free.
+  /// `BitcoinChunkProof.mo`), and accept it if it checks out: `true` and the
+  /// verifier advances; otherwise `false` and the verifier is unchanged. An
+  /// empty `next` claims that the chunk is the last one. Allocation-free.
   public func verifyChunk(self : Verifier, txids : [Blob], next : [Blob]) : Bool {
     if (self.done or txids.size() == 0 or not wellFormed(txids) or not wellFormed(next)) return false;
-    let mmr = self.mmr;
-    // To be able to undo: the peaks, the count and the pending leaf.
-    let count = mmr.count;
-    let pending = mmr.pending;
-    copyPeaks(mmr.hasher, self.backup, count);
+    // To be able to undo: the peaks and the count.
+    let count = self.count;
+    copyPeaks(self.hasher, self.backup, count);
     // 1. Add the chunk.
     var ok = true;
     var j = 0;
     label adding while (j < txids.size()) {
-      if (not mmr.addChecked(txids[j])) {
+      if (not self.add(txids[j])) {
         ok := false;
         break adding;
       };
       j += 1;
     };
     // 2. and 3. Close the tree with the proof and compare with the root.
-    if (ok and closes(mmr, next, self.root)) {
+    if (ok and self.closes(next)) {
       // 4. Keep the grown tree.
       self.done := next.size() == 0;
       return true;
     };
-    copyPeaks(self.backup, mmr.hasher, count);
-    mmr.count := count;
-    mmr.pending := pending;
+    copyPeaks(self.backup, self.hasher, count);
+    self.count := count;
     false;
   };
 };
