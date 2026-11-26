@@ -1,10 +1,10 @@
 [dependencies]
 sha2 = "../src/"
 # Replace with:
-# sha2 = "0.3.3"
-core = "2.7.0"
+# sha2 = "0.3.4"
+core = "2.7.1"
 prng = "0.3.1"
 
 [toolchain]
-moc = "2.2.3"
+moc = "2.2.5"
 wasmtime = "50.0.2"

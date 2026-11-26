@@ -390,30 +390,30 @@ mops bench
 or look at the [benchmarks on mops](https://mops.one/sha2/benchmarks).
 The benchmarks cover every convenience function over message lengths from 0 bytes to 1 MB, the cost of each step of the `Digest` lifecycle, the `Hasher` operations against the equivalent `Digest` calls, and a Merkle build.
 
-For orientation, measured with moc 2.2.3 and wasm-opt on the 0.3.3 code:
+For orientation, measured with moc 2.2.5 and wasm-opt on the 0.3.4 code:
 
-| Operation                  |       Sha256 |       Sha512 |
-| -------------------------- | -----------: | -----------: |
-| `fromBlob`, empty message  |       12,100 |       12,900 |
-| `fromBlob`, one block      |       31,000 |       42,000 |
-| `fromBlob`, 1 MB           |  171,000,000 |   95,000,000 |
-| per byte of a long message |          170 |           90 |
-| `new()`                    |        1,500 |        1,400 |
-| `reset()`                  |          700 |          700 |
-| `close()`                  | 8,500–10,100 | 7,700–13,200 |
-| `readSum()`                |        2,300 |        3,700 |
+| Operation                  |      Sha256 |       Sha512 |
+| -------------------------- | ----------: | -----------: |
+| `fromBlob`, empty message  |      11,800 |       12,600 |
+| `fromBlob`, one block      |      30,400 |       41,300 |
+| `fromBlob`, 1 MB           | 167,000,000 |   92,500,000 |
+| per byte of a long message |         170 |           90 |
+| `new()`                    |       1,500 |        1,400 |
+| `reset()`                  |         700 |          700 |
+| `close()`                  | 8,200–9,800 | 7,400–12,800 |
+| `readSum()`                |       2,300 |        3,700 |
 
 The ranges for `close()` span a message ending on a block boundary (cheaper) and one ending mid-block.
 Hashing from an array costs about the same as from a `Blob`.
-The accessor, reader and iterator inputs cost 16%, 52% and 92% more per byte for Sha256, because every byte goes through a function call; the figures for Sha512 are similar.
+The accessor, reader and iterator inputs cost 16%, 53% and 94% more per byte for Sha256, because every byte goes through a function call. For Sha512, whose own cost per byte is about half, they cost 28%, 94% and 171% more.
 
 The `Hasher` against the same hashes computed through a reused `Digest` (`reset`, `writeBlob`, `close`):
 
 | Operation                        | `Hasher` | `Digest` |
 | -------------------------------- | -------: | -------: |
-| hash of one 32-byte value        |    9,500 |   15,200 |
-| combine of two 32-byte values    |   15,200 |   26,800 |
-| double hash of one 32-byte value |   17,800 |   23,600 |
+| hash of one 32-byte value        |    9,200 |   14,800 |
+| combine of two 32-byte values    |   14,600 |   26,200 |
+| double hash of one 32-byte value |   17,300 |   23,000 |
 
 A combine is two compressions (the data block and the constant padding block), a single hash one compression; the `Digest` adds its buffer handling on top.
 
