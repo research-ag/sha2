@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Changed:
-  - The compression rounds compute Ch and Maj with three bitwise operations each instead of four and five. Measured with moc 2.2.3 and wasm-opt: SHA-256 hashing costs 2.4% fewer instructions per block, SHA-512 hashing 2.7%, and the `Hasher` operations 2.9% to 3.6%. Results and allocation are unchanged.
+  - The compression rounds compute Ch and Maj with three bitwise operations each instead of four and five; Maj needs one more XOR per block to start its chain. Measured with moc 2.2.3 and wasm-opt: SHA-256 hashing costs 2.4% fewer instructions per block, SHA-512 hashing 2.7%, and the `Hasher` operations 2.9% to 3.6%. Results and allocation are unchanged.
 
 ## 0.3.3
 
